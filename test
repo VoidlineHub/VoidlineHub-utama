@@ -1,3 +1,77 @@
+-- Adonis bypass
+local getinfo = getinfo or debug.getinfo
+local DEBUG = false
+setthreadidentity(2)
+for _, v in getgc(true) do
+    if typeof(v) == "table" then
+        local DetectFunc = rawget(v, "Detected")
+        local KillFunc = rawget(v, "Kill")
+    
+        if typeof(DetectFunc) == "function" then
+            hookfunction(DetectFunc, function(Action, Info, NoCrash)
+                if Action ~= "_" and DEBUG then
+                    warn("Adonis flag bypassed: " .. tostring(Action))
+                end
+                return true
+            end)
+        end
+    
+        if typeof(KillFunc) == "function" then
+            hookfunction(KillFunc, function(Info)
+                if DEBUG then warn("Adonis kick bypassed: " .. tostring(Info)) end
+            end)
+        end
+    end
+end
+hookfunction(getrenv().debug.info or debug.getinfo, newcclosure(function(...)
+    if (...) == "Detected" then
+        return coroutine.yield(coroutine.running())
+    end
+    return debug.info(...)
+end))
+setthreadidentity(7)
+
+-- Bypass pause game
+pcall(function()
+    local CoreGui = game:GetService("CoreGui")
+    local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+   
+    -- Hook game pause detection
+    local originalPause = game:GetService("ScriptContext").SetTimeout
+    if originalPause then
+        game:GetService("ScriptContext").SetTimeout = function(self, ...)
+            -- Prevent game pause timers
+            return
+        end
+    end
+   
+    -- Bypass pause GUI
+    game:GetService("UserInputService").WindowFocused:Connect(function()
+        -- Prevent pause when window loses focus
+    end)
+   
+    -- Remove pause screen
+    spawn(function()
+        while task.wait(1) do
+            pcall(function()
+                -- Remove any pause-related GUIs
+                for _, gui in pairs(PlayerGui:GetChildren()) do
+                    if gui.Name:lower():find("pause") or gui.Name:lower():find("paused") then
+                        gui:Destroy()
+                    end
+                end
+               
+                -- Also check CoreGui
+                for _, gui in pairs(CoreGui:GetChildren()) do
+                    if gui.Name:lower():find("pause") or gui.Name:lower():find("paused") then
+                        gui:Destroy()
+                    end
+                end
+            end)
+        end
+    end)
+end)
+
 -- Load WindUI properly
 local WindUI
 local maxRetries = 3
@@ -775,5 +849,6 @@ SettingsTab:Section({ Title = "Change Team" })
         Desc = "Drag Drive Simulator Script v0.0.1\nMade by komtolmmek2\n\nFeatures:\n• Courier Auto Farm\n• Office Auto Farm\n• Teleport System\n• Pause Game Bypass\n• Anti-AFK System\n• Fly & Noclip\n• Team Changer\n• Server Hopper\n• Gift Collector",
         BackgroundColor = secondaryColor
     })
+
 
 print("This script was created by VoidlineHub")
