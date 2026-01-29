@@ -6,20 +6,21 @@ local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
 local PlayerGui = LP:WaitForChild("PlayerGui")
 
+-- WINDUI ALWAYS LOAD VIA HTTP
 local WindUI
-local ok
-
-ok, WindUI = pcall(function()
+local success, lib = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 end)
 
-if not ok then
+if success and lib then
+    WindUI = lib
+else
     WindUI = {
-        Notify = function(opts)
+        Notify = function(o)
             game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = opts.Title or "",
-                Text = opts.Content or "",
-                Duration = opts.Duration or 3,
+                Title = o.Title or "Notification",
+                Text = o.Content or "",
+                Duration = o.Duration or 3
             })
         end
     }
@@ -731,4 +732,5 @@ if _G.AutoRejoin and child.Name == "ErrorPrompt" then
 game:GetService("TeleportService"):Teleport(game.PlaceId, LP)
 end
 end)
+
 
