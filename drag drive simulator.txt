@@ -1,0 +1,1863 @@
+-- Adonis bypass
+local getinfo = getinfo or debug.getinfo
+local DEBUG = false
+setthreadidentity(2)
+for _, v in getgc(true) do
+    if typeof(v) == "table" then
+        local DetectFunc = rawget(v, "Detected")
+        local KillFunc = rawget(v, "Kill")
+    
+        if typeof(DetectFunc) == "function" then
+            hookfunction(DetectFunc, function(Action, Info, NoCrash)
+                if Action ~= "_" and DEBUG then
+                    warn("Adonis flag bypassed: " .. tostring(Action))
+                end
+                return true
+            end)
+        end
+    
+        if typeof(KillFunc) == "function" then
+            hookfunction(KillFunc, function(Info)
+                if DEBUG then warn("Adonis kick bypassed: " .. tostring(Info)) end
+            end)
+        end
+    end
+end
+hookfunction(getrenv().debug.info or debug.getinfo, newcclosure(function(...)
+    if (...) == "Detected" then
+        return coroutine.yield(coroutine.running())
+    end
+    return debug.info(...)
+end))
+setthreadidentity(7)
+
+-- Bypass pause game
+pcall(function()
+    local CoreGui = game:GetService("CoreGui")
+    local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+   
+    -- Hook game pause detection
+    local originalPause = game:GetService("ScriptContext").SetTimeout
+    if originalPause then
+        game:GetService("ScriptContext").SetTimeout = function(self, ...)
+            -- Prevent game pause timers
+            return
+        end
+    end
+   
+    -- Bypass pause GUI
+    game:GetService("UserInputService").WindowFocused:Connect(function()
+        -- Prevent pause when window loses focus
+    end)
+   
+    -- Remove pause screen
+    spawn(function()
+        while task.wait(1) do
+            pcall(function()
+                -- Remove any pause-related GUIs
+                for _, gui in pairs(PlayerGui:GetChildren()) do
+                    if gui.Name:lower():find("pause") or gui.Name:lower():find("paused") then
+                        gui:Destroy()
+                    end
+                end
+               
+                -- Also check CoreGui
+                for _, gui in pairs(CoreGui:GetChildren()) do
+                    if gui.Name:lower():find("pause") or gui.Name:lower():find("paused") then
+                        gui:Destroy()
+                    end
+                end
+            end)
+        end
+    end)
+end)
+
+-- Load WindUI properly
+local WindUI
+local maxRetries = 3
+for attempt = 1, maxRetries do
+    local success, result = pcall(function()
+        -- Try to load WindUI
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+    end)
+   
+    if success and result then
+        WindUI = result
+        break
+    else
+        if attempt < maxRetries then
+            -- Try with delay
+            task.wait(2)
+           
+            -- Try alternative URL
+            local altSuccess, altResult = pcall(function()
+                return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/refs/heads/main/dist/main.lua"))()
+            end)
+           
+            if altSuccess and altResult then
+                WindUI = altResult
+                break
+            end
+        end
+    end
+end
+
+-- If WindUI still not loaded, use simple notification system
+if not WindUI then
+    -- Simple notification function as fallback
+    WindUI = {
+        Notify = function(options)
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = options.Title or "Notification",
+                Text = options.Content or "",
+                Duration = options.Duration or 3
+            })
+        end
+    }
+end
+
+-- Initialize global status
+_G.Status = _G.Status or {
+    Courier = "Waiting",
+    Office = "Waiting",
+    Quest = "Waiting",
+    Winter = "Waiting",
+    Gift = "Waiting",
+    Pause = "Disabled"
+}
+
+-- Status update function
+local function updateStatus(statusType, status)
+    if _G.Status then
+        _G.Status[statusType] = status
+    end
+end
+
+-- Services
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local VIM = game:GetService("VirtualInputManager")
+local RS = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LP = Players.LocalPlayer
+local HttpService = game:GetService("HttpService")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+
+-- Variables
+local noclipConn
+local pauseBypassEnabled = false
+local pauseCheckConnection = nil
+local instantInteractEnabled = false
+local instantInteractForWinterQuest = false
+local instantInteractForGift = false
+local giftAlreadyClaimed = false
+local currentGiftLocationIndex = 1
+local dropOffLocation = Vector3.new(-5144, 4, -3687) -- Gift drop-off location
+
+-- Courier variables
+local START_JOB = Vector3.new(-5110, 5, -3759)
+local DESTINATIONS = {
+    ["1"] = {name = "Faroka", pos = Vector3.new(-6795, 3, -446)},
+    ["2"] = {name = "Karangasem", pos = Vector3.new(-8385, 2, -3821)},
+    ["3"] = {name = "Kleco", pos = Vector3.new(-8779, 3, 647)},
+    ["4"] = {name = "Manahan", pos = Vector3.new(1123, 3, -4162)},
+    ["5"] = {name = "Pajang", pos = Vector3.new(-6741, 4, 7172)},
+    ["6"] = {name = "Klodran", pos = Vector3.new(-3351, 30, -8161)},
+    ["7"] = {name = "Colomandu", pos = Vector3.new(-9964, 3, -4054)},
+    ["8"] = {name = "Klaten", pos = Vector3.new(-17052, 105, 6567)},
+}
+
+local CourierAutoFarm = false
+local CurrentDest = nil
+local HasJob = false
+local WaitingForNextQuest = false
+local isFrozen = false
+
+-- Office variables
+local OfficeAutoFarm = false
+local WorkingSince = 0
+local IsProcessingAnswer = false
+local OfficeDelay = 4
+local OFFICE_POSITION = Vector3.new(-5946, 5, -261)
+local JUMP_POSITION = Vector3.new(-5952, 5, -261)
+
+-- Quest variables
+local QuestAutoFarm = false
+local CurrentQuest = nil
+local QuestCompleted = 0
+
+-- NEW QUEST VARIABLES
+local DailyQuestAutoClaim = false
+local WinterQuestAutoStart = false
+local GiftAutoCollect = false
+
+-- Anti AFK Variables
+local antiAFKEnabled = false
+
+-- Fly Variables
+local flyEnabled = false
+local flying = false
+local speed = 50
+local flyConnection = nil
+
+-- Loop control variables
+local courierLoopRunning = false
+local officeLoopRunning = false
+local questLoopRunning = false
+local winterLoopRunning = false
+local giftLoopRunning = false
+
+-- Set up instant interaction for specific features
+ProximityPromptService.PromptButtonHoldBegan:Connect(function(prompt, player)
+    if player ~= LP then return end
+   
+    -- Only activate instant interaction for winter quests or gift collection when enabled
+    if (instantInteractForWinterQuest or instantInteractForGift) and instantInteractEnabled then
+        -- Check if this prompt is related to winter quests or gifts
+        local parent = prompt.Parent
+        if parent then
+            -- Check for winter quest NPC
+            if instantInteractForWinterQuest and (parent.Name:find("Winter") or parent.Name:find("Quest") or
+               (parent.Parent and parent.Parent.Name:find("Winter")) or
+               (parent.Parent and parent.Parent.Name:find("Quest"))) then
+                fireproximityprompt(prompt)
+                return
+            end
+           
+            -- Check for gift objects
+            if instantInteractForGift and (parent.Name:find("Gift") or parent.Name:find("Present") or
+               (parent.Parent and parent.Parent.Name:find("Gift")) or
+               (parent.Parent and parent.Parent.Name:find("Present"))) then
+                fireproximityprompt(prompt)
+                return
+            end
+        end
+    end
+end)
+
+-- FIXED: Detect if gift already claimed with better detection
+local function setupGiftNotificationListener()
+    local success, notificationRemote = pcall(function()
+        return RS:WaitForChild("Notification"):WaitForChild("Notifications")
+    end)
+   
+    if success and notificationRemote then
+        notificationRemote.OnClientEvent:Connect(function(notifType, message, duration)
+            if notifType == "Info" then
+                -- Check for gift already claimed message
+                if message:find("already secured") or message:find("already claimed") or message:find("secured this gift") then
+                    giftAlreadyClaimed = true
+                    updateStatus("Gift", "Already claimed")
+                    WindUI:Notify({ Title = "Gift", Content = "Already claimed", Duration = 2 })
+                end
+            end
+        end)
+    end
+end
+
+-- Call setup function
+task.spawn(setupGiftNotificationListener)
+
+-- Pause Bypass Function
+local function togglePauseBypass(state)
+    pauseBypassEnabled = state
+   
+    if state then
+        updateStatus("Pause", "Enabled")
+       
+        -- Start checking for pause screens
+        if pauseCheckConnection then
+            pauseCheckConnection:Disconnect()
+        end
+       
+        pauseCheckConnection = RunService.Heartbeat:Connect(function()
+            pcall(function()
+                -- Remove pause GUIs
+                local PlayerGui = LP:WaitForChild("PlayerGui")
+                for _, gui in pairs(PlayerGui:GetChildren()) do
+                    if gui.Name:lower():find("pause") or gui.Name:lower():find("paused") then
+                        gui:Destroy()
+                    end
+                end
+               
+                -- Keep game running even when window is not focused
+                if not UserInputService:GetFocusedTextBox() then
+                    -- Simulate key press to prevent idle detection
+                    VIM:SendKeyEvent(true, Enum.KeyCode.W, false, game)
+                    task.wait(0.01)
+                    VIM:SendKeyEvent(false, Enum.KeyCode.W, false, game)
+                end
+            end)
+        end)
+       
+        WindUI:Notify({
+            Title = "Pause Bypass",
+            Content = "Pause bypass enabled - Game won't pause",
+            Duration = 3
+        })
+    else
+        updateStatus("Pause", "Disabled")
+       
+        if pauseCheckConnection then
+            pauseCheckConnection:Disconnect()
+            pauseCheckConnection = nil
+        end
+       
+        WindUI:Notify({
+            Title = "Pause Bypass",
+            Content = "Pause bypass disabled",
+            Duration = 3
+        })
+    end
+end
+
+-- Helper functions
+local function GetHRP()
+    return LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+end
+
+local function GetHum()
+    return LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+end
+
+local function RandomDelay(min, max)
+    task.wait(min + math.random() * (max - min))
+end
+
+local function GetGroundHeight(pos)
+    local rayOrigin = pos + Vector3.new(0, 50, 0)
+    local rayDirection = Vector3.new(0, -100, 0)
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    raycastParams.FilterDescendantsInstances = {LP.Character}
+    local result = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+    return result and result.Position.Y or pos.Y
+end
+
+-- INSTANT TELEPORT (for Winter and Gift)
+local function InstantTP(pos)
+    local hrp = GetHRP()
+    local hum = GetHum()
+    if not hrp or not hum then return false end
+   
+    -- Disable collision temporarily
+    toggleNoclip(true)
+   
+    -- Teleport directly to position
+    hrp.CFrame = CFrame.new(pos) + Vector3.new(0, 5, 0)
+   
+    -- Wait a moment
+    task.wait(0.3)
+   
+    -- Re-enable collision
+    toggleNoclip(false)
+   
+    return true
+end
+
+-- Noclip function
+local function toggleNoclip(state)
+    if state then
+        if noclipConn then noclipConn:Disconnect() end
+        noclipConn = RunService.Stepped:Connect(function()
+            if LP.Character then
+                for _, part in pairs(LP.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+        end)
+    else
+        if noclipConn then 
+            noclipConn:Disconnect()
+            noclipConn = nil 
+        end
+    end
+end
+
+-- Office functions
+local function ForceSitOnChair()
+    local hrp = GetHRP()
+    local hum = GetHum()
+    if not hrp or not hum then return false end
+  
+    toggleNoclip(true)
+    updateStatus("Office", "Sitting...")
+  
+    hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+    task.wait(0.3)
+    hum:ChangeState(Enum.HumanoidStateType.Landed)
+    task.wait(0.4)
+  
+    hrp.CFrame = CFrame.new(-5943.5, 4.5, -261) * CFrame.Angles(0, math.rad(180), 0)
+    task.wait(0.7)
+  
+    local prompt
+    pcall(function()
+        prompt = Workspace.Computers.Setup.Chair.Handle:FindFirstChildOfClass("ProximityPrompt")
+    end)
+  
+    local seated = false
+    if prompt then
+        pcall(function() prompt.Enabled = true end)
+        fireproximityprompt(prompt, true)
+        task.wait(0.15)
+        fireproximityprompt(prompt, false)
+        task.wait(1.2)
+        seated = hum.Sit or hum:GetState() == Enum.HumanoidStateType.Seated
+        if not seated then
+            hum:ChangeState(Enum.HumanoidStateType.Seated)
+            task.wait(0.6)
+            seated = hum.Sit or hum:GetState() == Enum.HumanoidStateType.Seated
+        end
+    end
+  
+    toggleNoclip(false)
+    updateStatus("Office", seated and "Seated" or "Failed")
+    return seated
+end
+
+local function IsOfficeWorker()
+    return LP.Team and LP.Team.Name == "Office Worker"
+end
+
+local function ChangeTeamToOfficeWorker()
+    updateStatus("Office", "Changing team...")
+    RS.JobEvents.TeamChangeRequest:FireServer("Office Worker", 0, 0, 0, "MainMenu")
+    task.wait(4)
+    return IsOfficeWorker()
+end
+
+local function StartOfficeWork()
+    if not IsOfficeWorker() then
+        ChangeTeamToOfficeWorker()
+    end
+    task.wait(1.5)
+    local success = ForceSitOnChair()
+    if success then
+        updateStatus("Office", "Waiting...")
+        IsProcessingAnswer = false
+        return true
+    end
+    return false
+end
+
+local function SolveMathQuestion(question, options)
+    local num1, op, num2 = question:match("(%d+)%s*([%+\-\*/])%s*(%d+)")
+    if not num1 then return options[math.random(1, #options)] end
+    num1, num2 = tonumber(num1), tonumber(num2)
+    local ans = (op == "+" and num1 + num2) or
+                (op == "-" and num1 - num2) or
+                (op == "*" and num1 * num2) or
+                (op == "/" and math.floor(num1 / num2)) or 0
+    for _, opt in ipairs(options) do
+        if tonumber(opt) == ans then return opt end
+    end
+    return options[1]
+end
+
+RS.JobEvents.GenerateQuestion.OnClientEvent:Connect(function(question, options, questionId)
+    if not OfficeAutoFarm or IsProcessingAnswer then return end
+  
+    IsProcessingAnswer = true
+    updateStatus("Office", "Answering...")
+  
+    task.wait(1.2 + math.random() * 0.8)
+    local answer = SolveMathQuestion(question, options)
+    RS.JobEvents.CorrectAnswer:FireServer(answer, questionId)
+  
+    IsProcessingAnswer = false
+    updateStatus("Office", "Answer sent")
+  
+    task.spawn(function()
+        task.wait(OfficeDelay)
+        local hum = GetHum()
+        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+        task.wait(0.6)
+        local hrp = GetHRP()
+        if hrp then
+            hrp.CFrame = CFrame.new(JUMP_POSITION)
+            task.wait(0.5)
+            hrp.CFrame = CFrame.new(OFFICE_POSITION)
+        end
+        task.wait(1.5)
+        if hum and not (hum.Sit or hum:GetState() == Enum.HumanoidStateType.Seated) then
+            ForceSitOnChair()
+        end
+    end)
+end)
+
+RS.JobEvents.CorrectAnswer.OnClientEvent:Connect(function(result)
+    if result == "success" then
+        WorkingSince = WorkingSince + 1
+        updateStatus("Office", "Correct: " .. WorkingSince)
+    end
+end)
+
+-- Courier functions - FIXED: Removed deprecated hum:Stop()
+local function setFrozen(state)
+    local hrp = GetHRP()
+    local hum = GetHum()
+    if not hrp or not hum then return end
+    if state then
+        hrp.Anchored = true
+        hum:ChangeState(Enum.HumanoidStateType.PlatformStanding)
+        hum.WalkSpeed = 0
+        hum.JumpPower = 0
+        -- FIXED: Replaced hum:Stop() with setting velocity to 0
+        if hrp and hrp:IsA("BasePart") then
+            hrp.Velocity = Vector3.new(0, 0, 0)
+        end
+        updateStatus("Courier", "Frozen")
+    else
+        -- FIXED: Replaced hum:Stop() with resetting state
+        hum:ChangeState(Enum.HumanoidStateType.Landed)
+        hum.WalkSpeed = 16
+        hum.JumpPower = 50
+        task.wait(0.1)
+        hrp.Anchored = false
+        updateStatus("Courier", "Active")
+    end
+    isFrozen = state
+end
+
+local function TweenTP(pos)
+    local hrp = GetHRP()
+    local hum = GetHum()
+    if not hrp or not hum then return false end
+    if isFrozen then setFrozen(false) end
+    hum:ChangeState(Enum.HumanoidStateType.PlatformStanding)
+    local startPos = hrp.Position
+    local groundY = GetGroundHeight(pos)
+    local finalEndPos = Vector3.new(pos.X, groundY + 4, pos.Z)
+    local undergroundDepth = -50
+    local undergroundStartPos = Vector3.new(startPos.X, undergroundDepth, startPos.Z)
+    local undergroundEndPos = Vector3.new(finalEndPos.X, undergroundDepth, finalEndPos.Z)
+    updateStatus("Courier", "Underground...")
+    hrp.CFrame = CFrame.new(undergroundStartPos)
+    task.wait(0.2)
+    local horizontalDist = (Vector3.new(startPos.X, 0, startPos.Z) - Vector3.new(finalEndPos.X, 0, finalEndPos.Z)).Magnitude
+    local time = math.max(horizontalDist / 350, 1.2)
+    local randomRotation = CFrame.Angles(0, math.rad(math.random(-45, 45)), 0)
+    local targetCFrameUnderground = CFrame.new(undergroundEndPos) * randomRotation
+    local tween = TweenService:Create(hrp, TweenInfo.new(time, Enum.EasingStyle.Linear), {CFrame = targetCFrameUnderground})
+    updateStatus("Courier", "Moving...")
+    tween:Play()
+    tween.Completed:Wait()
+    updateStatus("Courier", "Surfacing...")
+    local targetCFrameSurface = CFrame.new(finalEndPos) * randomRotation
+    local upwardTween = TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = targetCFrameSurface})
+    upwardTween:Play()
+    upwardTween.Completed:Wait()
+    hum:ChangeState(Enum.HumanoidStateType.Jumping)
+    task.wait(0.1)
+    hum:ChangeState(Enum.HumanoidStateType.Landed)
+    if isFrozen then setFrozen(true) end
+    task.wait(0.2)
+    RandomDelay(1.5, 4.0)
+    return true
+end
+
+local function PressF()
+    VIM:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+    task.wait(0.25)
+    VIM:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+end
+
+local function PressE()
+    VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+    task.wait(0.25)
+    VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+end
+
+-- HOLD E FOR 10 SECONDS
+local function HoldEFor10Seconds()
+    updateStatus("Gift", "Holding E...")
+   
+    -- Press and hold E
+    VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+   
+    -- Hold for 10 seconds
+    task.wait(10)
+   
+    -- Release E
+    VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+   
+    updateStatus("Gift", "E released")
+    return true
+end
+
+local function IsCourier()
+    return LP.Team and LP.Team.Name == "Courier"
+end
+
+local function ChangeTeamToCourier()
+    updateStatus("Courier", "Changing...")
+    local remote = RS.JobEvents:FindFirstChild("TeamChangeRequest")
+    if remote then
+        pcall(function()
+            remote:FireServer("Courier", 11378976, 0, 0, "Detector")
+        end)
+        task.wait(4)
+    end
+    updateStatus("Courier", IsCourier() and "Active" or "Failed")
+end
+
+local function EquipAndGrabNewBox()
+    task.wait(0.4)
+    local box = LP.Backpack:FindFirstChild("Box")
+    if box and GetHum() then
+        GetHum():EquipTool(box)
+        task.wait(0.2)
+        PressF()
+        updateStatus("Courier", "Box grabbed")
+        return true
+    end
+    return false
+end
+
+local function GetQuestBoard()
+    return Workspace:FindFirstChild("QuestBoard") or Workspace:FindFirstChild("Quests") or Workspace:FindFirstChild("Quest")
+end
+
+local function AcceptQuest()
+    local questBoard = GetQuestBoard()
+    if questBoard then
+        local prompt = questBoard:FindFirstChildWhichIsA("ProximityPrompt")
+        if prompt then
+            fireproximityprompt(prompt)
+            return true
+        end
+    end
+    return false
+end
+
+local function CompleteQuest()
+    local questBoard = GetQuestBoard()
+    if questBoard then
+        local prompt = questBoard:FindFirstChildWhichIsA("ProximityPrompt")
+        if prompt then
+            fireproximityprompt(prompt)
+            return true
+        end
+    end
+    return false
+end
+
+local function InstantInteract()
+    local hrp = GetHRP()
+    if not hrp then return false end
+   
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") then
+            local maxDistance = obj.MaxActivationDistance
+            if (hrp.Position - obj.Parent.Position).Magnitude <= maxDistance then
+                fireproximityprompt(obj)
+                return true
+            end
+        end
+    end
+    return false
+end
+
+-- Fly functions
+local function startFly()
+    if not GetHRP() or not GetHum() then return end
+  
+    local bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    bv.Velocity = Vector3.new(0, 0, 0)
+    bv.Parent = GetHRP()
+  
+    local bg = Instance.new("BodyGyro")
+    bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    bg.P = 9e4
+    bg.CFrame = GetHRP().CFrame
+    bg.Parent = GetHRP()
+  
+    flyConnection = RunService.Heartbeat:Connect(function()
+        if not flyEnabled or not flying or not GetHRP() or not GetHum() then
+            if bv then bv:Destroy() end
+            if bg then bg:Destroy() end
+            if flyConnection then 
+                flyConnection:Disconnect()
+                flyConnection = nil 
+            end
+            return
+        end
+      
+        local moveDir = GetHum().MoveDirection
+      
+        local upDown = 0
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            upDown = 1
+        elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then
+            upDown = -1
+        end
+      
+        bv.Velocity = (moveDir * speed) + Vector3.new(0, upDown * speed, 0)
+        bg.CFrame = GetHRP().CFrame
+    end)
+end
+
+local function stopFly()
+    flying = false
+    if flyConnection then
+        flyConnection:Disconnect()
+        flyConnection = nil
+    end
+    if GetHRP() then
+        for _, obj in pairs(GetHRP():GetChildren()) do
+            if obj:IsA("BodyVelocity") or obj:IsA("BodyGyro") then
+                obj:Destroy()
+            end
+        end
+    end
+end
+
+local function startAntiAFK()
+    spawn(function()
+        while antiAFKEnabled do
+            pcall(function() VIM:MoveMouse(1, 0) end)
+            task.wait(0.1)
+            pcall(function() VIM:MoveMouse(-1, 0) end)
+            task.wait(60 + math.random() * 60)
+        end
+    end)
+end
+
+-- NEW QUEST FUNCTIONS
+local function ClaimDailyQuest()
+    pcall(function()
+        RS:WaitForChild("DailyQuestRemotes"):WaitForChild("ClaimQuest"):FireServer("PlayTimeWeek", true)
+    end)
+end
+
+local function ClearDailyQuestUI()
+    pcall(function()
+        local DailyUI = LP:WaitForChild("PlayerGui"):WaitForChild("DailyWeeklyQuestUI")
+        if DailyUI and DailyUI:FindFirstChild("MainFrame") and DailyUI.MainFrame:FindFirstChild("SubFrame") then
+            local subFrame = DailyUI.MainFrame.SubFrame
+            if subFrame:FindFirstChild("Category1") then
+                local cat1 = subFrame.Category1
+                if cat1:FindFirstChild("VisitMotoDealer") and cat1.VisitMotoDealer:FindFirstChild("QuestTitle") then
+                    cat1.VisitMotoDealer.QuestTitle.Text = ""
+                end
+                if cat1:FindFirstChild("VisitModification") and cat1.VisitModification:FindFirstChild("QuestTitle") then
+                    cat1.VisitModification.QuestTitle.Text = ""
+                end
+                if cat1:FindFirstChild("SentulRaceWin") and cat1.SentulRaceWin:FindFirstChild("QuestTitle") then
+                    cat1.SentulRaceWin.QuestTitle.Text = ""
+                end
+                if cat1:FindFirstChild("SentulRaceJoin") and cat1.SentulRaceJoin:FindFirstChild("QuestTitle") then
+                    cat1.SentulRaceJoin.QuestTitle.Text = ""
+                end
+            end
+            if subFrame:FindFirstChild("Category2") then
+                local cat2 = subFrame.Category2
+                if cat2:FindFirstChild("Anomaly1") and cat2.Anomaly1:FindFirstChild("QuestTitle") then
+                    cat2.Anomaly1.QuestTitle.Text = ""
+                end
+                if cat2:FindFirstChild("BuyMedkit100") and cat2.BuyMedkit100:FindFirstChild("QuestTitle") then
+                    cat2.BuyMedkit100.QuestTitle.Text = ""
+                end
+                if cat2:FindFirstChild("WinSentul100") and cat2.WinSentul100:FindFirstChild("QuestTitle") then
+                    cat2.WinSentul100.QuestTitle.Text = ""
+                end
+            end
+        end
+    end)
+end
+
+-- FIXED: Courier Auto Farm Function
+local function startCourierFarm()
+    courierLoopRunning = true
+    while courierLoopRunning and CourierAutoFarm do
+        updateStatus("Courier", "Active")
+        if not IsCourier() then
+            ChangeTeamToCourier()
+            task.wait(1)
+            -- Fixed: Replaced continue with proper loop control
+            if not courierLoopRunning or not CourierAutoFarm then break end
+        end
+        
+        if not HasJob and not WaitingForNextQuest then
+            updateStatus("Courier", "Going to start...")
+            if TweenTP(START_JOB) then
+                task.wait(2)
+                PressF()
+                HasJob = true
+                WaitingForNextQuest = true
+                updateStatus("Courier", "Started")
+            end
+        end
+        
+        local livraison = Workspace:FindFirstChild("Livrason")
+        if not livraison then
+            updateStatus("Courier", "Not found")
+            task.wait(5)
+            -- Fixed: Replaced continue with proper loop control
+            if not courierLoopRunning or not CourierAutoFarm then break end
+        end
+        
+        for i = 1, 8 do
+            local loc = livraison.Location:FindFirstChild(tostring(i))
+            if not loc then 
+                -- Fixed: Replaced continue with proper loop control
+                if not courierLoopRunning or not CourierAutoFarm then break end
+            end
+          
+            local targetPart = nil
+            for _, child in ipairs(loc:GetChildren()) do
+                if child:IsA("BasePart") and child:FindFirstChildWhichIsA("ProximityPrompt") then
+                    targetPart = child
+                    break
+                end
+            end
+          
+            if targetPart then
+                local prompt = targetPart:FindFirstChildWhichIsA("ProximityPrompt")
+                if prompt and prompt.Enabled then
+                    local dest = DESTINATIONS[tostring(i)]
+                    if dest then
+                        CurrentDest = i
+                        updateStatus("Courier", "Target: " .. dest.name)
+                        if TweenTP(dest.pos) then
+                            task.wait(2.5)
+                            pcall(PressF)
+                            EquipAndGrabNewBox()
+                        end
+                        HasJob = false
+                        task.wait(15)
+                        break
+                    end
+                end
+            end
+        end
+        task.wait(0.4)
+    end
+    courierLoopRunning = false
+    if not CourierAutoFarm then
+        updateStatus("Courier", "Waiting")
+    end
+end
+
+-- Quest Auto Farm Function
+local function startQuestFarm()
+    questLoopRunning = true
+    while questLoopRunning and QuestAutoFarm do
+        if not CurrentQuest then
+            updateStatus("Quest", "Looking...")
+            local questBoard = GetQuestBoard()
+            if questBoard then
+                updateStatus("Quest", "Found")
+                if AcceptQuest() then
+                    CurrentQuest = "Active"
+                    updateStatus("Quest", "Accepted")
+                    task.wait(2)
+                    if CompleteQuest() then
+                        QuestCompleted = QuestCompleted + 1
+                        updateStatus("Quest", "Completed: " .. QuestCompleted)
+                        CurrentQuest = nil
+                        task.wait(5)
+                    end
+                end
+            else
+                updateStatus("Quest", "Not found")
+            end
+        end
+        task.wait(1)
+    end
+    questLoopRunning = false
+    if not QuestAutoFarm then
+        updateStatus("Quest", "Waiting")
+    end
+end
+
+-- Winter Quest Function - USING INSTANT TELEPORT
+local function startWinterQuest()
+    winterLoopRunning = true
+    while winterLoopRunning and WinterQuestAutoStart do
+        local hrp = GetHRP()
+        if hrp then
+            local targetPos = Vector3.new(-5168, 3, -3674)
+            if (hrp.Position - targetPos).Magnitude > 50 then
+                updateStatus("Winter", "Teleporting...")
+                InstantTP(targetPos)
+                task.wait(0.5)
+            end
+            updateStatus("Winter", "Interacting...")
+            instantInteractEnabled = true
+            instantInteractForWinterQuest = true
+            instantInteractForGift = false
+           
+            for i = 1, 3 do
+                InstantInteract()
+                task.wait(0.5)
+            end
+           
+            instantInteractEnabled = false
+            instantInteractForWinterQuest = false
+        else
+            updateStatus("Winter", "No character")
+        end
+        task.wait(3)
+    end
+    winterLoopRunning = false
+    if not WinterQuestAutoStart then
+        updateStatus("Winter", "Waiting")
+    end
+end
+
+-- FIXED: Gift Collection Function with better gift detection
+local function startGiftCollection()
+    giftLoopRunning = true
+    local giftLocations = {
+        Vector3.new(-16530, 108, 9350),
+        Vector3.new(-16138, 115, 4255),
+        Vector3.new(-979, 8, 624),
+        Vector3.new(-15193, 4, -4050),
+        Vector3.new(-1609, 19, -4248),
+        Vector3.new(-905, 5, -380),
+        Vector3.new(-8072, 2, -3856),
+        Vector3.new(-13110, 4, -4732),
+        Vector3.new(-425, 14, -4244),
+        Vector3.new(-3170, 4, -528),
+        Vector3.new(-11975, 3, -4222)
+    }
+   
+    -- Alternative gift detection method
+    local function checkIfHasGift()
+        if not LP.Character then return false end
+        for _, tool in pairs(LP.Character:GetChildren()) do
+            if tool:IsA("Tool") and (tool.Name:find("Gift") or tool.Name:find("Present") or tool.Name:find("Box")) then
+                return true
+            end
+        end
+        return false
+    end
+   
+    while giftLoopRunning and GiftAutoCollect do
+        local hrp = GetHRP()
+        if hrp then
+            -- Reset claim status at start of each location
+            giftAlreadyClaimed = false
+           
+            local targetPos = giftLocations[currentGiftLocationIndex]
+            updateStatus("Gift", "Location " .. currentGiftLocationIndex)
+            InstantTP(targetPos)
+            task.wait(0.5)
+           
+            -- Check if holding gift
+            local hasGift = checkIfHasGift()
+           
+            if hasGift then
+                updateStatus("Gift", "Delivering...")
+                InstantTP(dropOffLocation)
+                task.wait(1)
+               
+                for i = 1, 10 do
+                    InstantInteract()
+                    task.wait(0.3)
+                end
+               
+                task.wait(1)
+                updateStatus("Gift", "Returning...")
+                InstantTP(targetPos)
+                task.wait(0.5)
+            end
+           
+            updateStatus("Gift", "Collecting...")
+            instantInteractEnabled = true
+            instantInteractForWinterQuest = false
+            instantInteractForGift = true
+           
+            -- Hold E for 10 seconds
+            HoldEFor10Seconds()
+           
+            -- Try instant interaction
+            for i = 1, 5 do
+                InstantInteract()
+                task.wait(0.2)
+            end
+           
+            instantInteractEnabled = false
+            instantInteractForGift = false
+           
+            task.wait(2) -- Wait for notifications
+           
+            -- FIXED: Check gift claim status
+            if giftAlreadyClaimed then
+                updateStatus("Gift", "Already claimed")
+                WindUI:Notify({ Title = "Gift", Content = "Claimed, next", Duration = 2 })
+                currentGiftLocationIndex = (currentGiftLocationIndex % #giftLocations) + 1
+                task.wait(1)
+                -- Fixed: Replaced continue with proper loop control
+                if not giftLoopRunning or not GiftAutoCollect then break end
+            end
+           
+            -- Check if holding gift after collection
+            local hasGiftAfter = checkIfHasGift()
+           
+            if hasGiftAfter then
+                updateStatus("Gift", "Delivering...")
+                InstantTP(dropOffLocation)
+                task.wait(1)
+               
+                for i = 1, 10 do
+                    InstantInteract()
+                    task.wait(0.3)
+                end
+               
+                task.wait(2)
+                updateStatus("Gift", "Delivered")
+                WindUI:Notify({ Title = "Gift", Content = "Delivered", Duration = 2 })
+                currentGiftLocationIndex = (currentGiftLocationIndex % #giftLocations) + 1
+            else
+                updateStatus("Gift", "Failed")
+                -- If failed, try same location again
+                task.wait(2)
+            end
+        else
+            updateStatus("Gift", "No character")
+        end
+       
+        task.wait(2) -- Wait before next location
+    end
+   
+    giftLoopRunning = false
+    if not GiftAutoCollect then
+        updateStatus("Gift", "Waiting")
+    end
+end
+
+-- Create UI using proper WindUI structure
+task.spawn(function()
+    if not WindUI or not WindUI.CreateWindow then
+        return
+    end
+   
+    task.wait(1)
+   
+    -- PINK & BLACK THEME (FIXED HEX VALUES)
+    local primaryColor = Color3.fromRGB(255, 105, 180) -- Hot Pink
+    local secondaryColor = Color3.fromRGB(0, 0, 0) -- Black
+    local accentColor = Color3.fromRGB(255, 182, 193) -- Light Pink
+   
+    -- Add custom theme (FIXED HEX VALUES)
+    WindUI:AddTheme({
+        Name = "komtolmmek2 Theme",
+        Accent = Color3.fromRGB(76, 175, 80), -- #4CAF50
+        Dialog = Color3.fromRGB(22, 22, 22), -- #161616
+        Outline = Color3.fromRGB(255, 255, 255), -- #FFFFFF
+        Text = Color3.fromRGB(255, 255, 255), -- #FFFFFF
+        Placeholder = Color3.fromRGB(122, 122, 122), -- #7a7a7a
+        Background = Color3.fromRGB(30, 78, 45), -- #1E4E2D
+        Button = Color3.fromRGB(56, 142, 60), -- #388E3C
+        Icon = Color3.fromRGB(255, 255, 255) -- #FFFFFF
+    })
+   
+    local Window = WindUI:CreateWindow({
+        Title = "Drag Drive Simulator",
+        SubTitle = "v0.0.1",
+        Folder = "DragDriveConfig",
+        Icon = "",
+        NewElements = true,
+        Color = primaryColor,
+        HideSearchBar = false,
+        OpenButton = {
+            Title = "by komtolmmek2 script",
+            Icon = "solar:car-bold",
+            CornerRadius = UDim.new(1,0), -- fully rounded
+            StrokeThickness = 3, -- removing outline
+            Enabled = true, -- enable or disable openbutton
+            Draggable = true,
+            OnlyMobile = false,
+            Color = ColorSequence.new( -- gradient
+                Color3.fromRGB(48, 255, 106), -- #30FF6A
+                Color3.fromRGB(231, 255, 47) -- #e7ff2f
+            ),
+            BackgroundColor = secondaryColor,
+            TextColor = primaryColor,
+        },
+        Topbar = {
+            Height = 44,
+            ButtonsType = "Mac", -- Default or Mac
+            Color = secondaryColor
+        },
+        -- Custom UI settings
+        Size = UDim2.fromOffset(560, 350),
+        MinSize = Vector2.new(560, 350),
+        MaxSize = Vector2.new(850, 560),
+        Transparent = true,
+        Theme = "komtolmmek2 Theme",
+        Resizable = true,
+        SideBarWidth = 200,
+        BackgroundImageTransparency = 0.42,
+        HideSearchBar = false,
+        ScrollBarEnabled = false
+    })
+   
+    -- Add version tag
+    do
+        Window:Tag({
+            Title = "v0.0.1",
+            Icon = "github",
+            Color = Color3.fromRGB(255, 251, 251), -- FFFFFBFB
+            Border = true,
+        })
+    end
+   
+    -- HOME TAB
+    local HomeTab = Window:Tab({
+        Title = "Home",
+        Icon = "solar:home-2-bold",
+        Color = primaryColor
+    })
+   
+    HomeTab:Paragraph({
+        Title = "UPDATE LOG",
+        Desc = "[/] teleport to player not working\n[+] Auto Quest features are locked because in development.\n[/] Courier farm now has using tween for anti cheat teleport\n[+] Winter Quest auto-start\n[+] Gift Collector with auto delivery system\n[+] Anti-AFK system to prevent disconnects\n[+] Pause Game Bypass\n[+] noclip\n[+] Fly mode\n[+] Team changer for all jobs\n[+] Server hop for crowded or empty servers\n[+] bypass pause game",
+        Image = "",
+        ImageSize = 60,
+        Locked = false,
+        BackgroundColor = secondaryColor,
+        TextTransparency = 0
+    })
+   
+    HomeTab:Divider()
+    HomeTab:Section({ Title = "Social Links" })
+   
+    HomeTab:Button({
+        Title = "Copy Discord Invite",
+        Desc = "Click to copy invite link!",
+        Callback = function()
+            setclipboard("https://discord.gg/BMrXHt4rJv")
+            WindUI:Notify({
+                Title = "Copied!",
+                Content = "Discord invite copied to clipboard.",
+                Duration = 3
+            })
+        end
+    })
+    HomeTab:Button({
+        Title = "Follow on TikTok",
+        Desc = "Click to copy TikTok link!\nTikTok: @komtolmmek2",
+        Callback = function()
+            setclipboard("https://www.tiktok.com/@komtolmmek2")
+            WindUI:Notify({
+                Title = "Copied!",
+                Content = "TikTok link copied to clipboard.",
+                Duration = 3
+            })
+        end
+    })
+   
+    -- Status Display
+    HomeTab:Section({ Title = "Current Status" })
+    local statusDisplay = HomeTab:Paragraph({
+        Title = "Activities",
+        Desc = "Loading..."
+    })
+   
+    task.spawn(function()
+        while true do
+            task.wait(0.7)
+           
+            if _G.Status then
+                local lines = {}
+                for job, stat in pairs(_G.Status) do
+                    table.insert(lines, job .. ": " .. stat)
+                end
+               
+                statusDisplay:SetDesc(table.concat(lines, "\n"))
+            end
+        end
+    end)
+   
+    -- AUTO FARM TAB
+    local AutoFarmTab = Window:Tab({
+        Title = "Auto Farm",
+        Icon = "solar:cpu-bold",
+        Color = primaryColor
+    })
+   
+    AutoFarmTab:Section({ Title = "Courier Farm" })
+    local courierToggle = AutoFarmTab:Toggle({
+        Title = "Auto Farm Courier",
+        Callback = function(v)
+            CourierAutoFarm = v
+            HasJob = false
+            CurrentDest = nil
+            WaitingForNextQuest = false
+            if v then
+                if OfficeAutoFarm then
+                    OfficeAutoFarm = false
+                end
+                setFrozen(true)
+                if not IsCourier() then ChangeTeamToCourier() end
+                task.spawn(startCourierFarm)
+            else
+                setFrozen(false)
+                courierLoopRunning = false
+                updateStatus("Courier", "Waiting")
+            end
+        end
+    })
+   
+    AutoFarmTab:Section({ Title = "Office Farm" })
+    local officeToggle = AutoFarmTab:Toggle({
+        Title = "Auto Farm Office",
+        Callback = function(v)
+            OfficeAutoFarm = v
+            if v then
+                if CourierAutoFarm then
+                    CourierAutoFarm = false
+                    setFrozen(false)
+                end
+                updateStatus("Office", "Starting...")
+                if not IsOfficeWorker() then
+                    ChangeTeamToOfficeWorker()
+                end
+                task.wait(1.5)
+                ForceSitOnChair()
+            else
+                IsProcessingAnswer = false
+                updateStatus("Office", "Waiting")
+            end
+        end
+    })
+   
+    AutoFarmTab:Section({ Title = "Office Settings" })
+    AutoFarmTab:Slider({
+        Title = "Office Delay",
+        Step = 1,
+        Value = {Min = 1, Max = 30, Default = 4},
+        Callback = function(value)
+            OfficeDelay = value
+        end
+    })
+   
+    -- QUESTS TAB WITH LOCKED FEATURES
+    local QuestsTab = Window:Tab({
+        Title = "Quests",
+        Icon = "solar:file-text-bold",
+        Color = primaryColor
+    })
+   
+    QuestsTab:Section({ Title = "Quest Farm" })
+    local questToggle = QuestsTab:Toggle({
+        Title = "Auto Farm Quests",
+        Locked = true,
+        LockedTitle = "still in development",
+        Callback = function(v)
+            -- This won't execute because it's locked
+        end
+    })
+   
+    QuestsTab:Section({ Title = "Winter Quests" })
+    local winterToggle = QuestsTab:Toggle({
+        Title = "Auto Winter Quest",
+        Locked = true,
+        LockedTitle = "still in development",
+        Callback = function(v)
+            -- This won't execute because it's locked
+        end
+    })
+   
+    QuestsTab:Section({ Title = "Gift Collector" })
+    local giftToggle = QuestsTab:Toggle({
+        Title = "Auto Collect Gifts",
+        Locked = true,
+        LockedTitle = "still in development",
+        Callback = function(v)
+            -- This won't execute because it's locked
+        end
+    })
+   
+    -- TELEPORT TAB
+    local TeleportTab = Window:Tab({
+        Title = "Teleport",
+        Icon = "solar:map-bold",
+        Color = primaryColor
+    })
+    -- Variables to store dropdown elements
+    local courierDropdown = nil
+    local colomaduDropdown = nil
+    local importantDropdown = nil
+    local giftDropdown = nil
+    local playerDropdown = nil
+    -- Function to refresh player list
+    local function refreshPlayerList()
+        local playerNames = {}
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LP then
+                table.insert(playerNames, player.Name)
+            end
+        end
+       
+        if playerDropdown then
+            playerDropdown:Refresh(playerNames)
+        end
+       
+        return playerNames
+    end
+    -- COURIER DESTINATIONS
+    TeleportTab:Section({ Title = "Courier Destinations" })
+    local courierLocations = {
+        ["Job Start"] = START_JOB,
+        ["Faroka"] = Vector3.new(-6795, 3, -446),
+        ["Karangasem"] = Vector3.new(-8385, 2, -3821),
+        ["Kleco"] = Vector3.new(-8779, 3, 647),
+        ["Manahan"] = Vector3.new(1123, 3, -4162),
+        ["Pajang"] = Vector3.new(-6741, 4, 7172),
+        ["Klodran"] = Vector3.new(-3351, 30, -8161),
+        ["Colomandu"] = Vector3.new(-9964, 3, -4054),
+        ["Klaten"] = Vector3.new(-17052, 105, 6567)
+    }
+    local courierLocationNames = {}
+    for name, _ in pairs(courierLocations) do
+        table.insert(courierLocationNames, name)
+    end
+    local selectedCourierLocation = START_JOB
+    courierDropdown = TeleportTab:Dropdown({
+        Title = "Courier Locations",
+        Values = courierLocationNames,
+        Value = 1,
+        Callback = function(value)
+            selectedCourierLocation = courierLocations[value]
+        end
+    })
+    TeleportTab:Button({
+        Title = "Teleport to Courier Location",
+        Callback = function()
+            if selectedCourierLocation and GetHRP() then
+                InstantTP(selectedCourierLocation)
+                WindUI:Notify({
+                    Title = "Teleport",
+                    Content = "Teleported to location",
+                    Duration = 2
+                })
+            else
+                WindUI:Notify({
+                    Title = "Error",
+                    Content = "No location selected or no character",
+                    Duration = 2
+                })
+            end
+        end
+    })
+    TeleportTab:Section({ Title = "Colomadu Area" })
+    local colomaduLocations = {
+        ["Alfamart"] = Vector3.new(-9762, 3, -4024),
+        ["Billboard 1"] = Vector3.new(-13322, 3, -4329),
+        ["Billboard 2"] = Vector3.new(-10540, 3, -4223),
+        ["Gedung Pagar 1"] = Vector3.new(-10973, 3, -4326),
+        ["Gedung Pagar 2"] = Vector3.new(-14244, 3, -4330),
+        ["Indomart"] = Vector3.new(-8927, 3, -4006),
+        ["Dalam Modifikasi"] = Vector3.new(-13342, 3, -4786),
+        ["Gapura Lapangan Futsal"] = Vector3.new(-14713, 2, -4326),
+        ["Tempat Parkir"] = Vector3.new(-11333, 19, -4127),
+        ["Perumahan"] = Vector3.new(-13172, 2, -4614),
+        ["Atas Gedung"] = Vector3.new(-10182, 101, -4427),
+        ["Pom Bensin Shell"] = Vector3.new(-13474, 6, -4155),
+        ["Cosmic Ban"] = Vector3.new(-12361, 3, -4230),
+        ["Warung Kecil"] = Vector3.new(-12282, 3, -4226),
+        ["Parkiran Kosong"] = Vector3.new(-12155, 3, -4221),
+        ["DNL Express"] = Vector3.new(-9978, 3, -4118),
+        ["Masjid Nurul Jannah"] = Vector3.new(-13778, 3, -4341),
+        ["Pabrik"] = Vector3.new(-14495, 3, -4234),
+        ["Ruko Panjang"] = Vector3.new(-12963, 3, -4237),
+        ["Gacoan"] = Vector3.new(-15122, 3, -4218),
+        ["Pecel Lele"] = Vector3.new(-14359, 3, -4326),
+        ["Rumah Orang"] = Vector3.new(-12009, 3, -4186),
+        ["Starbucks"] = Vector3.new(-10281, 4, -4096),
+        ["Parkiran Depan Ruko"] = Vector3.new(-15226, 4, -4169)
+    }
+    local colomaduLocationNames = {}
+    for name, _ in pairs(colomaduLocations) do
+        table.insert(colomaduLocationNames, name)
+    end
+    local selectedColomaduLocation = colomaduLocations["Alfamart"]
+    colomaduDropdown = TeleportTab:Dropdown({
+        Title = "Colomadu Locations (24)",
+        Values = colomaduLocationNames,
+        Value = 1,
+        Callback = function(value)
+            selectedColomaduLocation = colomaduLocations[value]
+        end
+    })
+    TeleportTab:Button({
+        Title = "Teleport to Colomadu",
+        Callback = function()
+            if selectedColomaduLocation and GetHRP() then
+                InstantTP(selectedColomaduLocation)
+                WindUI:Notify({
+                    Title = "Teleport",
+                    Content = "Teleported to location",
+                    Duration = 2
+                })
+            else
+                WindUI:Notify({
+                    Title = "Error",
+                    Content = "No location selected or no character",
+                    Duration = 2
+                })
+            end
+        end
+    })
+    -- IMPORTANT LOCATIONS (Dealers & Shops)
+    TeleportTab:Section({ Title = "Important Locations" })
+    local importantLocations = {
+        ["Car Dealer"] = Vector3.new(-6440, 3, -4178),
+        ["Hando Dealer"] = Vector3.new(-5951, 2, -3939),
+        ["Piazzo Dealer"] = Vector3.new(-5757, 3, -3959),
+        ["Courier Start"] = Vector3.new(-5757, 3, -3959),
+        ["Clothing Shop"] = Vector3.new(-4787, 4, -3967),
+        ["Feva Hotel"] = Vector3.new(-2739, 7, -4160),
+        ["Helmet Shop"] = Vector3.new(-723, 4, -520),
+        ["Office Worker"] = Vector3.new(-5946, 5, -261),
+        ["Quest Board"] = Vector3.new(-5900, 4, -261),
+        ["Gift Drop-Off"] = dropOffLocation,
+        ["Winter Quest"] = Vector3.new(-5168, 3, -3674)
+    }
+    local importantLocationNames = {}
+    for name, _ in pairs(importantLocations) do
+        table.insert(importantLocationNames, name)
+    end
+    local selectedImportantLocation = importantLocations["Car Dealer"]
+    importantDropdown = TeleportTab:Dropdown({
+        Title = "Dealers & Important Places",
+        Values = importantLocationNames,
+        Value = 1,
+        Callback = function(value)
+            selectedImportantLocation = importantLocations[value]
+        end
+    })
+    TeleportTab:Button({
+        Title = "Teleport to Important Location",
+        Callback = function()
+            if selectedImportantLocation and GetHRP() then
+                InstantTP(selectedImportantLocation)
+                WindUI:Notify({
+                    Title = "Teleport",
+                    Content = "Teleported to location",
+                    Duration = 2
+                })
+            else
+                WindUI:Notify({
+                    Title = "Error",
+                    Content = "No location selected or no character",
+                    Duration = 2
+                })
+            end
+        end
+    })
+    -- GIFT LOCATIONS
+    TeleportTab:Section({ Title = "Gift Locations" })
+    local giftTeleportLocations = {
+        ["Gift 1"] = Vector3.new(-16530, 108, 9350),
+        ["Gift 2"] = Vector3.new(-16138, 115, 4255),
+        ["Gift 3"] = Vector3.new(-979, 8, 624),
+        ["Gift 4"] = Vector3.new(-15193, 4, -4050),
+        ["Gift 5"] = Vector3.new(-1609, 19, -4248),
+        ["Gift 6"] = Vector3.new(-905, 5, -380),
+        ["Gift 7"] = Vector3.new(-8072, 2, -3856),
+        ["Gift 8"] = Vector3.new(-13110, 4, -4732),
+        ["Gift 9"] = Vector3.new(-425, 14, -4244),
+        ["Gift 10"] = Vector3.new(-3170, 4, -528),
+        ["Gift 11"] = Vector3.new(-11975, 3, -4222)
+    }
+    local giftLocationNames = {}
+    for name, _ in pairs(giftTeleportLocations) do
+        table.insert(giftLocationNames, name)
+    end
+    local selectedGiftLocation = giftTeleportLocations["Gift 1"]
+    giftDropdown = TeleportTab:Dropdown({
+        Title = "Gift Collection Points",
+        Values = giftLocationNames,
+        Value = 1,
+        Callback = function(value)
+            selectedGiftLocation = giftTeleportLocations[value]
+        end
+    })
+    TeleportTab:Button({
+        Title = "Teleport to Gift Location",
+        Callback = function()
+            if selectedGiftLocation and GetHRP() then
+                InstantTP(selectedGiftLocation)
+                WindUI:Notify({
+                    Title = "Teleport",
+                    Content = "Teleported to location",
+                    Duration = 2
+                })
+            else
+                WindUI:Notify({
+                    Title = "Error",
+                    Content = "No location selected or no character",
+                    Duration = 2
+                })
+            end
+        end
+    })
+    -- CUSTOM TELEPORT
+    TeleportTab:Section({ Title = "Custom Teleport" })
+    local customX, customY, customZ = 0, 0, 0
+    TeleportTab:Input({
+        Title = "X Coordinate",
+        Placeholder = "Enter X position",
+        Callback = function(value)
+            customX = tonumber(value) or 0
+        end
+    })
+    TeleportTab:Input({
+        Title = "Y Coordinate",
+        Placeholder = "Enter Y position",
+        Callback = function(value)
+            customY = tonumber(value) or 0
+        end
+    })
+    TeleportTab:Input({
+        Title = "Z Coordinate",
+        Placeholder = "Enter Z position",
+        Callback = function(value)
+            customZ = tonumber(value) or 0
+        end
+    })
+    TeleportTab:Button({
+        Title = "Teleport to Custom Location",
+        Callback = function()
+            if customX and customY and customZ and GetHRP() then
+                local targetPos = Vector3.new(customX, customY, customZ)
+                InstantTP(targetPos)
+                WindUI:Notify({
+                    Title = "Teleport",
+                    Content = string.format("Teleported to (%.1f, %.1f, %.1f)", targetPos.X, targetPos.Y, targetPos.Z),
+                    Duration = 2
+                })
+            else
+                WindUI:Notify({ Title = "Error", Content = "Enter all coordinates", Duration = 2 })
+            end
+        end
+    })
+    -- Simplified Save Position (only one button)
+    TeleportTab:Section({ Title = "Save Position" })
+    TeleportTab:Button({
+        Title = "Save Current Position",
+        Callback = function()
+            local hrp = GetHRP()
+            if hrp then
+                local pos = hrp.Position
+                customX = math.floor(pos.X)
+                customY = math.floor(pos.Y)
+                customZ = math.floor(pos.Z)
+                WindUI:Notify({
+                    Title = "Saved",
+                    Content = string.format("Position saved: (%.1f, %.1f, %.1f)", pos.X, pos.Y, pos.Z),
+                    Duration = 2
+                })
+            end
+        end
+    })
+    -- COPY LOCATION BUTTONS
+    TeleportTab:Section({ Title = "Copy Location" })
+    TeleportTab:Button({
+        Title = "Copy Current Position",
+        Callback = function()
+            local hrp = GetHRP()
+            if hrp then
+                local pos = hrp.Position
+                local text = string.format("Vector3.new(%d, %d, %d)", math.floor(pos.X), math.floor(pos.Y), math.floor(pos.Z))
+                setclipboard(text)
+                WindUI:Notify({
+                    Title = "Copied",
+                    Content = "Position copied to clipboard",
+                    Duration = 2
+                })
+            end
+        end
+    })
+    -- TELEPORT TO PLAYER
+    TeleportTab:Section({ Title = "Teleport to Player" })
+    local selectedPlayer = nil
+    -- Initial player list
+    local initialPlayerList = refreshPlayerList()
+    playerDropdown = TeleportTab:Dropdown({
+        Title = "Select Player",
+        Values = initialPlayerList,
+        Value = 1,
+        Callback = function(value)
+            selectedPlayer = value
+        end
+    })
+    TeleportTab:Button({
+        Title = "Refresh Player List",
+        Callback = function()
+            refreshPlayerList()
+            WindUI:Notify({ Title = "Player List", Content = "Refreshed", Duration = 2 })
+        end
+    })
+    TeleportTab:Button({
+        Title = "Teleport to Player",
+        Callback = function()
+            if not selectedPlayer or selectedPlayer == "" then
+                WindUI:Notify({ Title = "Error", Content = "No player selected", Duration = 2 })
+                return
+            end
+           
+            local target = Players:FindFirstChild(selectedPlayer)
+            if not target then
+                WindUI:Notify({ Title = "Error", Content = "Player not found", Duration = 2 })
+                return
+            end
+           
+            local hrp = GetHRP()
+            if not hrp then
+                WindUI:Notify({ Title = "Error", Content = "No character", Duration = 2 })
+                return
+            end
+           
+            local targetChar = target.Character
+            if not targetChar then
+                WindUI:Notify({ Title = "Info", Content = "Waiting for player character...", Duration = 2 })
+                target.CharacterAdded:Wait()
+                targetChar = target.Character
+            end
+           
+            if not targetChar then
+                WindUI:Notify({ Title = "Error", Content = "Failed to get player character", Duration = 2 })
+                return
+            end
+           
+            local targetHrp = targetChar:WaitForChild("HumanoidRootPart", 2)
+            if targetHrp then
+                hrp.CFrame = targetHrp.CFrame + Vector3.new(0, 5, 0)
+                WindUI:Notify({ Title = "Success", Content = "Teleported to " .. selectedPlayer, Duration = 2 })
+            else
+                InstantTP(targetChar:GetPrimaryPartCFrame().Position)
+                WindUI:Notify({ Title = "Success", Content = "Teleported to " .. selectedPlayer, Duration = 2 })
+            end
+        end
+    })
+   
+    -- SETTINGS TAB with PAUSE BYPASS
+    local SettingsTab = Window:Tab({
+        Title = "Settings",
+        Icon = "solar:settings-bold",
+        Color = primaryColor
+    })
+   
+    -- PAUSE BYPASS SECTION
+    SettingsTab:Section({ Title = "Pause Bypass" })
+    SettingsTab:Toggle({
+        Title = "Bypass Pause Game",
+        Desc = "Prevents game from pausing when window loses focus",
+        Callback = function(v)
+            togglePauseBypass(v)
+        end
+    })
+   
+    SettingsTab:Section({ Title = "Anti AFK" })
+    SettingsTab:Toggle({
+        Title = "Anti-AFK",
+        Callback = function(v)
+            antiAFKEnabled = v
+            if v then startAntiAFK() end
+        end
+    })
+   
+    SettingsTab:Section({ Title = "Character" })
+    SettingsTab:Slider({
+        Title = "Walk Speed",
+        Step = 1,
+        Value = {Min = 16, Max = 200, Default = 16},
+        Callback = function(v)
+            if LP.Character and LP.Character.Humanoid then
+                LP.Character.Humanoid.WalkSpeed = v
+            end
+        end
+    })
+   
+    SettingsTab:Slider({
+        Title = "Jump Power",
+        Step = 1,
+        Value = {Min = 50, Max = 200, Default = 50},
+        Callback = function(v)
+            if LP.Character and LP.Character.Humanoid then
+                LP.Character.Humanoid.JumpPower = v
+            end
+        end
+    })
+   
+    SettingsTab:Section({ Title = "Fly" })
+    SettingsTab:Toggle({
+        Title = "Enable Fly (Press E)",
+        Callback = function(v)
+            flyEnabled = v
+        end
+    })
+   
+    SettingsTab:Slider({
+        Title = "Fly Speed",
+        Step = 1,
+        Value = {Min = 10, Max = 200, Default = 50},
+        Callback = function(v)
+            speed = v
+        end
+    })
+   
+    SettingsTab:Section({ Title = "Noclip" })
+    local noclipEnabled = false
+    SettingsTab:Toggle({
+        Title = "Enable Noclip",
+        Callback = function(v)
+            noclipEnabled = v
+            toggleNoclip(v)
+            WindUI:Notify({
+                Title = "Noclip",
+                Content = v and "Enabled" or "Disabled",
+                Duration = 2
+            })
+        end
+    })
+   
+    SettingsTab:Section({ Title = "Change Team" })
+    SettingsTab:Button({
+        Title = "Office Worker",
+        Callback = function()
+            RS.JobEvents.TeamChangeRequest:FireServer("Office Worker", 0, 0, 0, "MainMenu")
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Police",
+        Callback = function()
+            RS.JobEvents.TeamChangeRequest:FireServer("Police", 0, 0, 0, "MainMenu")
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Courier",
+        Callback = function()
+            RS.JobEvents.TeamChangeRequest:FireServer("Courier", 11378976, 0, 0, 0, "Detector")
+        end
+    })
+   
+    -- SERVER SECTION WITH UPDATED CODE
+    SettingsTab:Section({ Title = "Server" })
+    SettingsTab:Input({
+        Title = "Join Job ID",
+        Placeholder = "Enter Job ID",
+        Callback = function(text)
+            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, text, LP)
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Copy Current Job ID",
+        Callback = function()
+            setclipboard(game.JobId)
+            WindUI:Notify({
+                Title = "Success",
+                Content = "Job ID copied to clipboard",
+                Duration = 3
+            })
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Hop to Low Server",
+        Callback = function()
+            local success, servers = pcall(function()
+                return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"))
+            end)
+            if success then
+                for _, server in pairs(servers.data) do
+                    if server.playing < server.maxPlayers * 0.8 then
+                        pcall(function()
+                            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, server.id, LP)
+                        end)
+                        break
+                    end
+                end
+            else
+                WindUI:Notify({Title = "Error", Content = "Failed to fetch server list.", Duration = 5})
+            end
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Hop to Crowded Server",
+        Callback = function()
+            local success, servers = pcall(function()
+                return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"))
+            end)
+            if success then
+                for _, server in pairs(servers.data) do
+                    if server.playing > server.maxPlayers * 0.5 then
+                        pcall(function()
+                            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, server.id, LP)
+                        end)
+                        break
+                    end
+                end
+            else
+                WindUI:Notify({Title = "Error", Content = "Failed to fetch server list.", Duration = 5})
+            end
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Rejoin",
+        Callback = function()
+            game:GetService("TeleportService"):Teleport(game.PlaceId, LP)
+        end
+    })
+   
+    -- CREDITS SECTION
+    SettingsTab:Section({ Title = "Credits" })
+    SettingsTab:Paragraph({
+        Title = "Script Information",
+        Desc = "Drag Drive Simulator Script v0.0.1\nMade by komtolmmek2\n\nFeatures:\n• Courier Auto Farm\n• Office Auto Farm\n• Teleport System\n• Pause Game Bypass\n• Anti-AFK System\n• Fly & Noclip\n• Team Changer\n• Server Hopper\n• Gift Collector",
+        BackgroundColor = secondaryColor
+    })
+   
+    -- Fly activation
+    UserInputService.InputBegan:Connect(function(input)
+        if input.KeyCode == Enum.KeyCode.E and flyEnabled then
+            if flying then
+                stopFly()
+            else
+                flying = true
+                startFly()
+            end
+        end
+    end)
+   
+    WindUI:Notify({
+        Title = "Script Ready",
+        Content = "Drag Drive Simulator v0.0.1 Loaded\nthis script made by komtolmmek2 script",
+        Duration = 3
+    })
+end)
+
+-- RESPAWN HANDLER
+LP.CharacterAdded:Connect(function(char)
+    local hum = char:WaitForChild("Humanoid")
+    task.wait(1.5)
+    if isFrozen then setFrozen(true) end
+    if OfficeAutoFarm then
+        task.wait(2)
+        ForceSitOnChair()
+        IsProcessingAnswer = false
+    end
+    if noclipEnabled then
+        toggleNoclip(true)
+    end
+    if pauseBypassEnabled then
+        togglePauseBypass(true)
+    end
+end)
+
+print("this script made by komtolmmek2 script")
