@@ -1,0 +1,779 @@
+-- Load WindUI properly
+local WindUI
+local maxRetries = 3
+for attempt = 1, maxRetries do
+    local success, result = pcall(function()
+        -- Try to load WindUI
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+    end)
+   
+    if success and result then
+        WindUI = result
+        break
+    else
+        if attempt < maxRetries then
+            -- Try with delay
+            task.wait(2)
+           
+            -- Try alternative URL
+            local altSuccess, altResult = pcall(function()
+                return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/refs/heads/main/dist/main.lua"))()
+            end)
+           
+            if altSuccess and altResult then
+                WindUI = altResult
+                break
+            end
+        end
+    end
+end
+
+-- If WindUI still not loaded, use simple notification system
+if not WindUI then
+    -- Simple notification function as fallback
+    WindUI = {
+        Notify = function(options)
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = options.Title or "Notification",
+                Text = options.Content or "",
+                Duration = options.Duration or 3
+            })
+        end
+    }
+end
+
+-- Create UI using proper WindUI structure
+task.spawn(function()
+    if not WindUI or not WindUI.CreateWindow then
+        return
+    end
+   
+    task.wait(1)
+   
+    -- PINK & BLACK THEME (FIXED HEX VALUES)
+    local primaryColor = Color3.fromRGB(255, 105, 180) -- Hot Pink
+    local secondaryColor = Color3.fromRGB(0, 0, 0) -- Black
+    local accentColor = Color3.fromRGB(255, 182, 193) -- Light Pink
+   
+    -- Add custom theme (FIXED HEX VALUES)
+    WindUI:AddTheme({
+        Name = "komtolmmek2 Theme",
+        Accent = Color3.fromRGB(76, 175, 80), -- #4CAF50
+        Dialog = Color3.fromRGB(22, 22, 22), -- #161616
+        Outline = Color3.fromRGB(255, 255, 255), -- #FFFFFF
+        Text = Color3.fromRGB(255, 255, 255), -- #FFFFFF
+        Placeholder = Color3.fromRGB(122, 122, 122), -- #7a7a7a
+        Background = Color3.fromRGB(30, 78, 45), -- #1E4E2D
+        Button = Color3.fromRGB(56, 142, 60), -- #388E3C
+        Icon = Color3.fromRGB(255, 255, 255) -- #FFFFFF
+    })
+   
+    local Window = WindUI:CreateWindow({
+        Title = "Drag Drive Simulator",
+        SubTitle = "v0.0.1",
+        Folder = "DragDriveConfig",
+        Icon = "",
+        NewElements = true,
+        Color = primaryColor,
+        HideSearchBar = false,
+        OpenButton = {
+            Title = "by komtolmmek2 script",
+            Icon = "solar:car-bold",
+            CornerRadius = UDim.new(1,0), -- fully rounded
+            StrokeThickness = 3, -- removing outline
+            Enabled = true, -- enable or disable openbutton
+            Draggable = true,
+            OnlyMobile = false,
+            Color = ColorSequence.new( -- gradient
+                Color3.fromRGB(48, 255, 106), -- #30FF6A
+                Color3.fromRGB(231, 255, 47) -- #e7ff2f
+            ),
+            BackgroundColor = secondaryColor,
+            TextColor = primaryColor,
+        },
+        Topbar = {
+            Height = 44,
+            ButtonsType = "Mac", -- Default or Mac
+            Color = secondaryColor
+        },
+        -- Custom UI settings
+        Size = UDim2.fromOffset(560, 350),
+        MinSize = Vector2.new(560, 350),
+        MaxSize = Vector2.new(850, 560),
+        Transparent = true,
+        Theme = "komtolmmek2 Theme",
+        Resizable = true,
+        SideBarWidth = 200,
+        BackgroundImageTransparency = 0.42,
+        HideSearchBar = false,
+        ScrollBarEnabled = false
+    })
+   
+    -- Add version tag
+    do
+        Window:Tag({
+            Title = "v0.0.1",
+            Icon = "github",
+            Color = Color3.fromRGB(255, 251, 251), -- FFFFFBFB
+            Border = true,
+        })
+    end
+   
+    -- HOME TAB
+    local HomeTab = Window:Tab({
+        Title = "Home",
+        Icon = "solar:home-2-bold",
+        Color = primaryColor
+    })
+   
+    HomeTab:Paragraph({
+        Title = "UPDATE LOG",
+        Desc = "[+]tes",
+        Image = "",
+        ImageSize = 60,
+        Locked = false,
+        BackgroundColor = secondaryColor,
+        TextTransparency = 0
+    })
+   
+    HomeTab:Divider()
+    HomeTab:Section({ Title = "Social Links" })
+   
+    HomeTab:Button({
+        Title = "Copy Discord Invite",
+        Desc = "Click to copy invite link!",
+        Callback = function()
+            setclipboard("https://discord.gg/BMrXHt4rJv")
+            WindUI:Notify({
+                Title = "Copied!",
+                Content = "Discord invite copied to clipboard.",
+                Duration = 3
+            })
+        end
+    })
+    HomeTab:Button({
+        Title = "Follow on TikTok",
+        Desc = "Click to copy TikTok link!\nTikTok: @bilzzhub",
+        Callback = function()
+            setclipboard("https://www.tiktok.com/@bilzzhub")
+            WindUI:Notify({
+                Title = "Copied!",
+                Content = "TikTok link copied to clipboard.",
+                Duration = 3
+            })
+        end
+    })
+   
+    -- Status Display
+    HomeTab:Section({ Title = "Current Status" })
+    local statusDisplay = HomeTab:Paragraph({
+        Title = "Activities",
+        Desc = "Loading..."
+    })
+   
+    task.spawn(function()
+        while true do
+            task.wait(0.7)
+           
+            if _G.Status then
+                local lines = {}
+                for job, stat in pairs(_G.Status) do
+                    table.insert(lines, job .. ": " .. stat)
+                end
+               
+                statusDisplay:SetDesc(table.concat(lines, "\n"))
+            end
+        end
+    end)
+   local AutoFarmTab = Window:Tab({
+        Title = "Auto Farm",
+        Icon = "solar:cpu-bold",
+        Color = primaryColor
+    })
+   
+    AutoFarmTab:Section({ Title = "Courier Farm" })
+    local courierToggle = AutoFarmTab:Toggle({
+        Title = "Auto Farm Courier",
+        Callback = function(v)
+            CourierAutoFarm = v
+            HasJob = false
+            CurrentDest = nil
+            WaitingForNextQuest = false
+            if v then
+                if OfficeAutoFarm then
+                    OfficeAutoFarm = false
+                end
+                setFrozen(true)
+                if not IsCourier() then ChangeTeamToCourier() end
+                task.spawn(startCourierFarm)
+            else
+                setFrozen(false)
+                courierLoopRunning = false
+                updateStatus("Courier", "Waiting")
+            end
+        end
+    })
+   
+    AutoFarmTab:Section({ Title = "Office Farm" })
+    local officeToggle = AutoFarmTab:Toggle({
+        Title = "Auto Farm Office",
+        Callback = function(v)
+            OfficeAutoFarm = v
+            if v then
+                if CourierAutoFarm then
+                    CourierAutoFarm = false
+                    setFrozen(false)
+                end
+                updateStatus("Office", "Starting...")
+                if not IsOfficeWorker() then
+                    ChangeTeamToOfficeWorker()
+                end
+                task.wait(1.5)
+                ForceSitOnChair()
+            else
+                IsProcessingAnswer = false
+                updateStatus("Office", "Waiting")
+            end
+        end
+    })
+   
+    AutoFarmTab:Section({ Title = "Office Settings" })
+    AutoFarmTab:Slider({
+        Title = "Office Delay",
+        Step = 1,
+        Value = {Min = 1, Max = 30, Default = 4},
+        Callback = function(value)
+            OfficeDelay = value
+        end
+    })
+   
+    -- QUESTS TAB WITH LOCKED FEATURES
+    local QuestsTab = Window:Tab({
+        Title = "Quests",
+        Icon = "solar:file-text-bold",
+        Color = primaryColor
+    })
+   
+    QuestsTab:Section({ Title = "Quest Farm" })
+    local questToggle = QuestsTab:Toggle({
+        Title = "Auto Farm Quests",
+        Locked = true,
+        LockedTitle = "still in development",
+        Callback = function(v)
+            -- This won't execute because it's locked
+        end
+    })
+   
+    QuestsTab:Section({ Title = "Winter Quests" })
+    local winterToggle = QuestsTab:Toggle({
+        Title = "Auto Winter Quest",
+        Locked = true,
+        LockedTitle = "still in development",
+        Callback = function(v)
+            -- This won't execute because it's locked
+        end
+    })
+   
+    QuestsTab:Section({ Title = "Gift Collector" })
+    local giftToggle = QuestsTab:Toggle({
+        Title = "Auto Collect Gifts",
+        Locked = true,
+        LockedTitle = "still in development",
+        Callback = function(v)
+            -- This won't execute because it's locked
+        end
+    })
+
+
+    -- TELEPORT TAB
+    local TeleportTab = Window:Tab({
+        Title = "Teleport",
+        Icon = "solar:map-bold",
+        Color = primaryColor
+    })
+    -- Variables to store dropdown elements
+    local courierDropdown = nil
+    local colomaduDropdown = nil
+    local importantDropdown = nil
+    local giftDropdown = nil
+    local playerDropdown = nil
+    -- Function to refresh player list
+    local function refreshPlayerList()
+        local playerNames = {}
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LP then
+                table.insert(playerNames, player.Name)
+            end
+        end
+       
+        if playerDropdown then
+            playerDropdown:Refresh(playerNames)
+        end
+       
+        return playerNames
+    end
+    -- COURIER DESTINATIONS
+    TeleportTab:Section({ Title = "Courier Destinations" })
+    local courierLocations = {
+        ["Job Start"] = START_JOB,
+        ["Faroka"] = Vector3.new(-6795, 3, -446),
+        ["Karangasem"] = Vector3.new(-8385, 2, -3821),
+        ["Kleco"] = Vector3.new(-8779, 3, 647),
+        ["Manahan"] = Vector3.new(1123, 3, -4162),
+        ["Pajang"] = Vector3.new(-6741, 4, 7172),
+        ["Klodran"] = Vector3.new(-3351, 30, -8161),
+        ["Colomandu"] = Vector3.new(-9964, 3, -4054),
+        ["Klaten"] = Vector3.new(-17052, 105, 6567)
+    }
+    local courierLocationNames = {}
+    for name, _ in pairs(courierLocations) do
+        table.insert(courierLocationNames, name)
+    end
+    local selectedCourierLocation = START_JOB
+    courierDropdown = TeleportTab:Dropdown({
+        Title = "Courier Locations",
+        Values = courierLocationNames,
+        Value = 1,
+        Callback = function(value)
+            selectedCourierLocation = courierLocations[value]
+        end
+    })
+    TeleportTab:Button({
+        Title = "Teleport to Courier Location",
+        Callback = function()
+            if selectedCourierLocation and GetHRP() then
+                InstantTP(selectedCourierLocation)
+                WindUI:Notify({
+                    Title = "Teleport",
+                    Content = "Teleported to location",
+                    Duration = 2
+                })
+            else
+                WindUI:Notify({
+                    Title = "Error",
+                    Content = "No location selected or no character",
+                    Duration = 2
+                })
+            end
+        end
+    })
+    TeleportTab:Section({ Title = "Colomadu Area" })
+    local colomaduLocations = {
+        ["Alfamart"] = Vector3.new(-9762, 3, -4024),
+        ["Billboard 1"] = Vector3.new(-13322, 3, -4329),
+        ["Billboard 2"] = Vector3.new(-10540, 3, -4223),
+        ["Gedung Pagar 1"] = Vector3.new(-10973, 3, -4326),
+        ["Gedung Pagar 2"] = Vector3.new(-14244, 3, -4330),
+        ["Indomart"] = Vector3.new(-8927, 3, -4006),
+        ["Dalam Modifikasi"] = Vector3.new(-13342, 3, -4786),
+        ["Gapura Lapangan Futsal"] = Vector3.new(-14713, 2, -4326),
+        ["Tempat Parkir"] = Vector3.new(-11333, 19, -4127),
+        ["Perumahan"] = Vector3.new(-13172, 2, -4614),
+        ["Atas Gedung"] = Vector3.new(-10182, 101, -4427),
+        ["Pom Bensin Shell"] = Vector3.new(-13474, 6, -4155),
+        ["Cosmic Ban"] = Vector3.new(-12361, 3, -4230),
+        ["Warung Kecil"] = Vector3.new(-12282, 3, -4226),
+        ["Parkiran Kosong"] = Vector3.new(-12155, 3, -4221),
+        ["DNL Express"] = Vector3.new(-9978, 3, -4118),
+        ["Masjid Nurul Jannah"] = Vector3.new(-13778, 3, -4341),
+        ["Pabrik"] = Vector3.new(-14495, 3, -4234),
+        ["Ruko Panjang"] = Vector3.new(-12963, 3, -4237),
+        ["Gacoan"] = Vector3.new(-15122, 3, -4218),
+        ["Pecel Lele"] = Vector3.new(-14359, 3, -4326),
+        ["Rumah Orang"] = Vector3.new(-12009, 3, -4186),
+        ["Starbucks"] = Vector3.new(-10281, 4, -4096),
+        ["Parkiran Depan Ruko"] = Vector3.new(-15226, 4, -4169)
+    }
+    local colomaduLocationNames = {}
+    for name, _ in pairs(colomaduLocations) do
+        table.insert(colomaduLocationNames, name)
+    end
+    local selectedColomaduLocation = colomaduLocations["Alfamart"]
+    colomaduDropdown = TeleportTab:Dropdown({
+        Title = "Colomadu Locations (24)",
+        Values = colomaduLocationNames,
+        Value = 1,
+        Callback = function(value)
+            selectedColomaduLocation = colomaduLocations[value]
+        end
+
+TeleportTab:Button({
+        Title = "Teleport to Colomadu",
+        Callback = function()
+            if selectedColomaduLocation and GetHRP() then
+                InstantTP(selectedColomaduLocation)
+                WindUI:Notify({
+                    Title = "Teleport",
+                    Content = "Teleported to location",
+                    Duration = 2
+                })
+            else
+                WindUI:Notify({
+                    Title = "Error",
+                    Content = "No location selected or no character",
+                    Duration = 2
+                })
+            end
+        end
+    })
+    -- IMPORTANT LOCATIONS (Dealers & Shops)
+    TeleportTab:Section({ Title = "Important Locations" })
+    local importantLocations = {
+        ["Car Dealer"] = Vector3.new(-6440, 3, -4178),
+        ["Hando Dealer"] = Vector3.new(-5951, 2, -3939),
+        ["Piazzo Dealer"] = Vector3.new(-5757, 3, -3959),
+        ["Courier Start"] = Vector3.new(-5757, 3, -3959),
+        ["Clothing Shop"] = Vector3.new(-4787, 4, -3967),
+        ["Feva Hotel"] = Vector3.new(-2739, 7, -4160),
+        ["Helmet Shop"] = Vector3.new(-723, 4, -520),
+        ["Office Worker"] = Vector3.new(-5946, 5, -261),
+        ["Quest Board"] = Vector3.new(-5900, 4, -261),
+        ["Gift Drop-Off"] = dropOffLocation,
+        ["Winter Quest"] = Vector3.new(-5168, 3, -3674)
+    }
+    local importantLocationNames = {}
+    for name, _ in pairs(importantLocations) do
+        table.insert(importantLocationNames, name)
+    end
+    local selectedImportantLocation = importantLocations["Car Dealer"]
+    importantDropdown = TeleportTab:Dropdown({
+        Title = "Dealers & Important Places",
+        Values = importantLocationNames,
+        Value = 1,
+        Callback = function(value)
+            selectedImportantLocation = importantLocations[value]
+        end
+    })
+    TeleportTab:Button({
+        Title = "Teleport to Important Location",
+        Callback = function()
+            if selectedImportantLocation and GetHRP() then
+                InstantTP(selectedImportantLocation)
+                WindUI:Notify({
+                    Title = "Teleport",
+                    Content = "Teleported to location",
+                    Duration = 2
+                })
+            else
+                WindUI:Notify({
+                    Title = "Error",
+                    Content = "No location selected or no character",
+                    Duration = 2
+                })
+            end
+        end
+    })
+    -- GIFT LOCATIONS
+    TeleportTab:Section({ Title = "Gift Locations" })
+    local giftTeleportLocations = {
+        ["Gift 1"] = Vector3.new(-16530, 108, 9350),
+        ["Gift 2"] = Vector3.new(-16138, 115, 4255),
+        ["Gift 3"] = Vector3.new(-979, 8, 624),
+        ["Gift 4"] = Vector3.new(-15193, 4, -4050),
+        ["Gift 5"] = Vector3.new(-1609, 19, -4248),
+        ["Gift 6"] = Vector3.new(-905, 5, -380),
+        ["Gift 7"] = Vector3.new(-8072, 2, -3856),
+        ["Gift 8"] = Vector3.new(-13110, 4, -4732),
+        ["Gift 9"] = Vector3.new(-425, 14, -4244),
+        ["Gift 10"] = Vector3.new(-3170, 4, -528),
+        ["Gift 11"] = Vector3.new(-11975, 3, -4222)
+    }
+    local giftLocationNames = {}
+    for name, _ in pairs(giftTeleportLocations) do
+        table.insert(giftLocationNames, name)
+    end
+    local selectedGiftLocation = giftTeleportLocations["Gift 1"]
+    giftDropdown = TeleportTab:Dropdown({
+        Title = "Gift Collection Points",
+        Values = giftLocationNames,
+        Value = 1,
+        Callback = function(value)
+            selectedGiftLocation = giftTeleportLocations[value]
+        end
+    })
+    TeleportTab:Button({
+        Title = "Teleport to Gift Location",
+        Callback = function()
+            if selectedGiftLocation and GetHRP() then
+                InstantTP(selectedGiftLocation)
+                WindUI:Notify({
+                    Title = "Teleport",
+                    Content = "Teleported to location",
+                    Duration = 2
+                })
+            else
+                WindUI:Notify({
+                    Title = "Error",
+                    Content = "No location selected or no character",
+                    Duration = 2
+                })
+            end
+        end
+    })
+    -- CUSTOM TELEPORT
+    TeleportTab:Section({ Title = "Custom Teleport" })
+    local customX, customY, customZ = 0, 0, 0
+    TeleportTab:Input({
+        Title = "X Coordinate",
+        Placeholder = "Enter X position",
+        Callback = function(value)
+            customX = tonumber(value) or 0
+        end
+    })
+    TeleportTab:Input({
+        Title = "Y Coordinate",
+        Placeholder = "Enter Y position",
+        Callback = function(value)
+            customY = tonumber(value) or 0
+        end
+    })
+    TeleportTab:Input({
+        Title = "Z Coordinate",
+        Placeholder = "Enter Z position",
+        Callback = function(value)
+            customZ = tonumber(value) or 0
+        end
+    })
+    TeleportTab:Button({
+        Title = "Teleport to Custom Location",
+        Callback = function()
+            if customX and customY and customZ and GetHRP() then
+                local targetPos = Vector3.new(customX, customY, customZ)
+                InstantTP(targetPos)
+                WindUI:Notify({
+                    Title = "Teleport",
+                    Content = string.format("Teleported to (%.1f, %.1f, %.1f)", targetPos.X, targetPos.Y, targetPos.Z),
+                    Duration = 2
+                })
+            else
+                WindUI:Notify({ Title = "Error", Content = "Enter all coordinates", Duration = 2 })
+            end
+        end
+    })
+    -- Simplified Save Position (only one button)
+    TeleportTab:Section({ Title = "Save Position" })
+    TeleportTab:Button({
+        Title = "Save Current Position",
+        Callback = function()
+            local hrp = GetHRP()
+            if hrp then
+                local pos = hrp.Position
+                customX = math.floor(pos.X)
+                customY = math.floor(pos.Y)
+                customZ = math.floor(pos.Z)
+                WindUI:Notify({
+                    Title = "Saved",
+                    Content = string.format("Position saved: (%.1f, %.1f, %.1f)", pos.X, pos.Y, pos.Z),
+                    Duration = 2
+                })
+            end
+        end
+
+TeleportTab:Section({ Title = "Copy Location" })
+    TeleportTab:Button({
+        Title = "Copy Current Position",
+        Callback = function()
+            local hrp = GetHRP()
+            if hrp then
+                local pos = hrp.Position
+                local text = string.format("Vector3.new(%d, %d, %d)", math.floor(pos.X), math.floor(pos.Y), math.floor(pos.Z))
+                setclipboard(text)
+                WindUI:Notify({
+                    Title = "Copied",
+                    Content = "Position copied to clipboard",
+                    Duration = 2
+                })
+            end
+        end
+    })
+    -- TELEPORT TO PLAYER
+    TeleportTab:Section({ Title = "Teleport to Player" })
+    local selectedPlayer = nil
+    -- Initial player list
+    local initialPlayerList = refreshPlayerList()
+    playerDropdown = TeleportTab:Dropdown({
+        Title = "Select Player",
+        Values = initialPlayerList,
+        Value = 1,
+        Callback = function(value)
+            selectedPlayer = value
+        end
+    })
+    TeleportTab:Button({
+        Title = "Refresh Player List",
+        Callback = function()
+            refreshPlayerList()
+            WindUI:Notify({ Title = "Player List", Content = "Refreshed", Duration = 2 })
+        end
+    })
+    TeleportTab:Button({
+        Title = "Teleport to Player",
+        Callback = function()
+            if not selectedPlayer or selectedPlayer == "" then
+                WindUI:Notify({ Title = "Error", Content = "No player selected", Duration = 2 })
+                return
+            end
+           
+            local target = Players:FindFirstChild(selectedPlayer)
+            if not target then
+                WindUI:Notify({ Title = "Error", Content = "Player not found", Duration = 2 })
+                return
+            end
+           
+            local hrp = GetHRP()
+            if not hrp then
+                WindUI:Notify({ Title = "Error", Content = "No character", Duration = 2 })
+                return
+            end
+           
+            local targetChar = target.Character
+            if not targetChar then
+                WindUI:Notify({ Title = "Info", Content = "Waiting for player character...", Duration = 2 })
+                target.CharacterAdded:Wait()
+                targetChar = target.Character
+            end
+           
+            if not targetChar then
+                WindUI:Notify({ Title = "Error", Content = "Failed to get player character", Duration = 2 })
+                return
+            end
+           
+            local targetHrp = targetChar:WaitForChild("HumanoidRootPart", 2)
+            if targetHrp then
+                hrp.CFrame = targetHrp.CFrame + Vector3.new(0, 5, 0)
+                WindUI:Notify({ Title = "Success", Content = "Teleported to " .. selectedPlayer, Duration = 2 })
+            else
+                InstantTP(targetChar:GetPrimaryPartCFrame().Position)
+                WindUI:Notify({ Title = "Success", Content = "Teleported to " .. selectedPlayer, Duration = 2 })
+            end
+        end
+    })
+   
+    -- SETTINGS TAB with PAUSE BYPASS
+    local SettingsTab = Window:Tab({
+        Title = "Settings",
+        Icon = "solar:settings-bold",
+        Color = primaryColor
+    })
+   
+    -- PAUSE BYPASS SECTION
+    SettingsTab:Section({ Title = "Pause Bypass" })
+    SettingsTab:Toggle({
+        Title = "Bypass Pause Game",
+        Desc = "Prevents game from pausing when window loses focus",
+        Callback = function(v)
+            togglePauseBypass(v)
+        end
+    })
+   
+    SettingsTab:Section({ Title = "Anti AFK" })
+    SettingsTab:Toggle({
+        Title = "Anti-AFK",
+        Callback = function(v)
+            antiAFKEnabled = v
+            if v then startAntiAFK() end
+        end
+    })
+
+SettingsTab:Section({ Title = "Change Team" })
+    SettingsTab:Button({
+        Title = "Office Worker",
+        Callback = function()
+            RS.JobEvents.TeamChangeRequest:FireServer("Office Worker", 0, 0, 0, "MainMenu")
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Police",
+        Callback = function()
+            RS.JobEvents.TeamChangeRequest:FireServer("Police", 0, 0, 0, "MainMenu")
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Courier",
+        Callback = function()
+            RS.JobEvents.TeamChangeRequest:FireServer("Courier", 11378976, 0, 0, 0, "Detector")
+        end
+    })
+   
+    -- SERVER SECTION WITH UPDATED CODE
+    SettingsTab:Section({ Title = "Server" })
+    SettingsTab:Input({
+        Title = "Join Job ID",
+        Placeholder = "Enter Job ID",
+        Callback = function(text)
+            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, text, LP)
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Copy Current Job ID",
+        Callback = function()
+            setclipboard(game.JobId)
+            WindUI:Notify({
+                Title = "Success",
+                Content = "Job ID copied to clipboard",
+                Duration = 3
+            })
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Hop to Low Server",
+        Callback = function()
+            local success, servers = pcall(function()
+                return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"))
+            end)
+            if success then
+                for _, server in pairs(servers.data) do
+                    if server.playing < server.maxPlayers * 0.8 then
+                        pcall(function()
+                            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, server.id, LP)
+                        end)
+                        break
+                    end
+                end
+            else
+                WindUI:Notify({Title = "Error", Content = "Failed to fetch server list.", Duration = 5})
+            end
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Hop to Crowded Server",
+        Callback = function()
+            local success, servers = pcall(function()
+                return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"))
+            end)
+            if success then
+                for _, server in pairs(servers.data) do
+                    if server.playing > server.maxPlayers * 0.5 then
+                        pcall(function()
+                            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, server.id, LP)
+                        end)
+                        break
+                    end
+                end
+            else
+                WindUI:Notify({Title = "Error", Content = "Failed to fetch server list.", Duration = 5})
+            end
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Rejoin",
+        Callback = function()
+            game:GetService("TeleportService"):Teleport(game.PlaceId, LP)
+        end
+    })
+   
+    -- CREDITS SECTION
+    SettingsTab:Section({ Title = "Credits" })
+    SettingsTab:Paragraph({
+        Title = "Script Information",
+        Desc = "Drag Drive Simulator Script v0.0.1\nMade by komtolmmek2\n\nFeatures:\n• Courier Auto Farm\n• Office Auto Farm\n• Teleport System\n• Pause Game Bypass\n• Anti-AFK System\n• Fly & Noclip\n• Team Changer\n• Server Hopper\n• Gift Collector",
+        BackgroundColor = secondaryColor
+    })
+
+print("This script was created by VoidlineHub")
