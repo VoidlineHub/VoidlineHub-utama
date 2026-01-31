@@ -389,7 +389,7 @@ SettingTab:Button({ Title = "Test Send Webhook", Callback = function() SendWebho
 
 -- // LOGIC BARISTA
 -- =========================================================
--- BARISTA GHOST MODE (ORIGINAL TWEEN + PERSISTENT AUTOWALK)
+-- BARISTA GHOST MODE (FIXED AUTOWALK + 2S PROMPT DELAY)
 -- =========================================================
 
 local Players = game:GetService("Players")
@@ -447,7 +447,7 @@ local function safeTween(targetCF)
 end
 
 -- =========================================================
--- PERSISTENT AUTOWALK (NGIKUTIN TARGET WALAU DIGANGGU)
+-- PERSISTENT AUTOWALK (NGIKUTIN TARGET)
 -- =========================================================
 local function autoWalk(targetPos)
     local char = LP.Character
@@ -457,7 +457,7 @@ local function autoWalk(targetPos)
     
     hum.WalkSpeed = 19 
     
-    -- Loop maksa jalan sampe bener-bener nempel (Range 3.8)
+    -- Loop maksa jalan sampe nempel
     repeat
         if not _G.AutoFarmBarista then break end
         hum:MoveTo(targetPos)
@@ -466,16 +466,17 @@ local function autoWalk(targetPos)
 end
 
 -- =========================================================
--- FORCE CLICK (PASTI KEPENCET)
+-- FORCE CLICK (DELAY 2 DETIK SESUAI REQUEST)
 -- =========================================================
 local function forceClick(prompt)
     if not prompt then return end
+    task.wait(2.0) -- Jeda 2 detik sebelum klik pertama (Human-like)
     local retry = 0
     repeat
         fireproximityprompt(prompt)
-        task.wait(1.0)
+        task.wait(2.0) -- Jeda 2 detik tiap kali percobaan klik
         retry = retry + 1
-    until not prompt.Enabled or retry > 15 or not _G.AutoFarmBarista
+    until not prompt.Enabled or retry > 5 or not _G.AutoFarmBarista
 end
 
 -- =========================
@@ -523,11 +524,11 @@ local function applyStealthBypass()
 
     while mini.Visible and _G.AutoFarmBarista do task.wait(0.2) end
     
-    -- Register & Machine pake Autowalk biar natural
+    -- OTW Register
     autoWalk(registerPart.Position)
     forceClick(registerPart:FindFirstChild("RegisterPrompt"))
-    task.wait(0.5)
     
+    -- Balik Mesin
     autoWalk(machinePart.Position)
     isWorking = false
 end
@@ -542,7 +543,7 @@ local function StartBaristaGhost()
     task.spawn(function()
         print("⏳ Job Setup...")
         TeamChangeRequest:FireServer("Barista", 11378976, 1, 0, "Detector")
-        task.wait(2.5) -- Delay awal
+        task.wait(3) -- Nunggu tim stabil
         
         while _G.AutoFarmBarista do
             local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
@@ -550,14 +551,21 @@ local function StartBaristaGhost()
             -- AMBIL JOB
             if not missionUI and not isWorking then
                 safeTween(startPart.CFrame)
+                task.wait(1) -- Napas setelah tween
                 forceClick(startPart:FindFirstChild("JobPrompt"))
                 
+                -- Tunggu UI Misi muncul
                 local retry = 0
-                while not PlayerGui:FindFirstChild("BaristaMissionUI") and retry < 20 do
+                while not PlayerGui:FindFirstChild("BaristaMissionUI") and retry < 15 do
                     task.wait(1)
                     retry = retry + 1
                 end
-                if _G.AutoFarmBarista then autoWalk(machinePart.Position) end
+                
+                -- FORCE JALAN KE MESIN SETELAH JOB DIAMBIL
+                if _G.AutoFarmBarista then 
+                    task.wait(0.5)
+                    autoWalk(machinePart.Position) 
+                end
 
             -- REPAIR
             elseif missionUI and not isWorking then
@@ -586,13 +594,13 @@ local function StartBaristaGhost()
                     end
                 end
             end
-            task.wait(0.2)
+            task.wait(0.5)
         end
         BaristaRunning = false
     end)
 end
 
--- ANTI-AFK (ADONIS SAFE)
+-- ANTI-AFK
 task.spawn(function()
     LP.Idled:Connect(function()
         if _G.AntiAFK then
