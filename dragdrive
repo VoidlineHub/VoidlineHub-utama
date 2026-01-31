@@ -484,26 +484,29 @@ local function runRepairFlow()
     local label = missionUI and missionUI:FindFirstChild("ObjectiveLabel", true)
     
     if label then
-        -- Jeda sebentar buat mastiin teks label sinkron sama warnanya (Cegah bug salah lari)
-        task.wait(0.5)
-        
+        task.wait(0.5) -- Sync delay
         local text = label.Text:lower()
-        -- Filter deteksi Anomali yang lebih ketat
-        if text:find("anomaly") or text:find("strange") or text:find("person") or text:find("customer") or text:find("order") then
-            print("👾 [GHOST] Anomaly detected, standing still...")
+        
+        -- Filter Anomali (Diem)
+        if text:find("anomaly") or text:find("strange") or text:find("person") then
             return 
         end
 
-        -- Jalankan repair cuma kalau beneran butuh supply
-        if text:find("broken") or text:find("restock") or text:find("supply") then
+        -- Filter Repair Berdasarkan Foto ("Machine broke down!" / "Fix Machine")
+        if text:find("broke") or text:find("down") or text:find("fix") or text:find("restock") then
             isWorking = true
-            print("🛠️ [REPAIR] Machine Broken. Moving to Supply...")
+            print("🛠️ Match: Machine Broke Down. OTW Supply...")
+            
             safeTween(CFrame.new(POS_EXIT_BARISTA))
             safeTween(CFrame.new(POS_SUPPLY))
             
             BaristaEvent:FireServer("RestockSupplies")
             local prompt = supplyPart:FindFirstChild("SupplyPrompt")
-            smartWaitAndClick(prompt, 6)
+            
+            -- Smart Click
+            task.wait(1)
+            fireproximityprompt(prompt)
+            task.wait(6.5)
             
             safeTween(CFrame.new(POS_EXIT_BARISTA))
             isWorking = false
