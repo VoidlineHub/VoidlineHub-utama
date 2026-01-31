@@ -389,7 +389,7 @@ SettingTab:Button({ Title = "Test Send Webhook", Callback = function() SendWebho
 
 -- // LOGIC BARISTA
 -- =========================================================
--- BARISTA GHOST MODE (FIXED ORDER + TIMED DELAY)
+-- BARISTA GHOST MODE (FIXED AUTOWALK ALL + PERSISTENT PROMPT)
 -- =========================================================
 
 local Players = game:GetService("Players")
@@ -418,9 +418,9 @@ local machinePart = Interactions.MachinePart.MachinePart
 local registerPart = Interactions.RegisterPart.RegisterPart
 local supplyPart = Interactions.SupplyPart.SupplyPart
 
--- =========================
--- PERSISTENT AUTOWALK
--- =========================
+-- =========================================================
+-- PERSISTENT AUTOWALK (NGIKUTIN TARGET WALAU DIGANGGU)
+-- =========================================================
 local function autoWalk(targetPos)
     local char = LP.Character
     local hum = char and char:FindFirstChild("Humanoid")
@@ -428,11 +428,27 @@ local function autoWalk(targetPos)
     if not hum or not hrp then return end
     
     hum.WalkSpeed = 16 
-    while _G.AutoFarmBarista and (hrp.Position - targetPos).Magnitude > 3 do
+    
+    -- Loop maksa jalan sampe jarak bener-bener deket
+    repeat
+        if not _G.AutoFarmBarista then break end
         hum:MoveTo(targetPos)
         task.wait(0.1)
-        if isWorking and targetPos ~= Vector3.new(-5114.04, 2.89, -669.93) then break end
-    end
+    until (hrp.Position - targetPos).Magnitude < 3.5
+end
+
+-- =========================================================
+-- SMART PROXIMITY (CEPAT & PASTI KEPENCET)
+-- =========================================================
+local function forceClick(prompt)
+    if not prompt then return end
+    local retry = 0
+    -- Coba pencet terus sampe prompt-nya ilang/diproses
+    repeat
+        fireproximityprompt(prompt)
+        task.wait(0.1)
+        retry = retry + 1
+    until not prompt.Enabled or retry > 10 or not _G.AutoFarmBarista
 end
 
 -- =========================
@@ -476,8 +492,8 @@ local function runRepairFlow()
             safeTween(CFrame.new(-5114.04, 2.89, -669.93))
             
             BaristaEvent:FireServer("RestockSupplies")
-            fireproximityprompt(supplyPart:FindFirstChild("SupplyPrompt"))
-            task.wait(6.1)
+            forceClick(supplyPart:FindFirstChild("SupplyPrompt"))
+            task.wait(6.2)
             
             safeTween(CFrame.new(-5004.42, 2.89, -678.09))
             isWorking = false
@@ -503,52 +519,46 @@ local function applyStealthBypass()
 
     while mini.Visible and _G.AutoFarmBarista do task.wait(0.2) end
     
+    -- JALAN KE REGISTER (DIPAKSA SAMPE NYAMPE)
+    print("🚶 OTW Register...")
     autoWalk(registerPart.Position)
-    fireproximityprompt(registerPart:FindFirstChild("RegisterPrompt"))
+    forceClick(registerPart:FindFirstChild("RegisterPrompt"))
     task.wait(0.5)
     
+    -- BALIK KE MESIN
+    print("🚶 Balik ke Mesin...")
     autoWalk(machinePart.Position)
     isWorking = false
 end
 
 -- =========================
--- MAIN CONTROLLER (TIMED)
+-- MAIN CONTROLLER
 -- =========================
 local function StartBaristaGhost()
     if BaristaRunning then return end
     BaristaRunning = true
 
     task.spawn(function()
-        -- STEP 1: Request Team/Job Event
-        print("⏳ Menyiapkan Tim Barista...")
+        print("⏳ Menyiapkan Tim...")
         TeamChangeRequest:FireServer("Barista", 11378976, 1, 0, "Detector")
-        task.wait(2.5) -- JEDA WAJIB: Biar server proses tim dulu sebelum kita gerak
-
+        task.wait(2)
+        
         while _G.AutoFarmBarista do
             local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
             
-            -- STEP 2: AMBIL JOB (Kalau belum ada UI)
+            -- 1. AMBIL JOB
             if not missionUI and not isWorking then
-                print("📋 OTW Ambil Job...")
                 safeTween(startPart.CFrame)
-                task.wait(0.5) -- Jeda dikit pas nyampe biar prompt muncul
-                fireproximityprompt(startPart:FindFirstChild("JobPrompt"))
+                forceClick(startPart:FindFirstChild("JobPrompt"))
                 
-                -- Tunggu konfirmasi UI Barista
-                local timeout = 0
-                while not PlayerGui:FindFirstChild("BaristaMissionUI") and timeout < 20 do
+                local retry = 0
+                while not PlayerGui:FindFirstChild("BaristaMissionUI") and retry < 20 do
                     task.wait(1)
-                    timeout = timeout + 1
-                    print("⌛ Menunggu UI Misi...")
+                    retry = retry + 1
                 end
-                
-                -- Setelah dapet job, baru lari ke mesin
-                if _G.AutoFarmBarista and PlayerGui:FindFirstChild("BaristaMissionUI") then
-                    print("✅ Job Berhasil Diambil. Menuju Mesin...")
-                    autoWalk(machinePart.Position)
-                end
+                if _G.AutoFarmBarista then autoWalk(machinePart.Position) end
 
-            -- STEP 3: REPAIR
+            -- 2. REPAIR
             elseif missionUI and not isWorking then
                 local label = missionUI:FindFirstChild("ObjectiveLabel", true)
                 if label and label.TextColor3 == Color3.fromRGB(255, 50, 50) then
@@ -556,7 +566,7 @@ local function StartBaristaGhost()
                 end
             end
 
-            -- STEP 4: KERJA
+            -- 3. KERJA
             if missionUI and not isWorking then
                 local gui = PlayerGui:FindFirstChild("BaristaGUI")
                 local mini = gui and gui:FindFirstChild("MinigameFrame")
@@ -566,18 +576,19 @@ local function StartBaristaGhost()
                 else
                     local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
                     if hrp then
+                        -- Cek apakah posisi jauh dari mesin
                         if (hrp.Position - machinePart.Position).Magnitude > 4 then
                             autoWalk(machinePart.Position)
                         else
                             local prompt = machinePart:FindFirstChild("MachinePrompt")
                             if prompt and prompt.Enabled then
-                                fireproximityprompt(prompt)
+                                forceClick(prompt)
                             end
                         end
                     end
                 end
             end
-            task.wait(0.3)
+            task.wait(0.2)
         end
         BaristaRunning = false
     end)
