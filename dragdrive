@@ -1,4 +1,3 @@
-
 -- [[ 2. UI / WINDOWS SECTION ]] --
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -440,7 +439,6 @@ end
 local function safeTween(targetCF)
     local hrp = getHRP()
     local VOID_Y = -25
-    -- Speed diturunin ke 135 (Amman dari sensor RealPhysicsFPS Adonis)
     local SPEED = 135 
 
     local downCF = CFrame.new(hrp.Position.X, VOID_Y, hrp.Position.Z)
@@ -449,7 +447,6 @@ local function safeTween(targetCF)
 
     local targetVoid = CFrame.new(targetCF.X, VOID_Y, targetCF.Z)
     local dist = (hrp.Position - targetVoid.Position).Magnitude
-    -- Pakai Linear agar movement tidak fluktuatif (kebaca Speedhack)
     local moveTween = TweenService:Create(hrp, TweenInfo.new(dist / SPEED, Enum.EasingStyle.Linear), {CFrame = targetVoid})
     moveTween:Play()
     moveTween.Completed:Wait()
@@ -468,7 +465,6 @@ local function smartWaitAndClick(prompt, holdTime)
         task.wait(0.1)
         t += 1
     end
-    -- Jeda variatif (Human-like) supaya tidak ngetrigger 'fireproximityprompt' detector
     task.wait(0.8 + (math.random(1, 4) / 10))
     fireproximityprompt(prompt)
     
@@ -478,30 +474,43 @@ local function smartWaitAndClick(prompt, holdTime)
 end
 
 -- =========================
--- REPAIR LOGIC (2 TAHAP)
+-- REPAIR LOGIC WITH LOG MONITOR
 -- =========================
 local function runRepairFlow()
     local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
     local label = missionUI and missionUI:FindFirstChild("ObjectiveLabel", true)
     
     if label then
-        local text = label.Text:lower()
-        if text:find("anomaly") or text:find("strange") or text:find("person") then
+        local rawText = label.Text
+        local text = rawText:lower()
+        
+        -- MONITOR: Print teks merah ke console biar kita bisa liat isinya
+        print("🚩 RED STATUS DETECTED: [" .. rawText .. "]")
+
+        -- Filter Anomaly (Jangan lari)
+        if text:find("anomaly") or text:find("strange") or text:find("person") or text:find("mysterious") then
+            warn("👾 Anomaly matched! Staying at machine.")
             return 
         end
+        
+        -- Filter Broken (Boleh lari)
+        if text:find("broken") or text:find("supply") or text:find("restock") or text:find("out of") then
+            isWorking = true
+            print("🛠️ Confirmed Broken. Moving to Supply...")
+            
+            safeTween(CFrame.new(POS_EXIT_BARISTA))
+            safeTween(CFrame.new(POS_SUPPLY))
+            
+            BaristaEvent:FireServer("RestockSupplies")
+            local prompt = supplyPart:FindFirstChild("SupplyPrompt")
+            smartWaitAndClick(prompt, 6)
+            
+            safeTween(CFrame.new(POS_EXIT_BARISTA))
+            isWorking = false
+        else
+            warn("❓ Red status but no keywords matched. Waiting to be safe.")
+        end
     end
-
-    isWorking = true
-    safeTween(CFrame.new(POS_EXIT_BARISTA))
-    safeTween(CFrame.new(POS_SUPPLY))
-    
-    -- Remote ditembak pas sudah di depan box (Safe behavior)
-    BaristaEvent:FireServer("RestockSupplies")
-    local prompt = supplyPart:FindFirstChild("SupplyPrompt")
-    smartWaitAndClick(prompt, 6)
-    
-    safeTween(CFrame.new(POS_EXIT_BARISTA))
-    isWorking = false
 end
 
 -- =========================
@@ -545,7 +554,6 @@ local function StartBaristaGhost()
         while _G.AutoFarmBarista do
             local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
             
-            -- PRIORITY 1: AMBIL JOB
             if not missionUI and not isWorking then
                 safeTween(startPart.CFrame)
                 smartWaitAndClick(startPart:WaitForChild("JobPrompt"))
@@ -557,15 +565,14 @@ local function StartBaristaGhost()
                 end
                 if _G.AutoFarmBarista then safeTween(machinePart.CFrame) end
 
-            -- PRIORITY 2: REPAIR
             elseif missionUI then
                 local label = missionUI:FindFirstChild("ObjectiveLabel", true)
+                -- Hanya jalankan flow jika warna MERAH
                 if label and label.TextColor3 == Color3.fromRGB(255, 50, 50) and not isWorking then
                     runRepairFlow()
                 end
             end
 
-            -- PRIORITY 3: WORK
             if missionUI and not isWorking then
                 local gui = PlayerGui:FindFirstChild("BaristaGUI")
                 local mini = gui and gui:FindFirstChild("MinigameFrame")
