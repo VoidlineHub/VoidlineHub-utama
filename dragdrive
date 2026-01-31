@@ -389,7 +389,7 @@ SettingTab:Button({ Title = "Test Send Webhook", Callback = function() SendWebho
 
 -- // LOGIC BARISTA
 -- =========================================================
--- BARISTA GHOST MODE (INDICATOR SYNC + ORIGINAL MINIGAME)
+-- BARISTA GHOST MODE (INSTANT CLICK + PERSISTENT AUTOWALK)
 -- =========================================================
 
 local Players = game:GetService("Players")
@@ -418,39 +418,24 @@ local machinePart = Interactions.MachinePart.MachinePart
 local registerPart = Interactions.RegisterPart.RegisterPart
 local supplyPart = Interactions.SupplyPart.SupplyPart
 
--- COORDINATES
-local POS_EXIT_BARISTA = Vector3.new(-5004.42, 2.89, -678.09)
-local POS_SUPPLY = Vector3.new(-5114.04, 2.89, -669.93)
-
--- UTILS
-local function getHRP()
-    local char = LP.Character or LP.CharacterAdded:Wait()
-    return char:WaitForChild("HumanoidRootPart")
-end
-
 -- =========================================================
--- AUTOWALK (HUMAN-LIKE MOVEMENT)
+-- PERSISTENT AUTOWALK (NGIKUTIN TARGET WALAU DIGANGGU)
 -- =========================================================
 local function autoWalk(targetPos)
     local char = LP.Character
     local hum = char and char:FindFirstChild("Humanoid")
-    if not hum then return end
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hum or not hrp then return end
     
     hum.WalkSpeed = 16 
-    hum:MoveTo(targetPos)
     
-    -- Tunggu sampe sampe atau target berubah
-    local arrived = false
-    local connection
-    connection = hum.MoveToFinished:Connect(function()
-        arrived = true
-        connection:Disconnect()
-    end)
-    
-    local timeout = 0
-    while not arrived and timeout < 100 do
-        task.wait(0.1)
-        timeout = timeout + 1
+    -- Loop terus sampe jarak ke target kurang dari 3 studs
+    while _G.AutoFarmBarista and (hrp.Position - targetPos).Magnitude > 3 do
+        hum:MoveTo(targetPos)
+        task.wait(0.1) -- Refresh tujuan biar gak bisa dibelokin manual
+        
+        -- Kalau tiba-tiba harus ngerjain yang lain (Repair)
+        if isWorking and targetPos ~= POS_SUPPLY then break end
     end
 end
 
@@ -458,13 +443,15 @@ end
 -- SAFE TWEEN (VOID -25)
 -- =========================
 local function safeTween(targetCF, speed)
-    local hrp = getHRP()
+    local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
     local VOID_Y = -25
     local SPEED = speed or 135
 
     local downCF = CFrame.new(hrp.Position.X, VOID_Y, hrp.Position.Z)
-    TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {CFrame = downCF}):Play()
-    task.wait(0.55)
+    TweenService:Create(hrp, TweenInfo.new(0.4, Enum.EasingStyle.Sine), {CFrame = downCF}):Play()
+    task.wait(0.45)
 
     local targetVoid = CFrame.new(targetCF.X, VOID_Y, targetCF.Z)
     local dist = (hrp.Position - targetVoid.Position).Magnitude
@@ -472,23 +459,9 @@ local function safeTween(targetCF, speed)
     t2:Play()
     t2.Completed:Wait()
 
-    TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {CFrame = targetCF + Vector3.new(0, 2, 0)}):Play()
-    task.wait(0.55)
+    TweenService:Create(hrp, TweenInfo.new(0.4, Enum.EasingStyle.Sine), {CFrame = targetCF + Vector3.new(0, 2, 0)}):Play()
+    task.wait(0.45)
 end
-
--- =========================
--- ANTI-AFK (ADONIS SAFE)
--- =========================
-task.spawn(function()
-    LP.Idled:Connect(function()
-        if _G.AntiAFK then
-            local humanoid = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-            end
-        end
-    end)
-end)
 
 -- =========================
 -- REPAIR LOGIC
@@ -498,20 +471,20 @@ local function runRepairFlow()
     local label = missionUI and missionUI:FindFirstChild("ObjectiveLabel", true)
     
     if label then
-        task.wait(0.5)
         local text = label.Text:lower()
         if text:find("anomaly") or text:find("strange") or text:find("person") then return end
 
         if text:find("broke") or text:find("down") or text:find("fix") then
             isWorking = true
-            safeTween(CFrame.new(POS_EXIT_BARISTA))
-            safeTween(CFrame.new(POS_SUPPLY))
+            -- Tween ke Supply (Jarak Jauh)
+            safeTween(CFrame.new(-5004.42, 2.89, -678.09))
+            safeTween(CFrame.new(-5114.04, 2.89, -669.93))
             
             BaristaEvent:FireServer("RestockSupplies")
             fireproximityprompt(supplyPart:FindFirstChild("SupplyPrompt"))
-            task.wait(6.5)
+            task.wait(6.1) -- Tunggu isi box
             
-            safeTween(CFrame.new(POS_EXIT_BARISTA))
+            safeTween(CFrame.new(-5004.42, 2.89, -678.09))
             isWorking = false
         end
     end
@@ -526,7 +499,6 @@ local function applyStealthBypass()
     if not mini or not mini.Visible or isWorking then return end
 
     isWorking = true
-    -- Balik ke logic lu yang lama (Bypass instan area)
     pcall(function()
         local bg = mini:WaitForChild("BackgroundBar")
         local target = bg:WaitForChild("TargetZone")
@@ -535,13 +507,12 @@ local function applyStealthBypass()
         target.BackgroundTransparency = 1
     end)
 
-    while mini.Visible and _G.AutoFarmBarista do task.wait(0.5) end
+    while mini.Visible and _G.AutoFarmBarista do task.wait(0.2) end
     
-    -- Autowalk ke Register (Ikutin indikator tugas selanjutnya)
+    -- Autowalk ke Register (Gak bisa diganggu)
     autoWalk(registerPart.Position)
-    task.wait(0.5)
     fireproximityprompt(registerPart:FindFirstChild("RegisterPrompt"))
-    task.wait(1)
+    task.wait(0.5)
     
     -- Balik ke mesin
     autoWalk(machinePart.Position)
@@ -557,15 +528,15 @@ local function StartBaristaGhost()
 
     task.spawn(function()
         TeamChangeRequest:FireServer("Barista", 11378976, 1, 0, "Detector")
-        task.wait(1.5)
-
+        
         while _G.AutoFarmBarista do
             local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
             
             if not missionUI and not isWorking then
+                -- Ambil Job
                 safeTween(startPart.CFrame)
                 fireproximityprompt(startPart:FindFirstChild("JobPrompt"))
-                task.wait(2)
+                task.wait(1)
                 if _G.AutoFarmBarista then autoWalk(machinePart.Position) end
 
             elseif missionUI and not isWorking then
@@ -575,32 +546,42 @@ local function StartBaristaGhost()
                 end
             end
 
+            -- KERJA (Persisten ke Indikator)
             if missionUI and not isWorking then
                 local gui = PlayerGui:FindFirstChild("BaristaGUI")
                 local mini = gui and gui:FindFirstChild("MinigameFrame")
 
-                -- LOGIC: Cek apakah minigame muncul (Indikator selesai di mesin)
                 if mini and mini.Visible then
                     applyStealthBypass()
                 else
-                    -- Standby/AutoWalk ke mesin jika indikator nunjuk ke sana
-                    local hrp = getHRP()
-                    if (hrp.Position - machinePart.Position).Magnitude > 5 then
-                        autoWalk(machinePart.Position)
-                    else
-                        local prompt = machinePart:FindFirstChild("MachinePrompt")
-                        if prompt and prompt.Enabled then
-                            task.wait(0.5)
-                            fireproximityprompt(prompt)
+                    local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        if (hrp.Position - machinePart.Position).Magnitude > 4 then
+                            autoWalk(machinePart.Position)
+                        else
+                            local prompt = machinePart:FindFirstChild("MachinePrompt")
+                            if prompt and prompt.Enabled then
+                                fireproximityprompt(prompt)
+                            end
                         end
                     end
                 end
             end
-            task.wait(0.5)
+            task.wait(0.1)
         end
         BaristaRunning = false
     end)
 end
+
+-- ANTI-AFK (ADONIS SAFE)
+task.spawn(function()
+    LP.Idled:Connect(function()
+        if _G.AntiAFK then
+            local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+        end
+    end)
+end)
 
 -- TOGGLE
 task.spawn(function()
@@ -609,6 +590,7 @@ task.spawn(function()
         if _G.AutoFarmBarista then StartBaristaGhost() end
     end
 end)
+
 
 -- =========================
 -- SYSTEM LOOPS (FPS Counter)
