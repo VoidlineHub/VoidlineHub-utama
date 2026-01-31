@@ -683,37 +683,13 @@ end
 
 end)
 
--- =========================
--- ANTI-AFK (ULTRA SAFE)
--- =========================
-_G.AntiAFK = true -- Pastikan ini true
-
+-- ANTI AFK FIXED
 task.spawn(function()
-    local LP = game:GetService("Players").LocalPlayer
-    
-    -- Kita dengerin event Idled dari game
-    LP.Idled:Connect(function(time)
+    local VU = game:GetService("VirtualUser")
+    while task.wait(60) do
         if _G.AntiAFK then
-            -- Daripada VirtualUser, kita gerakin kamera atau karakter dikit
-            -- Ini cara paling aman buat bypass kick 20 menit
-            local char = LP.Character
-            local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-            
-            if humanoid then
-                -- Loncat kecil buat refresh status idle di server
-                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                task.wait(0.2)
-                print("🛡️ Anti-AFK: Jump performed to stay active.")
-            end
-        end
-    end)
-    
-    -- Backup: Pergerakan halus setiap 2 menit buat mastiin server tetep sinkron
-    while task.wait(120) do
-        if _G.AntiAFK and LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp = LP.Character.HumanoidRootPart
-            -- Geser 0.1 stud doang, gak bakal ganggu autofarm
-            hrp.CFrame = hrp.CFrame * CFrame.new(0, 0.01, 0)
+            VU:CaptureController()
+            VU:ClickButton2(Vector2.new(0,0))
         end
     end
 end)
