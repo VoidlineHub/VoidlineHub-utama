@@ -429,7 +429,7 @@ end
 -- =========================================================
 local function safeTween(targetCF)
     local hrp = getHRP()
-    local VOID_Y = -90
+    local VOID_Y = -29
     local SPEED = 195 
 
     local downCF = CFrame.new(hrp.Position.X, VOID_Y, hrp.Position.Z)
