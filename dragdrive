@@ -525,7 +525,92 @@ local function handleMinigame()
     isWorking = true
     pcall(function()
         local target = mini:WaitForChild("BackgroundBar"):WaitForChild("TargetZone")
-        target.Size = UDim
+        target.Size = UDim2.new(1.8, 0, 1.8, 0)
+        target.Position = UDim2.new(-0.4, 0, -0.4, 0)
+        target.BackgroundTransparency = 1
+    end)
+
+    while mini.Visible and _G.AutoFarmBarista do task.wait(0.5) end
+    
+    autoWalk(registerPart.Position)
+    safeClick(registerPart:FindFirstChild("RegisterPrompt"))
+    autoWalk(machinePart.Position)
+    isWorking = false
+end
+
+-- =========================
+-- MAIN CONTROLLER
+-- =========================
+local function StartBaristaGhost()
+    if BaristaRunning then return end
+    BaristaRunning = true
+
+    task.spawn(function()
+        TeamChangeRequest:FireServer("Barista", 11378976, 1, 0, "Detector")
+        task.wait(2.5)
+        
+        while _G.AutoFarmBarista do
+            local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
+            
+            -- 1. AMBIL JOB
+            if not missionUI and not isWorking then
+                safeTween(startPart.CFrame)
+                safeClick(startPart:FindFirstChild("JobPrompt"))
+                
+                local retry = 0
+                while not PlayerGui:FindFirstChild("BaristaMissionUI") and retry < 15 do
+                    task.wait(1)
+                    retry = retry + 1
+                end
+                if _G.AutoFarmBarista and PlayerGui:FindFirstChild("BaristaMissionUI") then
+                    autoWalk(machinePart.Position)
+                end
+
+            -- 2. CEK REPAIR & ANOMALI
+            elseif missionUI and not isWorking then
+                local label = missionUI:FindFirstChild("ObjectiveLabel", true)
+                -- Hanya jalankan repair jika label berwarna merah (tanda rusak)
+                if label and label.TextColor3 == Color3.fromRGB(255, 50, 50) then
+                    local status = runRepairFlow()
+                    if not status then 
+                        -- Berhenti/Diem kalau ada anomali
+                        task.wait(2)
+                    end
+                end
+            end
+
+            -- 3. KERJA RUTIN (MACHINE)
+            if missionUI and not isWorking then
+                local gui = PlayerGui:FindFirstChild("BaristaGUI")
+                local mini = gui and gui:FindFirstChild("MinigameFrame")
+
+                if mini and mini.Visible then
+                    handleMinigame()
+                else
+                    local hrp = getHRP()
+                    if (hrp.Position - machinePart.Position).Magnitude > 4 then
+                        autoWalk(machinePart.Position)
+                    else
+                        local prompt = machinePart:FindFirstChild("MachinePrompt")
+                        if prompt and prompt.Enabled then
+                            safeClick(prompt)
+                        end
+                    end
+                end
+            end
+            task.wait(0.5)
+        end
+        BaristaRunning = false
+    end)
+end
+
+-- TOGGLE
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if _G.AutoFarmBarista then StartBaristaGhost() end
+    end
+end)
 
 
 -- =========================
