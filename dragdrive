@@ -1,3 +1,4 @@
+
 -- [[ 2. UI / WINDOWS SECTION ]] --
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -426,7 +427,7 @@ local POS_EXIT_BARISTA = Vector3.new(-5004.42, 2.89, -678.09)
 local POS_SUPPLY = Vector3.new(-5114.04, 2.89, -669.93)
 
 -- =========================
--- GET HRP
+-- UTILS (ANTI-DETECTION)
 -- =========================
 local function getHRP()
     local char = LP.Character or LP.CharacterAdded:Wait()
@@ -434,30 +435,31 @@ local function getHRP()
 end
 
 -- =========================
--- SAFE TWEEN ENGINE
+-- SAFE TWEEN ENGINE (FIXED FOR SPEED DETECTION)
 -- =========================
-local function safeTween(targetCF, speed)
+local function safeTween(targetCF)
     local hrp = getHRP()
     local VOID_Y = -25
-    local OFFSET = 2
-    local SPEED = speed or 140
+    -- Speed diturunin ke 135 (Amman dari sensor RealPhysicsFPS Adonis)
+    local SPEED = 135 
 
     local downCF = CFrame.new(hrp.Position.X, VOID_Y, hrp.Position.Z)
-    TweenService:Create(hrp, TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {CFrame = downCF}):Play()
-    task.wait(0.45)
+    TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {CFrame = downCF}):Play()
+    task.wait(0.55)
 
     local targetVoid = CFrame.new(targetCF.X, VOID_Y, targetCF.Z)
     local dist = (hrp.Position - targetVoid.Position).Magnitude
+    -- Pakai Linear agar movement tidak fluktuatif (kebaca Speedhack)
     local moveTween = TweenService:Create(hrp, TweenInfo.new(dist / SPEED, Enum.EasingStyle.Linear), {CFrame = targetVoid})
     moveTween:Play()
     moveTween.Completed:Wait()
 
-    TweenService:Create(hrp, TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {CFrame = targetCF + Vector3.new(0, OFFSET, 0)}):Play()
-    task.wait(0.45)
+    TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {CFrame = targetCF + Vector3.new(0, 2, 0)}):Play()
+    task.wait(0.55)
 end
 
 -- =========================
--- SMART CLICK
+-- SMART CLICK (ANTI-BOT DETECTION)
 -- =========================
 local function smartWaitAndClick(prompt, holdTime)
     if not prompt then return end
@@ -466,9 +468,13 @@ local function smartWaitAndClick(prompt, holdTime)
         task.wait(0.1)
         t += 1
     end
-    task.wait(0.6)
+    -- Jeda variatif (Human-like) supaya tidak ngetrigger 'fireproximityprompt' detector
+    task.wait(0.8 + (math.random(1, 4) / 10))
     fireproximityprompt(prompt)
-    if holdTime then task.wait(holdTime) end
+    
+    if holdTime then 
+        task.wait(holdTime + 0.2) 
+    end
 end
 
 -- =========================
@@ -478,20 +484,18 @@ local function runRepairFlow()
     local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
     local label = missionUI and missionUI:FindFirstChild("ObjectiveLabel", true)
     
-    -- Filter: Bedakan Anomaly vs Broken
     if label then
         local text = label.Text:lower()
         if text:find("anomaly") or text:find("strange") or text:find("person") then
-            print("👾 NPC Anomali Terdeteksi (Merah). Menunggu di Mesin...")
             return 
         end
     end
 
     isWorking = true
-    print("🛠️ Mesin Merah (Broken)! OTW Supply...")
     safeTween(CFrame.new(POS_EXIT_BARISTA))
     safeTween(CFrame.new(POS_SUPPLY))
     
+    -- Remote ditembak pas sudah di depan box (Safe behavior)
     BaristaEvent:FireServer("RestockSupplies")
     local prompt = supplyPart:FindFirstChild("SupplyPrompt")
     smartWaitAndClick(prompt, 6)
@@ -535,33 +539,25 @@ local function StartBaristaGhost()
     BaristaRunning = true
 
     task.spawn(function()
-        -- Request Team
         TeamChangeRequest:FireServer("Barista", 11378976, 1, 0, "Detector")
-        task.wait(1)
+        task.wait(1.5)
 
         while _G.AutoFarmBarista do
             local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
             
-            -- PRIORITY 1: AMBIL JOB (HARUS PALING UTAMA)
+            -- PRIORITY 1: AMBIL JOB
             if not missionUI and not isWorking then
-                print("📝 Job not found. Taking job first...")
                 safeTween(startPart.CFrame)
                 smartWaitAndClick(startPart:WaitForChild("JobPrompt"))
                 
-                -- Tunggu sampai UI muncul sebelum lanjut ke logic lain
                 local waitTime = 0
                 while not PlayerGui:FindFirstChild("BaristaMissionUI") and waitTime < 40 do
                     task.wait(0.2)
                     waitTime += 1
                 end
-                print("✅ Job Registered!")
-                
-                -- Langsung Tween ke Machine setelah ambil job
-                if _G.AutoFarmBarista then
-                    safeTween(machinePart.CFrame)
-                end
+                if _G.AutoFarmBarista then safeTween(machinePart.CFrame) end
 
-            -- PRIORITY 2: REPAIR (MESIN MERAH)
+            -- PRIORITY 2: REPAIR
             elseif missionUI then
                 local label = missionUI:FindFirstChild("ObjectiveLabel", true)
                 if label and label.TextColor3 == Color3.fromRGB(255, 50, 50) and not isWorking then
@@ -569,7 +565,7 @@ local function StartBaristaGhost()
                 end
             end
 
-            -- PRIORITY 3: MINIGAME & WORK
+            -- PRIORITY 3: WORK
             if missionUI and not isWorking then
                 local gui = PlayerGui:FindFirstChild("BaristaGUI")
                 local mini = gui and gui:FindFirstChild("MinigameFrame")
@@ -588,7 +584,6 @@ local function StartBaristaGhost()
                     end
                 end
             end
-
             task.wait(1)
         end
         BaristaRunning = false
@@ -606,6 +601,7 @@ task.spawn(function()
         end
     end
 end)
+
 
 -- =========================
 -- SYSTEM LOOPS (FPS Counter)
@@ -692,4 +688,3 @@ task.spawn(function()
 end)
 
 print("🚀 VoidlineHub Loaded with Adonis Bypass!")
-
