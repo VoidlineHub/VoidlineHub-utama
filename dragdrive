@@ -429,7 +429,7 @@ end
 -- =========================================================
 local function safeTween(targetCF)
     local hrp = getHRP()
-    local VOID_Y = -30
+    local VOID_Y = -50
     local SPEED = 135 
 
     local downCF = CFrame.new(hrp.Position.X, VOID_Y, hrp.Position.Z)
@@ -473,7 +473,7 @@ local function forceClick(prompt)
     local retry = 0
     repeat
         fireproximityprompt(prompt)
-        task.wait(0.1)
+        task.wait(0.100)
         retry = retry + 1
     until not prompt.Enabled or retry > 15 or not _G.AutoFarmBarista
 end
