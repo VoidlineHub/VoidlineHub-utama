@@ -455,7 +455,7 @@ local function autoWalk(targetPos)
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if not hum or not hrp then return end
     
-    hum.WalkSpeed = 16 
+    hum.WalkSpeed = 19 
     
     -- Loop maksa jalan sampe bener-bener nempel (Range 3.8)
     repeat
@@ -473,7 +473,7 @@ local function forceClick(prompt)
     local retry = 0
     repeat
         fireproximityprompt(prompt)
-        task.wait(0.100)
+        task.wait(1.0)
         retry = retry + 1
     until not prompt.Enabled or retry > 15 or not _G.AutoFarmBarista
 end
