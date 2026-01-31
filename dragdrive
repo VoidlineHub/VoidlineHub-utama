@@ -434,25 +434,34 @@ local function getHRP()
 end
 
 -- =========================
--- SAFE TWEEN ENGINE (FIXED FOR SPEED DETECTION)
+-- SAFE TWEEN ENGINE (ANTI-RUBBERBAND)
 -- =========================
 local function safeTween(targetCF)
     local hrp = getHRP()
-    local VOID_Y = -25
-    local SPEED = 135 
+    if not hrp then return end
 
-    local downCF = CFrame.new(hrp.Position.X, VOID_Y, hrp.Position.Z)
-    TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {CFrame = downCF}):Play()
-    task.wait(0.55)
+    -- Kita main di Y yang lebih aman (sedikit di bawah lantai saja)
+    -- Biar gak dianggap 'Fall to Void' sama Adonis
+    local SAFE_Y = 0.5 
+    local SPEED = 125 -- Pelanin dikit biar server-side sync nya kekejar
 
-    local targetVoid = CFrame.new(targetCF.X, VOID_Y, targetCF.Z)
-    local dist = (hrp.Position - targetVoid.Position).Magnitude
-    local moveTween = TweenService:Create(hrp, TweenInfo.new(dist / SPEED, Enum.EasingStyle.Linear), {CFrame = targetVoid})
+    -- STEP 1: Turun tipis saja (Jangan ke -25 lagi)
+    local startPos = hrp.Position
+    local midCF = CFrame.new(startPos.X, SAFE_Y, startPos.Z)
+    
+    TweenService:Create(hrp, TweenInfo.new(0.4, Enum.EasingStyle.QuadOut), {CFrame = midCF}):Play()
+    task.wait(0.45)
+
+    -- STEP 2: Jalan Horizontal
+    local targetMid = CFrame.new(targetCF.X, SAFE_Y, targetCF.Z)
+    local dist = (hrp.Position - targetMid.Position).Magnitude
+    local moveTween = TweenService:Create(hrp, TweenInfo.new(dist / SPEED, Enum.EasingStyle.Linear), {CFrame = targetMid})
     moveTween:Play()
     moveTween.Completed:Wait()
 
-    TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {CFrame = targetCF + Vector3.new(0, 2, 0)}):Play()
-    task.wait(0.55)
+    -- STEP 3: Naik ke target
+    TweenService:Create(hrp, TweenInfo.new(0.4, Enum.EasingStyle.QuadIn), {CFrame = targetCF + Vector3.new(0, 2, 0)}):Play()
+    task.wait(0.45)
 end
 
 -- =========================
@@ -484,20 +493,15 @@ local function runRepairFlow()
         local rawText = label.Text
         local text = rawText:lower()
         
-        -- MONITOR: Print teks merah ke console biar kita bisa liat isinya
-        print("🚩 RED STATUS DETECTED: [" .. rawText .. "]")
+        print("🚩 RED STATUS: [" .. rawText .. "]")
 
-        -- Filter Anomaly (Jangan lari)
         if text:find("anomaly") or text:find("strange") or text:find("person") or text:find("mysterious") then
-            warn("👾 Anomaly matched! Staying at machine.")
+            warn("👾 NPC Anomali! Standby...")
             return 
         end
         
-        -- Filter Broken (Boleh lari)
         if text:find("broken") or text:find("supply") or text:find("restock") or text:find("out of") then
             isWorking = true
-            print("🛠️ Confirmed Broken. Moving to Supply...")
-            
             safeTween(CFrame.new(POS_EXIT_BARISTA))
             safeTween(CFrame.new(POS_SUPPLY))
             
@@ -507,8 +511,6 @@ local function runRepairFlow()
             
             safeTween(CFrame.new(POS_EXIT_BARISTA))
             isWorking = false
-        else
-            warn("❓ Red status but no keywords matched. Waiting to be safe.")
         end
     end
 end
@@ -567,7 +569,6 @@ local function StartBaristaGhost()
 
             elseif missionUI then
                 local label = missionUI:FindFirstChild("ObjectiveLabel", true)
-                -- Hanya jalankan flow jika warna MERAH
                 if label and label.TextColor3 == Color3.fromRGB(255, 50, 50) and not isWorking then
                     runRepairFlow()
                 end
