@@ -446,7 +446,7 @@ local function forceClick(prompt)
     -- Coba pencet terus sampe prompt-nya ilang/diproses
     repeat
         fireproximityprompt(prompt)
-        task.wait(0.1)
+        task.wait(0.6)
         retry = retry + 1
     until not prompt.Enabled or retry > 10 or not _G.AutoFarmBarista
 end
@@ -454,27 +454,26 @@ end
 -- =========================
 -- SAFE TWEEN (VOID -25)
 -- =========================
-local function safeTween(targetCF, speed)
-    local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    
-    local VOID_Y = -25
-    local SPEED = speed or 135
+local function safeTween(targetCF)
+    local hrp = getHRP()
+    local VOID_Y = -30
+    -- Speed diturunin ke 135 (Amman dari sensor RealPhysicsFPS Adonis)
+    local SPEED = 135 
 
     local downCF = CFrame.new(hrp.Position.X, VOID_Y, hrp.Position.Z)
-    TweenService:Create(hrp, TweenInfo.new(0.4, Enum.EasingStyle.Sine), {CFrame = downCF}):Play()
-    task.wait(0.45)
+    TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {CFrame = downCF}):Play()
+    task.wait(0.55)
 
     local targetVoid = CFrame.new(targetCF.X, VOID_Y, targetCF.Z)
     local dist = (hrp.Position - targetVoid.Position).Magnitude
-    local t2 = TweenService:Create(hrp, TweenInfo.new(dist / SPEED, Enum.EasingStyle.Linear), {CFrame = targetVoid})
-    t2:Play()
-    t2.Completed:Wait()
+    -- Pakai Linear agar movement tidak fluktuatif (kebaca Speedhack)
+    local moveTween = TweenService:Create(hrp, TweenInfo.new(dist / SPEED, Enum.EasingStyle.Linear), {CFrame = targetVoid})
+    moveTween:Play()
+    moveTween.Completed:Wait()
 
-    TweenService:Create(hrp, TweenInfo.new(0.4, Enum.EasingStyle.Sine), {CFrame = targetCF + Vector3.new(0, 2, 0)}):Play()
-    task.wait(0.45)
+    TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {CFrame = targetCF + Vector3.new(0, 2, 0)}):Play()
+    task.wait(0.55)
 end
-
 -- =========================
 -- REPAIR LOGIC
 -- =========================
