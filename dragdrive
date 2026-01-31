@@ -438,9 +438,9 @@ end
 -- =========================
 local function safeTween(targetCF)
     local hrp = getHRP()
-    local VOID_Y = -30
+    local VOID_Y = -35
     -- Speed diturunin ke 135 (Amman dari sensor RealPhysicsFPS Adonis)
-    local SPEED = 135 
+    local SPEED = 120 
 
     local downCF = CFrame.new(hrp.Position.X, VOID_Y, hrp.Position.Z)
     TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {CFrame = downCF}):Play()
