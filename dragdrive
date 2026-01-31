@@ -477,7 +477,7 @@ local function smartWaitAndClick(prompt, holdTime)
 end
 
 -- =========================
--- REPAIR LOGIC (2 TAHAP)
+-- REPAIR LOGIC (FIXED ANOMALY BUG)
 -- =========================
 local function runRepairFlow()
     local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
@@ -608,6 +608,7 @@ task.spawn(function()
         end
     end
 end)
+
 
 -- =========================
 -- SYSTEM LOOPS (FPS Counter)
