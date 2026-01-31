@@ -468,7 +468,7 @@ end
 local function safeClick(prompt)
     if not prompt or not prompt.Enabled then return end
     
-    task.wait(2.0) -- Delay 2 detik sebelum pencet (Request)
+    task.wait(1.0) -- Delay 2 detik sebelum pencet (Request)
     fireproximityprompt(prompt)
     task.wait(0.5) -- Jeda biar server proses
 end
@@ -487,6 +487,7 @@ local function handleMinigame()
         local target = mini:WaitForChild("BackgroundBar"):WaitForChild("TargetZone")
         target.Size = UDim2.new(1.8, 0, 1.8, 0)
         target.Position = UDim2.new(-0.4, 0, -0.4, 0)
+        target.BackgroundTransparency = 1
     end)
 
     while mini.Visible and _G.AutoFarmBarista do task.wait(0.5) end
