@@ -458,7 +458,7 @@ local function safeTween(targetCF)
     local hrp = char:WaitForChild("HumanoidRootPart")
     
     -- Pakai -15 biar gak kena Kill Zone bawah map
-    local VOID_Y = -30 
+    local VOID_Y = -50 
     local SPEED = 180 
 
     -- Turun ke Void
