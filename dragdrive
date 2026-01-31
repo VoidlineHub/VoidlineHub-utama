@@ -429,8 +429,8 @@ end
 -- =========================================================
 local function safeTween(targetCF)
     local hrp = getHRP()
-    local VOID_Y = -50
-    local SPEED = 135 
+    local VOID_Y = -90
+    local SPEED = 195 
 
     local downCF = CFrame.new(hrp.Position.X, VOID_Y, hrp.Position.Z)
     TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {CFrame = downCF}):Play()
