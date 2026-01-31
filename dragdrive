@@ -389,7 +389,7 @@ SettingTab:Button({ Title = "Test Send Webhook", Callback = function() SendWebho
 
 -- // LOGIC BARISTA
 -- =========================================================
--- BARISTA GHOST MODE (FIXED COORDINATES & ANOMALY FILTER)
+-- BARISTA GHOST MODE (FIXED AUTOWALK & CLICK ENGINE)
 -- =========================================================
 
 local Players = game:GetService("Players")
@@ -405,7 +405,7 @@ _G.AntiAFK = true
 local BaristaRunning = false
 local isWorking = false
 
--- COORDINATES (WAJIB ADA BIAR GAK ERROR)
+-- COORDINATES
 local POS_EXIT_BARISTA = Vector3.new(-5004.42, 2.89, -678.09)
 local POS_SUPPLY = Vector3.new(-5114.04, 2.89, -669.93)
 
@@ -429,7 +429,7 @@ local function getHRP()
 end
 
 -- =========================================================
--- SAFE TWEEN (HEIGHT -27 | SPEED 180)
+-- SAFE TWEEN (STABLE -27 HEIGHT | 180 SPEED)
 -- =========================================================
 local function safeTween(targetCF)
     local hrp = getHRP()
@@ -447,11 +447,11 @@ local function safeTween(targetCF)
     moveTween.Completed:Wait()
 
     TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {CFrame = targetCF + Vector3.new(0, 2, 0)}):Play()
-    task.wait(0.55)
+    task.wait(0.7) -- JEDA STABILISASI (WAJIB BIAR AUTOWALK JALAN)
 end
 
 -- =========================================================
--- PERSISTENT AUTOWALK (SPEED 19)
+-- PERSISTENT AUTOWALK (FIXED DETECTION)
 -- =========================================================
 local function autoWalk(targetPos)
     local char = LP.Character
@@ -460,25 +460,34 @@ local function autoWalk(targetPos)
     if not hum or not hrp then return end
     
     hum.WalkSpeed = 19
+    
+    -- Paksa jalan sampai jarak < 3.5 stud
+    local timeout = 0
     repeat
         if not _G.AutoFarmBarista then break end
         hum:MoveTo(targetPos)
-        task.wait(0.1)
-    until (hrp.Position - targetPos).Magnitude < 3.8
+        task.wait(0.2)
+        timeout = timeout + 0.2
+    until (hrp.Position - targetPos).Magnitude < 3.5 or timeout > 10
 end
 
 -- =========================================================
--- SAFE CLICK (NO SPAM - DELAY 1.0S)
+-- SAFE CLICK (SMART RETRY - NO SPAM)
 -- =========================================================
 local function safeClick(prompt)
-    if not prompt or not prompt.Enabled then return end
-    task.wait(1.0) 
-    fireproximityprompt(prompt)
-    task.wait(0.5)
+    if not prompt then return end
+    
+    local retry = 0
+    repeat
+        if not prompt.Enabled then break end
+        fireproximityprompt(prompt)
+        task.wait(1.5) -- Jeda antar klik biar gak dianggap spam
+        retry = retry + 1
+    until not prompt.Enabled or retry > 5 or not _G.AutoFarmBarista
 end
 
 -- =========================================================
--- REPAIR LOGIC (FILTER ANOMALI & REPAIR)
+-- REPAIR LOGIC (ANOMALY AWARE)
 -- =========================================================
 local function runRepairFlow()
     local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
@@ -488,17 +497,15 @@ local function runRepairFlow()
         task.wait(0.5)
         local text = label.Text:lower()
         
-        -- 1. CEK ANOMALI (Kalau ada, script stop di sini/diem)
+        -- Filter Anomali
         if text:find("anomaly") or text:find("strange") or text:find("person") then
-            print("⚠️ Anomali Terdeteksi! Script Diem.")
-            return false -- Kasih tau Main Loop jangan lanjut dulu
+            print("⚠️ Anomali! Script nunggu.")
+            return false 
         end
 
-        -- 2. CEK REPAIR
+        -- Filter Repair
         if text:find("broke") or text:find("down") or text:find("fix") or text:find("restock") then
             isWorking = true
-            print("🛠️ Repairing Machine...")
-            
             safeTween(CFrame.new(POS_EXIT_BARISTA))
             safeTween(CFrame.new(POS_SUPPLY))
             
@@ -511,11 +518,11 @@ local function runRepairFlow()
             return true
         end
     end
-    return true -- Aman untuk lanjut kerja normal
+    return true
 end
 
 -- =========================
--- MINIGAME LOGIC
+-- MINIGAME & MAIN FLOW
 -- =========================
 local function handleMinigame()
     local gui = PlayerGui:FindFirstChild("BaristaGUI")
@@ -538,9 +545,6 @@ local function handleMinigame()
     isWorking = false
 end
 
--- =========================
--- MAIN CONTROLLER
--- =========================
 local function StartBaristaGhost()
     if BaristaRunning then return end
     BaristaRunning = true
@@ -552,34 +556,30 @@ local function StartBaristaGhost()
         while _G.AutoFarmBarista do
             local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
             
-            -- 1. AMBIL JOB
+            -- AMBIL JOB
             if not missionUI and not isWorking then
                 safeTween(startPart.CFrame)
                 safeClick(startPart:FindFirstChild("JobPrompt"))
                 
                 local retry = 0
                 while not PlayerGui:FindFirstChild("BaristaMissionUI") and retry < 15 do
-                    task.wait(1)
-                    retry = retry + 1
+                    task.wait(1); retry = retry + 1
                 end
+                
                 if _G.AutoFarmBarista and PlayerGui:FindFirstChild("BaristaMissionUI") then
+                    task.wait(0.5)
                     autoWalk(machinePart.Position)
                 end
 
-            -- 2. CEK REPAIR & ANOMALI
+            -- REPAIR / ANOMALY
             elseif missionUI and not isWorking then
                 local label = missionUI:FindFirstChild("ObjectiveLabel", true)
-                -- Hanya jalankan repair jika label berwarna merah (tanda rusak)
                 if label and label.TextColor3 == Color3.fromRGB(255, 50, 50) then
-                    local status = runRepairFlow()
-                    if not status then 
-                        -- Berhenti/Diem kalau ada anomali
-                        task.wait(2)
-                    end
+                    runRepairFlow()
                 end
             end
 
-            -- 3. KERJA RUTIN (MACHINE)
+            -- KERJA MESIN
             if missionUI and not isWorking then
                 local gui = PlayerGui:FindFirstChild("BaristaGUI")
                 local mini = gui and gui:FindFirstChild("MinigameFrame")
