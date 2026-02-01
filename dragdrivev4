@@ -389,7 +389,7 @@ SettingTab:Button({ Title = "Test Send Webhook", Callback = function() SendWebho
 
 -- // LOGIC BARISTA
 -- =========================================================
--- BARISTA GHOST MODE (FINAL FIX: OBSTACLE REMOVER + SYNCED HOLD)
+-- BARISTA GHOST MODE (FINAL FIX: SYNCED HOLD + PART REMOVER)
 -- =========================================================
 
 local Players = game:GetService("Players")
@@ -422,25 +422,18 @@ local machinePart = Interactions.MachinePart.MachinePart
 local registerPart = Interactions.RegisterPart.RegisterPart
 local supplyPart = Interactions.SupplyPart.SupplyPart
 
--- =========================
--- 1. OBSTACLE REMOVER (FIX STUCK)
--- =========================
+-- =========================================================
+-- FITUR TAMBAHAN: HAPUS PART PENGGANGGU (BIAR GAK STUCK)
+-- =========================================================
 task.spawn(function()
     pcall(function()
-        -- Part spesifik yang lu kasih path-nya
+        -- Path spesifik yang lu kasih
         local targetFolder = workspace:WaitForChild("BUILDING_JAJAR_SELATAN")
         local p1 = targetFolder:GetChildren()[8]:GetChildren()[177]
         local p2 = targetFolder:GetChildren()[8]:GetChildren()[150]
         
-        if p1 and p1:IsA("BasePart") then p1.CanCollide = false p1.Transparency = 0.5 end
-        if p2 and p2:IsA("BasePart") then p2.CanCollide = false p2.Transparency = 0.5 end
-        
-        -- Tambahan sapu bersih area Barista biar gak nyangkut meja/tembok
-        for _, v in pairs(BaristaJob:GetDescendants()) do
-            if v:IsA("BasePart") and (v.Name:find("Counter") or v.Name:find("Wall") or v.Name:find("Door")) then
-                v.CanCollide = false
-            end
-        end
+        if p1 and p1:IsA("BasePart") then p1.CanCollide = false p1.Transparency = 0.7 end
+        if p2 and p2:IsA("BasePart") then p2.CanCollide = false p2.Transparency = 0.7 end
     end)
 end)
 
@@ -482,7 +475,7 @@ local function autoWalk(targetPos)
 end
 
 -- =========================================================
--- UNIVERSAL HOLD SYSTEM (SYNCED WITH PHOTO DURATION)
+-- UNIVERSAL HOLD SYSTEM
 -- =========================================================
 local function universalHold(prompt, customDuration)
     if not prompt or not prompt.Enabled then return end
@@ -490,7 +483,7 @@ local function universalHold(prompt, customDuration)
     task.wait(0.5)
     prompt:InputHoldBegin()
     
-    -- Pakai 5.2 detik jika Supply (foto lu nunjukin 5 detik)
+    -- Sync dengan foto: Supply pakai 5.2s (Duration 5 + Buffer)
     local holdTime = customDuration or (prompt.HoldDuration > 0 and prompt.HoldDuration or 0.3)
     task.wait(holdTime)
     
@@ -500,7 +493,7 @@ local function universalHold(prompt, customDuration)
 end
 
 -- =========================================================
--- REPAIR LOGIC (SYNCED HOLD + AUTO RETURN)
+-- REPAIR LOGIC (GABUNGAN AMAN)
 -- =========================================================
 local function runRepairFlow()
     local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
@@ -518,14 +511,13 @@ local function runRepairFlow()
             
             local prompt = supplyPart:FindFirstChild("SupplyPrompt")
             if prompt then
-                -- Sesuai foto lu HoldDuration: 5, kita kasih 5.2 biar aman
+                -- PAKAI 5.2 SESUAI FOTO PROXY LU
                 universalHold(prompt, 5.2) 
                 BaristaEvent:FireServer("RestockSupplies")
             end
             
             task.wait(1.0)
             autoWalk(POS_EXIT_BARISTA)
-            autoWalk(machinePart.Position) -- Balik ke pos kerja dulu
             task.wait(0.5)
             isWorking = false 
         end
@@ -533,7 +525,7 @@ local function runRepairFlow()
 end
 
 -- =========================
--- MINIGAME & REGISTER
+-- MINIGAME & REGISTER (ORIGINAL LU)
 -- =========================
 local function handleMinigame()
     local gui = PlayerGui:FindFirstChild("BaristaGUI")
@@ -545,6 +537,7 @@ local function handleMinigame()
         local target = mini:WaitForChild("BackgroundBar"):WaitForChild("TargetZone")
         target.Size = UDim2.new(1.8, 0, 1.8, 0)
         target.Position = UDim2.new(-0.4, 0, -0.4, 0)
+        -- Transparency gue biarin default biar gak ilang
     end)
 
     while mini.Visible and _G.AutoFarmBarista do task.wait(0.5) end
@@ -619,7 +612,6 @@ local function StartBaristaGhost()
     end)
 end
 
--- TOGGLE
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -677,6 +669,15 @@ end)
 RunService.Heartbeat:Connect(function()
 local char = LP.Character
 if not char then return end
+
+-- HIDE NAME
+if _G.HideNameEnabled then
+local head = char:FindFirstChild("Head")
+local tag = head and head:FindFirstChildOfClass("BillboardGui")
+if tag then
+tag.Enabled = false
+end
+end
 
 -- HIDE CHARACTER
 if _G.HideCharEnabled then
