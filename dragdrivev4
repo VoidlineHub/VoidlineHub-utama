@@ -493,7 +493,7 @@ local function universalHold(prompt, customDuration)
 end
 
 -- =========================================================
--- REPAIR LOGIC (HOLD 5.2s SYNCED)
+-- REPAIR LOGIC (RESET STATE LANGSUNG SETELAH PROMPT)
 -- =========================================================
 local function runRepairFlow()
     local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
@@ -511,15 +511,16 @@ local function runRepairFlow()
             
             local prompt = supplyPart:FindFirstChild("SupplyPrompt")
             if prompt then
-                -- PAKAI 5.2 DETIK BIAR SINKRON SAMA PROXY DI FOTO LU
                 universalHold(prompt, 5.2) 
                 BaristaEvent:FireServer("RestockSupplies")
             end
             
-            task.wait(1.0)
-            autoWalk(POS_EXIT_BARISTA)
-            task.wait(0.5)
+            -- FIX: Langsung set false biar pas sampe machine autofarm normal langsung jalan
             isWorking = false 
+            
+            task.wait(0.5)
+            autoWalk(POS_EXIT_BARISTA)
+            autoWalk(machinePart.Position)
         end
     end
 end
@@ -538,7 +539,7 @@ local function handleMinigame()
         target.Size = UDim2.new(1.8, 0, 1.8, 0)
         target.Position = UDim2.new(-0.4, 0, -0.4, 0)
         target.BackgroundTransparency = 1
-       end)
+    end)
 
     while mini.Visible and _G.AutoFarmBarista do task.wait(0.5) end
     
@@ -684,7 +685,6 @@ if tag then
 tag.Enabled = false
 end
 end
-
 -- HIDE CHARACTER
 if _G.HideCharEnabled then
 for _, v in pairs(char:GetDescendants()) do
