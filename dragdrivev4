@@ -389,7 +389,7 @@ SettingTab:Button({ Title = "Test Send Webhook", Callback = function() SendWebho
 
 -- // LOGIC BARISTA
 -- =========================================================
--- BARISTA GHOST MODE (FINAL FIX: SYNCED HOLD + PART REMOVER)
+-- BARISTA GHOST MODE (FINAL VERSION: NPC SYNC + TWEEN FIX)
 -- =========================================================
 
 local Players = game:GetService("Players")
@@ -426,7 +426,7 @@ local supplyPart = Interactions.SupplyPart.SupplyPart
 -- HAPUS PART (DENGAN DELAY AGAR TIDAK KE DETECT SERVER)
 -- =========================================================
 task.spawn(function()
-    task.wait(5) -- Sesuai request lu: dikasih wait dulu
+    task.wait(5) 
     pcall(function()
         local targetFolder = workspace:WaitForChild("BUILDING_JAJAR_SELATAN")
         local p1 = targetFolder:GetChildren()[8]:GetChildren()[177]
@@ -475,7 +475,7 @@ local function autoWalk(targetPos)
 end
 
 -- =========================================================
--- UNIVERSAL HOLD SYSTEM (PASTI HOLD DI SEMUA TEMPAT)
+-- UNIVERSAL HOLD SYSTEM
 -- =========================================================
 local function universalHold(prompt, customDuration)
     if not prompt or not prompt.Enabled then return end
@@ -493,7 +493,7 @@ local function universalHold(prompt, customDuration)
 end
 
 -- =========================================================
--- REPAIR LOGIC (RESET STATE LANGSUNG SETELAH PROMPT)
+-- REPAIR LOGIC (NPC SYNCED)
 -- =========================================================
 local function runRepairFlow()
     local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
@@ -503,7 +503,8 @@ local function runRepairFlow()
         local text = label.Text:lower()
         if text:find("anomaly") or text:find("strange") or text:find("person") then return end
 
-        if text:find("broke") or text:find("down") or text:find("fix") or text:find("restock") then
+        -- Cek warna merah atau teks perbaikan
+        if label.TextColor3 == Color3.fromRGB(255, 50, 50) or text:find("fix") or text:find("restock") then
             isWorking = true
             
             autoWalk(POS_EXIT_BARISTA)
@@ -511,12 +512,11 @@ local function runRepairFlow()
             
             local prompt = supplyPart:FindFirstChild("SupplyPrompt")
             if prompt then
-                -- Pakai durasi 5.2s sesuai foto properti lu
-                universalHold(prompt, 5.2) 
+                universalHold(prompt, 5.2) --
                 BaristaEvent:FireServer("RestockSupplies")
             end
             
-            -- RESET LANGSUNG: Biar pas balik ke mesin autofarm normal langsung 'nyaut'
+            -- RESET AGAR BALIK KE MACHINE LANGSUNG DETEK NPC
             isWorking = false 
             
             task.wait(0.5)
@@ -542,13 +542,12 @@ local function handleMinigame()
         target.BackgroundTransparency = 1
     end)
 
+    -- Tunggu brewing selesai
     while mini.Visible and _G.AutoFarmBarista do task.wait(0.5) end
     
-    -- REGISTER HOLD
     autoWalk(registerPart.Position)
     universalHold(registerPart:FindFirstChild("RegisterPrompt"))
     
-    -- BALIK KE MACHINE
     autoWalk(machinePart.Position)
     isWorking = false
 end
@@ -567,26 +566,46 @@ local function StartBaristaGhost()
         while _G.AutoFarmBarista do
             local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
             
-            -- 1. REPAIR CHECK (PAKAI WARNA MERAH BIAR AKURAT)
-            if missionUI and not isWorking then
+            -- 1. START JOB (TWEEN)
+            if not missionUI and not isWorking then
+                local hrp = getHRP()
+                local targetCF = startPart.CFrame
+                -- Logic tween rakitan lu gue pertahankan
+                TweenService:Create(hrp, TweenInfo.new(0.5), {CFrame = CFrame.new(hrp.Position.X, -27, hrp.Position.Z)}):Play()
+                task.wait(0.6)
+                local dist = (hrp.Position - Vector3.new(targetCF.X, -27, targetCF.Z)).Magnitude
+                local move = TweenService:Create(hrp, TweenInfo.new(dist/180), {CFrame = CFrame.new(targetCF.X, -27, targetCF.Z)})
+                move:Play()
+                move.Completed:Wait()
+                TweenService:Create(hrp, TweenInfo.new(0.5), {CFrame = targetCF + Vector3.new(0,2,0)}):Play()
+                task.wait(0.6)
+                
+                universalHold(startPart:FindFirstChild("JobPrompt"))
+                task.wait(1)
+                if _G.AutoFarmBarista and PlayerGui:FindFirstChild("BaristaMissionUI") then
+                    autoWalk(machinePart.Position)
+                end
+
+            -- 2. REPAIR CHECK (PAKAI WARNA MERAH)
+            elseif missionUI and not isWorking then
                 local label = missionUI:FindFirstChild("ObjectiveLabel", true)
                 if label and label.TextColor3 == Color3.fromRGB(255, 50, 50) then
                     runRepairFlow() 
                 end
             end
 
-            -- 2. WORK CHECK (PAKAI KATA 'NPC' ATAU 'CUSTOMER')
+            -- 3. WORK (BACA NPC)
             if missionUI and not isWorking then
-                local label = missionUI:FindFirstChild("ObjectiveLabel", true)
                 local gui = PlayerGui:FindFirstChild("BaristaGUI")
                 local mini = gui and gui:FindFirstChild("MinigameFrame")
 
-                -- Kalau minigame (Brewing) muncul di layar, hajar!
                 if mini and mini.Visible then
                     handleMinigame()
                 else
+                    local label = missionUI:FindFirstChild("ObjectiveLabel", true)
                     local text = label and label.Text:lower() or ""
-                    -- SEKARANG BACA 'NPC' ATAU 'CUSTOMER' BIAR GAK PUSING SAMA NAMA MINUMAN
+                    
+                    -- BACA TULISAN NPC/CUSTOMER BIAR RANDOM TETEP JALAN
                     if text:find("npc") or text:find("customer") then
                         local hrp = getHRP()
                         if (hrp.Position - machinePart.Position).Magnitude > 4 then
@@ -673,6 +692,7 @@ if tag then
 tag.Enabled = false
 end
 end
+
 -- HIDE CHARACTER
 if _G.HideCharEnabled then
 for _, v in pairs(char:GetDescendants()) do
