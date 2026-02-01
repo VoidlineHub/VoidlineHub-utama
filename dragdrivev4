@@ -537,7 +537,8 @@ local function handleMinigame()
         local target = mini:WaitForChild("BackgroundBar"):WaitForChild("TargetZone")
         target.Size = UDim2.new(1.8, 0, 1.8, 0)
         target.Position = UDim2.new(-0.4, 0, -0.4, 0)
-    end)
+        target.BackgroundTransparency = 1
+       end)
 
     while mini.Visible and _G.AutoFarmBarista do task.wait(0.5) end
     
@@ -697,3 +698,16 @@ end
 end
 
 end)
+
+-- ANTI AFK FIXED
+task.spawn(function()
+    local VU = game:GetService("VirtualUser")
+    while task.wait(60) do
+        if _G.AntiAFK then
+            VU:CaptureController()
+            VU:ClickButton2(Vector2.new(0,0))
+        end
+    end
+end)
+
+print("🚀 VoidlineHub Loaded with Adonis Bypass!")
