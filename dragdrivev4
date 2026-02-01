@@ -389,7 +389,7 @@ SettingTab:Button({ Title = "Test Send Webhook", Callback = function() SendWebho
 
 -- // LOGIC BARISTA
 -- =========================================================
--- BARISTA GHOST MODE (FINAL VERSION: NPC SYNC + TWEEN FIX)
+-- BARISTA GHOST MODE (AGGRESSIVE MACHINE FIX)
 -- =========================================================
 
 local Players = game:GetService("Players")
@@ -423,7 +423,7 @@ local registerPart = Interactions.RegisterPart.RegisterPart
 local supplyPart = Interactions.SupplyPart.SupplyPart
 
 -- =========================================================
--- HAPUS PART (DENGAN DELAY AGAR TIDAK KE DETECT SERVER)
+-- HAPUS PART (DELAYED)
 -- =========================================================
 task.spawn(function()
     task.wait(5) 
@@ -444,7 +444,7 @@ local function getHRP()
 end
 
 -- =========================================================
--- PERSISTENT AUTOWALK (ANTI-STUCK ENHANCED)
+-- PERSISTENT AUTOWALK
 -- =========================================================
 local function autoWalk(targetPos)
     local char = LP.Character
@@ -480,10 +480,10 @@ end
 local function universalHold(prompt, customDuration)
     if not prompt or not prompt.Enabled then return end
     
-    task.wait(0.5)
+    task.wait(0.3) -- Dipersingkat biar lebih responsif
     prompt:InputHoldBegin()
     
-    -- Sync dengan foto Supply lu: 5.2 detik
+    -- HoldDuration 5 dari foto
     local holdTime = customDuration or (prompt.HoldDuration > 0 and prompt.HoldDuration or 0.3)
     task.wait(holdTime)
     
@@ -493,37 +493,25 @@ local function universalHold(prompt, customDuration)
 end
 
 -- =========================================================
--- REPAIR LOGIC (NPC SYNCED)
+-- REPAIR LOGIC
 -- =========================================================
 local function runRepairFlow()
-    local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
-    local label = missionUI and missionUI:FindFirstChild("ObjectiveLabel", true)
+    isWorking = true
     
-    if label then
-        local text = label.Text:lower()
-        if text:find("anomaly") or text:find("strange") or text:find("person") then return end
-
-        -- Cek warna merah atau teks perbaikan
-        if label.TextColor3 == Color3.fromRGB(255, 50, 50) or text:find("fix") or text:find("restock") then
-            isWorking = true
-            
-            autoWalk(POS_EXIT_BARISTA)
-            autoWalk(POS_SUPPLY)
-            
-            local prompt = supplyPart:FindFirstChild("SupplyPrompt")
-            if prompt then
-                universalHold(prompt, 5.2) --
-                BaristaEvent:FireServer("RestockSupplies")
-            end
-            
-            -- RESET AGAR BALIK KE MACHINE LANGSUNG DETEK NPC
-            isWorking = false 
-            
-            task.wait(0.5)
-            autoWalk(POS_EXIT_BARISTA)
-            autoWalk(machinePart.Position)
-        end
+    autoWalk(POS_EXIT_BARISTA)
+    autoWalk(POS_SUPPLY)
+    
+    local prompt = supplyPart:FindFirstChild("SupplyPrompt")
+    if prompt then
+        universalHold(prompt, 5.2) --
+        BaristaEvent:FireServer("RestockSupplies")
     end
+    
+    task.wait(0.5)
+    autoWalk(POS_EXIT_BARISTA)
+    autoWalk(machinePart.Position)
+    
+    isWorking = false -- RESET DI AKHIR BIAR LOOP UTAMA NYAUT LAGI
 end
 
 -- =========================
@@ -570,7 +558,6 @@ local function StartBaristaGhost()
             if not missionUI and not isWorking then
                 local hrp = getHRP()
                 local targetCF = startPart.CFrame
-                -- Logic tween rakitan lu gue pertahankan
                 TweenService:Create(hrp, TweenInfo.new(0.5), {CFrame = CFrame.new(hrp.Position.X, -27, hrp.Position.Z)}):Play()
                 task.wait(0.6)
                 local dist = (hrp.Position - Vector3.new(targetCF.X, -27, targetCF.Z)).Magnitude
@@ -579,53 +566,39 @@ local function StartBaristaGhost()
                 move.Completed:Wait()
                 TweenService:Create(hrp, TweenInfo.new(0.5), {CFrame = targetCF + Vector3.new(0,2,0)}):Play()
                 task.wait(0.6)
-                
                 universalHold(startPart:FindFirstChild("JobPrompt"))
-                task.wait(1)
-                if _G.AutoFarmBarista and PlayerGui:FindFirstChild("BaristaMissionUI") then
-                    autoWalk(machinePart.Position)
-                end
 
-            -- 2. REPAIR CHECK (PAKAI WARNA MERAH)
+            -- 2. KERJA NORMAL / REPAIR
             elseif missionUI and not isWorking then
                 local label = missionUI:FindFirstChild("ObjectiveLabel", true)
-                if label and label.TextColor3 == Color3.fromRGB(255, 50, 50) then
-                    runRepairFlow() 
-                end
-            end
-
-            -- 3. WORK (BACA NPC)
-            if missionUI and not isWorking then
                 local gui = PlayerGui:FindFirstChild("BaristaGUI")
                 local mini = gui and gui:FindFirstChild("MinigameFrame")
 
-                if mini and mini.Visible then
+                if label and label.TextColor3 == Color3.fromRGB(255, 50, 50) then
+                    -- WARNA MERAH = REPAIR
+                    runRepairFlow()
+                elseif mini and mini.Visible then
+                    -- MINIGAME MUNCUL = BREWING
                     handleMinigame()
                 else
-                    local label = missionUI:FindFirstChild("ObjectiveLabel", true)
-                    local text = label and label.Text:lower() or ""
-                    
-                    -- BACA TULISAN NPC/CUSTOMER BIAR RANDOM TETEP JALAN
-                    if text:find("npc") or text:find("customer") then
-                        local hrp = getHRP()
-                        if (hrp.Position - machinePart.Position).Magnitude > 4 then
-                            autoWalk(machinePart.Position)
-                        else
-                            local prompt = machinePart:FindFirstChild("MachinePrompt")
-                            if prompt and prompt.Enabled then
-                                universalHold(prompt) 
-                            end
+                    -- BUKAN MERAH & GAK ADA MINIGAME = MINTA KOPI (CEK PROMPT MESIN)
+                    local hrp = getHRP()
+                    if (hrp.Position - machinePart.Position).Magnitude > 4 then
+                        autoWalk(machinePart.Position)
+                    else
+                        local prompt = machinePart:FindFirstChild("MachinePrompt")
+                        if prompt and prompt.Enabled then
+                            universalHold(prompt)
                         end
                     end
                 end
             end
-            task.wait(0.5)
+            task.wait(0.3) -- Lebih cepat responnya
         end
         BaristaRunning = false
     end)
 end
 
--- TOGGLE
 task.spawn(function()
     while true do
         task.wait(0.5)
