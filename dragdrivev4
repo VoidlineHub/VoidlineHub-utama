@@ -423,17 +423,17 @@ local registerPart = Interactions.RegisterPart.RegisterPart
 local supplyPart = Interactions.SupplyPart.SupplyPart
 
 -- =========================================================
--- FITUR TAMBAHAN: HAPUS PART PENGGANGGU (BIAR GAK STUCK)
+-- HAPUS PART (DENGAN DELAY AGAR TIDAK KE DETECT SERVER)
 -- =========================================================
 task.spawn(function()
+    task.wait(5) -- Sesuai request lu: dikasih wait dulu
     pcall(function()
-        -- Path spesifik yang lu kasih
         local targetFolder = workspace:WaitForChild("BUILDING_JAJAR_SELATAN")
         local p1 = targetFolder:GetChildren()[8]:GetChildren()[177]
         local p2 = targetFolder:GetChildren()[8]:GetChildren()[150]
         
-        if p1 and p1:IsA("BasePart") then p1.CanCollide = false p1.Transparency = 0.7 end
-        if p2 and p2:IsA("BasePart") then p2.CanCollide = false p2.Transparency = 0.7 end
+        if p1 and p1:IsA("BasePart") then p1.CanCollide = false end
+        if p2 and p2:IsA("BasePart") then p2.CanCollide = false end
     end)
 end)
 
@@ -475,7 +475,7 @@ local function autoWalk(targetPos)
 end
 
 -- =========================================================
--- UNIVERSAL HOLD SYSTEM
+-- UNIVERSAL HOLD SYSTEM (PASTI HOLD DI SEMUA TEMPAT)
 -- =========================================================
 local function universalHold(prompt, customDuration)
     if not prompt or not prompt.Enabled then return end
@@ -483,7 +483,7 @@ local function universalHold(prompt, customDuration)
     task.wait(0.5)
     prompt:InputHoldBegin()
     
-    -- Sync dengan foto: Supply pakai 5.2s (Duration 5 + Buffer)
+    -- Sync dengan foto Supply lu: 5.2 detik
     local holdTime = customDuration or (prompt.HoldDuration > 0 and prompt.HoldDuration or 0.3)
     task.wait(holdTime)
     
@@ -493,7 +493,7 @@ local function universalHold(prompt, customDuration)
 end
 
 -- =========================================================
--- REPAIR LOGIC (GABUNGAN AMAN)
+-- REPAIR LOGIC (HOLD 5.2s SYNCED)
 -- =========================================================
 local function runRepairFlow()
     local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
@@ -511,7 +511,7 @@ local function runRepairFlow()
             
             local prompt = supplyPart:FindFirstChild("SupplyPrompt")
             if prompt then
-                -- PAKAI 5.2 SESUAI FOTO PROXY LU
+                -- PAKAI 5.2 DETIK BIAR SINKRON SAMA PROXY DI FOTO LU
                 universalHold(prompt, 5.2) 
                 BaristaEvent:FireServer("RestockSupplies")
             end
@@ -525,7 +525,7 @@ local function runRepairFlow()
 end
 
 -- =========================
--- MINIGAME & REGISTER (ORIGINAL LU)
+-- MINIGAME & REGISTER
 -- =========================
 local function handleMinigame()
     local gui = PlayerGui:FindFirstChild("BaristaGUI")
@@ -537,14 +537,15 @@ local function handleMinigame()
         local target = mini:WaitForChild("BackgroundBar"):WaitForChild("TargetZone")
         target.Size = UDim2.new(1.8, 0, 1.8, 0)
         target.Position = UDim2.new(-0.4, 0, -0.4, 0)
-        -- Transparency gue biarin default biar gak ilang
     end)
 
     while mini.Visible and _G.AutoFarmBarista do task.wait(0.5) end
     
+    -- REGISTER HOLD
     autoWalk(registerPart.Position)
     universalHold(registerPart:FindFirstChild("RegisterPrompt"))
     
+    -- BALIK KE MACHINE
     autoWalk(machinePart.Position)
     isWorking = false
 end
@@ -563,6 +564,7 @@ local function StartBaristaGhost()
         while _G.AutoFarmBarista do
             local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
             
+            -- 1. START JOB (TWEEN)
             if not missionUI and not isWorking then
                 local hrp = getHRP()
                 local targetCF = startPart.CFrame
@@ -581,6 +583,7 @@ local function StartBaristaGhost()
                     autoWalk(machinePart.Position)
                 end
 
+            -- 2. REPAIR CHECK
             elseif missionUI and not isWorking then
                 local label = missionUI:FindFirstChild("ObjectiveLabel", true)
                 if label and label.TextColor3 == Color3.fromRGB(255, 50, 50) then
@@ -588,6 +591,7 @@ local function StartBaristaGhost()
                 end
             end
 
+            -- 3. WORK
             if missionUI and not isWorking then
                 local gui = PlayerGui:FindFirstChild("BaristaGUI")
                 local mini = gui and gui:FindFirstChild("MinigameFrame")
@@ -612,6 +616,7 @@ local function StartBaristaGhost()
     end)
 end
 
+-- TOGGLE
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -692,16 +697,3 @@ end
 end
 
 end)
-
--- ANTI AFK FIXED
-task.spawn(function()
-    local VU = game:GetService("VirtualUser")
-    while task.wait(60) do
-        if _G.AntiAFK then
-            VU:CaptureController()
-            VU:ClickButton2(Vector2.new(0,0))
-        end
-    end
-end)
-
-print("🚀 VoidlineHub Loaded with Adonis Bypass!")
