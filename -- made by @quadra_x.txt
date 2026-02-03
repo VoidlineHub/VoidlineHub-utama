@@ -1,4 +1,3 @@
--- made by @quadra_x4 & little bit help of AI :)
 local VoidlineBypass = {}
 
 -- Configurable settings
@@ -1147,3 +1146,4 @@ task.spawn(function()
 end)
 
 print("🚀 VoidlineHub Loaded with Adonis Bypass!")
+
