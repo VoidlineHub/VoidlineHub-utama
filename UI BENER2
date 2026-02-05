@@ -326,12 +326,12 @@ local function StopRoute()
 end
 
 -- ==========================================
--- 6. AUTOMATION LOOPS & EVENTS (FIXED FOR MOBILE)
+-- 6. AUTOMATION LOOPS & EVENTS (FIXED)
 -- ==========================================
 
 -- 1. ADMIN LOG (OTOMATIS PAS EXECUTE)
 task.spawn(function()
-    task.wait(3) -- Jeda biar data player ke-load sempurna
+    task.wait(3) -- Jeda biar data player & server type ke-load stabil
     SendWebhook(false, true, false) -- isTest, isAdmin, isDisconnect
 end)
 
@@ -373,30 +373,33 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- 4. WEBHOOK AUTO-SEND (LAPORAN RUTIN USER)
+-- Fix: Ditambah logic pengecekan agar tidak spam dan data valid
 task.spawn(function()
     while task.wait(WEBHOOK_INTERVAL or 50) do
+        -- Webhook user cuma jalan kalau Toggle On DAN lagi Autofarm
         if _G.WebhookEnabled and AutoFarm then
             SendWebhook(false, false, false)
         end
     end
 end)
 
--- 5. DISCONNECT NOTIF (USER ONLY - FIX FOR MOBILE EXECUTORS)
--- Kita pakai PlayerRemoving karena BindToClose dilarang di Client/Executor
+-- 5. DISCONNECT & TELEPORT NOTIF (FIX FOR MOBILE)
+-- Pake PlayerRemoving & OnTeleport sebagai pengganti BindToClose yang dilarang di Client
+local function OnSessionEnd()
+    if _G.WebhookEnabled and _G.WebhookURL ~= "" then
+        -- Kirim status terakhir sebelum keluar/pindah
+        SendWebhook(false, false, true)
+    end
+end
+
 Players.PlayerRemoving:Connect(function(player)
     if player == LP then
-        if _G.WebhookEnabled and _G.WebhookURL ~= "" then
-            SendWebhook(false, false, true)
-        end
+        OnSessionEnd()
     end
 end)
 
--- Backup jika player pindah server (Teleport)
-LP.OnTeleport:Connect(function()
-    if _G.WebhookEnabled and _G.WebhookURL ~= "" then
-        SendWebhook(false, false, true)
-    end
-end)
+LP.OnTeleport:Connect(OnSessionEnd)
+
 
 
 -- ==========================================
