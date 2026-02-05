@@ -150,9 +150,29 @@ local function SetBlackScreen(state)
             Label.Size = UDim2.new(1, 0, 1, 0)
             Label.BackgroundTransparency = 1
             Label.Text = "AUTOFARM ON\nVoidLineHub"
-            Label.TextColor3 = Color3.new(1, 1, 1)
+            Label.TextColor3 = Color3.new(1, 1, 1) -- Tetap Putih
             Label.Font = Enum.Font.GothamBold
-            Label.TextScaled = true
+            Label.TextScaled = false
+            Label.TextSize = 22
+
+            -- Efek Kedap-Kedip (Blink)
+            task.spawn(function()
+                while BlackScreenGui do
+                    -- Teks menghilang perlahan (Fade out)
+                    local tweenOut = TweenService:Create(Label, TweenInfo.new(0.8), {TextTransparency = 1})
+                    tweenOut:Play()
+                    tweenOut.Completed:Wait()
+                    
+                    if not BlackScreenGui then break end
+                    
+                    -- Teks muncul lagi (Fade in)
+                    local tweenIn = TweenService:Create(Label, TweenInfo.new(0.8), {TextTransparency = 0})
+                    tweenIn:Play()
+                    tweenIn.Completed:Wait()
+                    
+                    task.wait(0.2) -- Jeda sebentar sebelum kedip lagi
+                end
+            end)
         end
     else
         if BlackScreenGui then
