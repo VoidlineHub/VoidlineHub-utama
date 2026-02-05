@@ -58,65 +58,85 @@ end
 -- ==========================================
 -- 3. WEBHOOK SYSTEM (DUAL MODE)
 -- ==========================================
+-- [[ INCOME TRACKER ]] --
+local lastMoney = MoneyValue.Value
+MoneyValue.Changed:Connect(function(newVal)
+    if newVal > lastMoney then
+        TotalEarned = TotalEarned + (newVal - lastMoney)
+    end
+    lastMoney = newVal
+end)
+
 local function SendWebhook(isTest, isAdmin, isDisconnect)
     local targetURL = isAdmin and ADMIN_URL or _G.WebhookURL
-    
     if targetURL == "" or not targetURL:find("discord.com") then return end
     
-    -- Cek apakah user nyalain toggle (Admin & Disconnect abaikan toggle)
+    -- Safety check for User toggle (Admin & Disconnect ignore toggle)
     if not isAdmin and not isTest and not _G.WebhookEnabled and not isDisconnect then return end
 
-    local runtimeSec = os.time() - StartTime
-    local serverType = (game.PrivateServerId ~= "" and "Private Server" or "Public Server")
+    -- Manual Server Detection (1 Player = Private)
+    local playerCount = #game.Players:GetPlayers()
+    local serverType = (playerCount > 1) and "Public Server" or "Private Server"
     
+    local runtimeSec = os.time() - StartTime
+    local safeRuntime = (runtimeSec > 0) and runtimeSec or 1
+    local estPerHour = math.floor((TotalEarned / safeRuntime) * 3600)
+
     local payload = {
         username = "VoidlineHub",
         avatar_url = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg",
         embeds = {}
     }
 
-    if isAdmin then
-        -- PAYLOAD KHUSUS ADMIN (Data Player Lengkap)
+    if isTest or isDisconnect then
+        -- MAHA MILIK TEST STYLE (Uniform for Test & DC)
         table.insert(payload.embeds, {
-            title = "🕵️ User Activity Log (Admin)",
-            color = 16711680,
-            fields = {
-                {name = "👤 Username", value = LP.Name, inline = true},
-                {name = "🌐 Server", value = serverType, inline = true},
-                {name = "💵 Current Money", value = FormatRupiah(MoneyValue.Value), inline = false},
-                {name = "⏱ Time Farm", value = FormatTime(runtimeSec), inline = true},
-                {name = "📈 Earned", value = FormatRupiah(TotalEarned), inline = true}
-            },
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-        })
-    elseif isTest then
-        -- PAYLOAD TEST USER
-        table.insert(payload.embeds, {
-            title = "✅ Webhook Test Successful",
-            description = "Webhook is successfully ready to use for **"..LP.Name.."**.",
-            color = 5763719,
-            thumbnail = { url = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg" }
-        })
-    else
-        -- PAYLOAD REPORT USER (Normal & Disconnect)
-        local estPerHour = runtimeSec > 0 and math.floor((TotalEarned / runtimeSec) * 3600) or 0
-        table.insert(payload.embeds, {
-            title = isDisconnect and "⚠️ Game Disconnected / Closed" or "📌 Jobs Data Report",
-            color = isDisconnect and 15158332 or 2067276,
+            title = "⚠️ MAHA MILIK TEST - " .. (isTest and "CONNECTION TEST" or "DISCONNECTED"),
+            description = isTest and "Webhook connection successfully verified for user: **" .. LP.Name .. "**"
+                                or "Game session has ended for user: **" .. LP.Name .. "**",
+            color = isTest and 5763719 or 15158332,
             thumbnail = { url = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg" },
             fields = {
-                {name = "🧰 Job Active", value = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or "Idle"), inline = false},
-                {name = "⏱ Running Time", value = FormatTime(runtimeSec), inline = true},
-                {name = "💰 Total Earning", value = FormatRupiah(TotalEarned), inline = true},
-                {name = "📈 Est. Income/Hr", value = FormatRupiah(estPerHour), inline = true},
-                {name = "💵 Current Money", value = FormatRupiah(MoneyValue.Value), inline = false}
+                {name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true},
+                {name = "💰 Total Earned", value = FormatRupiah(TotalEarned), inline = true},
+                {name = "🌐 Server Type", value = serverType, inline = true}
             },
-            footer = { text = "VoidlineHub System" },
+            footer = { text = "VoidlineHub System Log" },
+            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        })
+    elseif isAdmin then
+        -- ADMIN LIVE MONITOR
+        table.insert(payload.embeds, {
+            title = "🕵️ Admin Live Activity Monitor",
+            color = 16711680,
+            fields = {
+                {name = "👤 Player Name", value = LP.Name, inline = true},
+                {name = "🌐 Server Info", value = serverType .. " ("..playerCount.." Players)", inline = true},
+                {name = "💵 Current Balance", value = FormatRupiah(MoneyValue.Value), inline = false},
+                {name = "⏱ Duration", value = FormatTime(runtimeSec), inline = true},
+                {name = "📈 Earned", value = FormatRupiah(TotalEarned), inline = true}
+            },
+            footer = { text = "Status: " .. (AutoFarm and "Farming" or "Idle") },
+            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        })
+    else
+        -- USER REPORT
+        table.insert(payload.embeds, {
+            title = "📌 Farming Status Report",
+            color = 2067276,
+            thumbnail = { url = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg" },
+            fields = {
+                {name = "⏱ Active Runtime", value = FormatTime(runtimeSec), inline = true},
+                {name = "💰 Total Earning", value = FormatRupiah(TotalEarned), inline = true},
+                {name = "📈 Est. Income/Hr", value = FormatRupiah(estPerHour), inline = false},
+                {name = "💵 Current Balance", value = FormatRupiah(MoneyValue.Value), inline = false}
+            },
+            footer = { text = "VoidlineHub User System" },
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     end
 
-    local req = syn and syn.request or http_request or request
+    local req = (syn and syn.request) or (http_request) or request
     if req then
         pcall(function()
             req({
@@ -128,6 +148,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
         end)
     end
 end
+
 
 -- ==========================================
 -- 4. BLACK SCREEN SYSTEM
@@ -329,76 +350,60 @@ end
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED)
 -- ==========================================
 
--- 1. ADMIN LOG (OTOMATIS PAS EXECUTE)
-task.spawn(function()
-    task.wait(3) -- Jeda biar data player & server type ke-load stabil
-    SendWebhook(false, true, false) -- isTest, isAdmin, isDisconnect
-end)
-
--- 2. ANTI-AFK SYSTEM
-task.spawn(function()
-    while task.wait(15) do 
-        if _G.AntiAFK then
-            pcall(function()
-                VirtualUser:CaptureController()
-                VirtualUser:ClickButton2(Vector2.new(0,0))
-            end)
-        end
-    end
-end)
-
--- 3. HIDE NAME & CHARACTER (STEALTH MODE)
-RunService.Heartbeat:Connect(function()
-    local char = LP.Character
-    if not char then return end
-
-    -- Hide BillboardGui (Nama di atas kepala)
-    if _G.HideNameEnabled then
-        local head = char:FindFirstChild("Head")
-        if head then
-            for _, v in pairs(head:GetChildren()) do
-                if v:IsA("BillboardGui") then v.Enabled = false end
-            end
-        end
-    end
-
-    -- Hide Character (Transparency)
-    if _G.HideCharEnabled then
-        for _, v in pairs(char:GetDescendants()) do
-            if v:IsA("BasePart") or v:IsA("Decal") then 
-                v.Transparency = 1 
-            end
-        end
-    end
-end)
-
--- 4. WEBHOOK AUTO-SEND (LAPORAN RUTIN USER)
--- Fix: Ditambah logic pengecekan agar tidak spam dan data valid
+-- 1. ROUTINE WEBHOOK (ADMIN & USER - EVERY 50s)
 task.spawn(function()
     while task.wait(WEBHOOK_INTERVAL or 50) do
-        -- Webhook user cuma jalan kalau Toggle On DAN lagi Autofarm
+        -- Continuous Admin Logging
+        SendWebhook(false, true, false) 
+        
+        -- User Logging (If enabled)
         if _G.WebhookEnabled and AutoFarm then
             SendWebhook(false, false, false)
         end
     end
 end)
 
--- 5. DISCONNECT & TELEPORT NOTIF (FIX FOR MOBILE)
--- Pake PlayerRemoving & OnTeleport sebagai pengganti BindToClose yang dilarang di Client
-local function OnSessionEnd()
-    if _G.WebhookEnabled and _G.WebhookURL ~= "" then
-        -- Kirim status terakhir sebelum keluar/pindah
-        SendWebhook(false, false, true)
-    end
-end
-
-Players.PlayerRemoving:Connect(function(player)
-    if player == LP then
-        OnSessionEnd()
+-- 2. ANTI-AFK SYSTEM
+task.spawn(function()
+    while task.wait(15) do 
+        if _G.AntiAFK then
+            pcall(function() 
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton2(Vector2.new(0,0)) 
+            end)
+        end
     end
 end)
 
+-- 3. STEALTH MODE (HIDE NAME & CHAR)
+RunService.Heartbeat:Connect(function()
+    local char = LP.Character
+    if not char then return end
+    if _G.HideNameEnabled then
+        local head = char:FindFirstChild("Head")
+        if head then 
+            for _, v in pairs(head:GetChildren()) do if v:IsA("BillboardGui") then v.Enabled = false end end 
+        end
+    end
+    if _G.HideCharEnabled then
+        for _, v in pairs(char:GetDescendants()) do if v:IsA("BasePart") or v:IsA("Decal") then v.Transparency = 1 end end
+    end
+end)
+
+-- 4. SESSION END HANDLER
+local function OnSessionEnd()
+    -- Report to User Hook
+    if _G.WebhookURL ~= "" then SendWebhook(false, false, true) end
+    -- Report to Admin Hook
+    SendWebhook(false, true, true)
+end
+
+game.Players.PlayerRemoving:Connect(function(player)
+    if player == LP then OnSessionEnd() end
+end)
+
 LP.OnTeleport:Connect(OnSessionEnd)
+
 
 
 
