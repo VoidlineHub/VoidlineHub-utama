@@ -57,7 +57,7 @@ end
 
 -- ==========================================
 -- 3. WEBHOOK SYSTEM (DUAL MODE)
--- ==========================================
+-- ========================================
 -- [[ INCOME TRACKER ]] --
 local lastMoney = MoneyValue.Value
 MoneyValue.Changed:Connect(function(newVal)
@@ -68,18 +68,17 @@ MoneyValue.Changed:Connect(function(newVal)
 end)
 
 local function SendWebhook(isTest, isAdmin, isDisconnect)
-    -- URL Selector: Admin Routine go to ADMIN_URL, others go to USER_URL
+    -- Seleksi URL: Admin routine ke ADMIN_URL, sisanya ke User URL
     local targetURL = isAdmin and ADMIN_URL or _G.WebhookURL
     if targetURL == "" or not targetURL:find("discord.com") then return end
     
-    -- Toggle Protection
+    -- Filter Toggle: Admin, Test, dan Disconnect selalu tembus
     if not isAdmin and not isTest and not isDisconnect and not _G.WebhookEnabled then return end
 
     local runtimeSec = os.time() - StartTime
     local safeRuntime = (runtimeSec > 0) and runtimeSec or 1
+    -- Logic: Earned dibagi detik jalan, dikali 3600 detik (1 jam)
     local estPerHour = math.floor((TotalEarned / safeRuntime) * 3600)
-    local playerCount = #game.Players:GetPlayers()
-    local serverType = (playerCount > 1) and "Public Server" or "Private Server"
     
     local avatarImg = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg"
     
@@ -89,25 +88,23 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
         embeds = {}
     }
 
-    -- [[ STYLE 1: TEST & DISCONNECT (Compact Style) ]] --
+    -- [[ STYLE 1: TEST & DISCONNECT (Super Simple Style - No Fields) ]] --
     if isTest or isDisconnect then
         table.insert(payload.embeds, {
             title = isTest and "✅ Webhook Test Successful" or "⚠️ Game Disconnected / Closed",
-            description = isTest and "Webhook is successfully ready to use for **"..LP.Name.."**." 
-                                or "Game session has ended for user: **" .. LP.Name .. "**",
+            description = isTest and "webhook successfully ready to use." 
+                                or "Game session has ended for user **" .. LP.Name .. "**.",
             color = isTest and 5763719 or 15158332,
             thumbnail = { url = avatarImg },
-            fields = {
-                {name = "👤 Player", value = LP.Name, inline = true},
-                {name = "🌐 Server", value = serverType, inline = true},
-                {name = "⏱ Final Runtime", value = FormatTime(runtimeSec), inline = false}
-            },
-            footer = { text = "VoidlineHub System Log" },
+            footer = { text = "VoidlineHub System" },
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
 
-    -- [[ STYLE 2: ADMIN & USER REPORT (Detailed Tracker Style) ]] --
+    -- [[ STYLE 2: ADMIN & USER REPORT (Detailed Jobs Data) ]] --
     else
+        local playerCount = #game.Players:GetPlayers()
+        local serverType = (playerCount > 1) and "Public Server" or "Private Server"
+
         table.insert(payload.embeds, {
             title = isAdmin and "🕵️ Admin Live Activity Monitor" or "📌 Jobs Data Report",
             color = isAdmin and 16711680 or 2067276,
@@ -115,7 +112,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
             fields = {
                 {
                     name = "👤 Player Info",
-                    value = "Name: **"..LP.Name.."**\nServer: **"..serverType.."** ("..playerCount.." Players)",
+                    value = "Name: **"..LP.Name.."**\nServer: **"..serverType.."**",
                     inline = false
                 },
                 {
@@ -144,7 +141,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
                     inline = false
                 }
             },
-            footer = { text = isAdmin and "Admin Surveillance Mode" or "VoidlineHub User System" },
+            footer = { text = "VoidlineHub System" },
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     end
@@ -362,30 +359,36 @@ end
 -- ==========================================
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED)
 -- ==========================================
--- [[ WEBHOOK ROUTINE LOOP ]] --
+-- [[ ROUTINE LOOP (ADMIN & USER) ]] --
 task.spawn(function()
     while task.wait(WEBHOOK_INTERVAL or 50) do
-        -- Admin gets the detailed report every 50s
+        -- Admin monitor dikirim rutin ke Admin Hook
         SendWebhook(false, true, false) 
         
-        -- User gets the detailed report every 50s (if farming)
-        if AutoFarm then
+        -- Jobs Report dikirim rutin ke User Hook (jika toggle on)
+        if _G.WebhookEnabled and AutoFarm then
             SendWebhook(false, false, false)
         end
     end
 end)
 
--- [[ SESSION END HANDLER ]] --
+-- [[ SESSION END HANDLER (FIX DUPLICATE BUG) ]] --
+local hasSentDisconnect = false
 local function OnSessionEnd()
-    -- Disconnect notification (Compact style like Test)
-    if _G.WebhookURL ~= "" then SendWebhook(false, false, true) end
+    if hasSentDisconnect then return end -- Kunci biar nggak jalan 2 kali
+    hasSentDisconnect = true
+    
+    -- Kirim simple embed DC ke User & Admin
+    SendWebhook(false, false, true)
     SendWebhook(false, true, true)
 end
 
-game.Players.PlayerRemoving:Connect(function(player)
-    if player == LP then OnSessionEnd() end
+-- Hanya pakai PlayerRemoving untuk deteksi utama
+game.Players.PlayerRemoving:Connect(function(p)
+    if p == LP then OnSessionEnd() end
 end)
 
+-- OnTeleport tetap ada buat jaga-jaga pindah server
 LP.OnTeleport:Connect(OnSessionEnd)
 
 
