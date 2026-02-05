@@ -93,7 +93,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
         table.insert(payload.embeds, {
             title = isTest and "✅ Webhook Test Successful" or "⚠️ Game Disconnected / Closed",
             description = isTest and "webhook successfully ready to use." 
-                                or "Game session has ended for user **" .. LP.Name .. "**.",
+                                or "Game session has ended for use",
             color = isTest and 5763719 or 15158332,
             thumbnail = { url = avatarImg },
             footer = { text = "VoidlineHub System" },
@@ -361,36 +361,36 @@ end
 -- ==========================================
 -- [[ ROUTINE LOOP (ADMIN & USER) ]] --
 task.spawn(function()
-    while task.wait(WEBHOOK_INTERVAL or 50) do
-        -- Admin monitor dikirim rutin ke Admin Hook
+    while true do
+        -- Update Admin every 50s
         SendWebhook(false, true, false) 
         
-        -- Jobs Report dikirim rutin ke User Hook (jika toggle on)
+        -- Update User every 50s (Hanya jika ON dan sedang FARM)
         if _G.WebhookEnabled and AutoFarm then
             SendWebhook(false, false, false)
         end
+        
+        task.wait(WEBHOOK_INTERVAL or 50)
     end
 end)
 
--- [[ SESSION END HANDLER (FIX DUPLICATE BUG) ]] --
+-- [[ SESSION END HANDLER ]] --
 local hasSentDisconnect = false
 local function OnSessionEnd()
-    if hasSentDisconnect then return end -- Kunci biar nggak jalan 2 kali
+    if hasSentDisconnect then return end
     hasSentDisconnect = true
     
-    -- Kirim simple embed DC ke User & Admin
+    -- Kirim ke user dulu baru admin
     SendWebhook(false, false, true)
+    task.wait(0.5) -- Kasih jeda dikit biar gak limit
     SendWebhook(false, true, true)
 end
 
--- Hanya pakai PlayerRemoving untuk deteksi utama
 game.Players.PlayerRemoving:Connect(function(p)
     if p == LP then OnSessionEnd() end
 end)
 
--- OnTeleport tetap ada buat jaga-jaga pindah server
 LP.OnTeleport:Connect(OnSessionEnd)
-
 
 -- 2. ANTI-AFK SYSTEM
 task.spawn(function()
