@@ -58,30 +58,22 @@ end
 -- ==========================================
 -- 3. WEBHOOK SYSTEM (DUAL MODE)
 -- ========================================
--- [[ INCOME TRACKER ]] --
-local lastMoney = MoneyValue.Value
-MoneyValue.Changed:Connect(function(newVal)
-    if newVal > lastMoney then
-        TotalEarned = TotalEarned + (newVal - lastMoney)
-    end
-    lastMoney = newVal
-end)
-
 local function SendWebhook(isTest, isAdmin, isDisconnect)
-    -- Target URL Logic
+    -- Target URL Logic: Test/DC/Report ke User Hook, Routine Log ke Admin Hook
     local targetURL = (isTest or isDisconnect) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
     
     if targetURL == "" or not targetURL:find("discord.com") then return end
     
+    -- Filter: Bypass buat Test/Admin/DC. Laporan rutin wajib cek toggle.
     if not (isTest or isAdmin or isDisconnect) then
         if not _G.WebhookEnabled then return end
     end
 
     local runtimeSec = os.time() - StartTime
     local avatarImg = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg"
-
-    -- Fix: Est Income stay di 30jt sesuai request
-    local estPerHour = "30.000.000" 
+    
+    -- Request Lu: Stay di 30jt gausah nebak-nebak
+    local fixedIncome = "Rp 30.000.000"
 
     local payload = {
         username = "VoidlineHub",
@@ -108,7 +100,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
                 },
                 {
                     name = "📈 Est. Income / Hour", 
-                    value = "Rp " .. estPerHour .. "", 
+                    value = "" .. fixedIncome .. "", 
                     inline = true
                 },
                 {
@@ -335,7 +327,7 @@ end
 -- ==========================================
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED)
 -- ==========================================
--- [[ 🛡️ FINAL LOCK SYSTEM ]] --
+-- [[ 🛡️ ANTI-SPAM LOCK ]] --
 _G.DCSent = false 
 
 local function FinalExit()
@@ -344,7 +336,7 @@ local function FinalExit()
     pcall(function() SendWebhook(false, false, true) end)
 end
 
--- [[ 🔄 ADMIN LOOP (Start after 50s) ]] --
+-- [[ 🔄 ADMIN LOOP (50 Detik) ]] --
 task.spawn(function()
     while task.wait(50) do
         if _G.DCSent then break end
@@ -352,7 +344,7 @@ task.spawn(function()
     end
 end)
 
--- [[ 🔄 USER LOOP (Instant on Enable) ]] --
+-- [[ 🔄 USER LOOP (Instant ON) ]] --
 task.spawn(function()
     local lastSent = 0
     while true do
@@ -360,17 +352,19 @@ task.spawn(function()
         if _G.DCSent then break end
         
         if _G.WebhookEnabled and AutoFarm then
+            -- Langsung ngirim pas pertama kali ON (lastSent masi 0)
             if (tick() - lastSent) >= 50 then
                 SendWebhook(false, false, false)
                 lastSent = tick()
             end
         else
-            lastSent = 0 -- Reset biar pas di-ON langsung kirim
+            -- Reset biar pas dinyalain lagi langsung kirim
+            lastSent = 0 
         end
     end
 end)
 
--- [[ 🚨 EVENTS ]] --
+-- [[ 🚨 EVENT DETECT ]] --
 game.Players.PlayerRemoving:Connect(function(p) 
     if p == LP then FinalExit() end 
 end)
