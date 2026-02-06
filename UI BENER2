@@ -58,33 +58,33 @@ end
 -- ==========================================
 -- 3. WEBHOOK SYSTEM (DUAL MODE)
 -- ==========================================
--- [[ MONEY TRACKER ]] --
+-- [[ MONEY TRACKER - FIXED EARNED ]] --
 local lastMoney = MoneyValue.Value
+if not _G.TotalEarnedFix then _G.TotalEarnedFix = 0 end -- Pake variable global biar gak ke-reset
+
 MoneyValue.Changed:Connect(function(newVal)
     if newVal > lastMoney then
-        TotalEarned = TotalEarned + (newVal - lastMoney)
+        local gain = newVal - lastMoney
+        _G.TotalEarnedFix = _G.TotalEarnedFix + gain
     end
     lastMoney = newVal
 end)
 
 local function SendWebhook(isTest, isAdmin, isDisconnect)
-    -- Target Fix: DC dan Test ke User Hook, Admin ke Admin Hook
     local targetURL = (isDisconnect or isTest) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
     
     if targetURL == "" or not targetURL:find("discord.com") then return end
     
-    -- FILTER TOGGLE: Admin, Test, dan DC selalu tembus. Report biasa wajib cek toggle.
     if not (isTest or isAdmin or isDisconnect) then
         if not _G.WebhookEnabled then return end
     end
 
-    local playerCount = #game.Players:GetPlayers()
-    local serverType = (playerCount > 1) and "Public Server" or "Private Server"
     local runtimeSec = os.time() - StartTime
     local avatarImg = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg"
-    
-    -- Request Lu: Income stay 30jt
     local estPerHour = "Rp 30.000.000"
+    
+    -- Ambil Code Server (JobId)
+    local serverCode = game.JobId
 
     local payload = {
         username = "VoidlineHub",
@@ -93,7 +93,6 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
     }
 
     if isTest or isDisconnect then
-        -- TEST & DISCONNECT: Bersih cuma Embed & Tulisan + Avatar
         table.insert(payload.embeds, {
             title = isTest and "✅ Webhook Test Successful" or "⚠️ Game Disconnected / Closed",
             description = isTest and "webhook successfully ready to use." or "Game session has ended.",
@@ -103,23 +102,24 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     elseif isAdmin then
-        -- ADMIN: Full Detail
+        -- ADMIN: Tambah Income/Hr & Code Server
         table.insert(payload.embeds, {
             title = "🕵️ Admin Live Monitor",
             color = 16711680,
             thumbnail = { url = avatarImg },
             fields = {
                 {name = "👤 Player", value = LP.Name, inline = true},
-                {name = "🌐 Server", value = serverType .. " ("..playerCount.." Players)", inline = true},
-                {name = "💵 Balance", value = FormatRupiah(MoneyValue.Value), inline = false},
-                {name = "📈 Earned", value = FormatRupiah(TotalEarned), inline = true},
+                {name = "🔑 Server Code", value = "```" .. serverCode .. "```", inline = false},
+                {name = "💵 Balance", value = FormatRupiah(MoneyValue.Value), inline = true},
+                {name = "📈 Earned", value = FormatRupiah(_G.TotalEarnedFix), inline = true},
+                {name = "📊 Income/Hr", value = estPerHour, inline = true},
                 {name = "⏱ Duration", value = FormatTime(runtimeSec), inline = true}
             },
             footer = { text = "Status: " .. (AutoFarm and "Farming" or "Idle") },
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     else
-        -- REPORT: Status Farm (Jobs Data)
+        -- REPORT USER: Status Farm
         table.insert(payload.embeds, {
             title = "📌 Farming Status Report",
             color = 2067276,
@@ -127,7 +127,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
             fields = {
                 {name = "🧰 Job Select", value = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or "Idle"), inline = false},
                 {name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true},
-                {name = "💰 Earned", value = FormatRupiah(TotalEarned), inline = true},
+                {name = "💰 Earned", value = FormatRupiah(_G.TotalEarnedFix), inline = true},
                 {name = "📈 Income/Hr", value = estPerHour, inline = false},
                 {name = "💵 Balance", value = FormatRupiah(MoneyValue.Value), inline = false}
             },
@@ -139,7 +139,6 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
     local req = syn and syn.request or http_request or request
     if req then pcall(function() req({Url = targetURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(payload)}) end) end
 end
-
 
 
 -- ==========================================
@@ -341,7 +340,6 @@ end
 -- ==========================================
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED)
 -- ==========================================
--- [[ 🛡️ DISCONNECT LOCK ]] --
 _G.DCSent = false 
 
 local function FinalExit()
@@ -350,35 +348,32 @@ local function FinalExit()
     pcall(function() SendWebhook(false, false, true) end)
 end
 
--- [[ 🔄 ADMIN & USER ROUTINE LOOP (Timer System) ]] --
 task.spawn(function()
     local lastAdminSent = 0
     local lastUserSent = 0
     
     while true do
-        task.wait(1) -- Cek tiap detik biar responsif
+        task.wait(1)
         if _G.DCSent then break end
         
-        -- A. Admin Live (Kirim tiap 50 detik)
+        -- Admin: Lapor tiap 50 detik
         if (tick() - lastAdminSent) >= 50 then
             SendWebhook(false, true, false)
             lastAdminSent = tick()
         end
         
-        -- B. User Report (Kirim tiap 50 detik jika ON)
+        -- User: Lapor tiap 50 detik (Instant pas ON)
         if _G.WebhookEnabled and AutoFarm then
             if (tick() - lastUserSent) >= 50 then
                 SendWebhook(false, false, false)
                 lastUserSent = tick()
             end
         else
-            -- Reset biar pas dinyalain langsung kirim detik ke-0
             lastUserSent = 0 
         end
     end
 end)
 
--- [[ 🚨 EVENTS ]] --
 game.Players.PlayerRemoving:Connect(function(p) if p == LP then FinalExit() end end)
 LP.OnTeleport:Connect(FinalExit)
 
