@@ -104,7 +104,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
                 {name = "👤 Target Player", value = "> **" .. LP.Name .. "** (" .. LP.UserId .. ")", inline = false},
                 {name = "🛰️ Server Info", value = "> " .. serverType .. " (" .. playerCount .. " Players)", inline = true},
                 {name = "🆔 Session ID", value = "```" .. game.JobId .. "```", inline = false},
-                {name = "🔗 Join Server", value = "👉 **[Click to Join Target Server](" .. joinLink .. ")**", inline = false}, -- FIX BIRU
+                {name = "🔗 Join Server", value = "👉 [Click to Join Target Server](" .. joinLink .. ")", inline = false},
                 {name = "─── ⚡ `Activity Monitor` ⚡ ───", value = "```fix\n" ..
                     "» Status  : Farming Active ✅\n" ..
                     "» Vehicle : " .. isSitting .. "\n" ..
