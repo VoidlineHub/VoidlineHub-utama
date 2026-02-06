@@ -361,52 +361,50 @@ end
 -- ==========================================
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED)
 -- ==========================================
--- [[ ANTI-SPAM SYSTEM ]] --
-_G.WebhookSent = false -- Reset status saat script baru di-load
+-- [[ 🛡️ ANTI-SPAM DISCONNECT SYSTEM ]] --
+_G.HasSentDC = false -- Kunci utama
 
 local function OnSessionEnd()
-    -- KUNCI MATI: Kalau sudah kirim, URL kosong, atau lagi test, JANGAN JALAN.
-    if _G.WebhookSent or _G.WebhookURL == "" then return end
+    -- Jika sudah pernah kirim, atau URL kosong, langsung batalkan
+    if _G.HasSentDC or _G.WebhookURL == "" then return end
     
-    _G.WebhookSent = true -- Kunci gate sekarang juga!
+    _G.HasSentDC = true -- Kunci pintu sekarang juga
     
-    -- Kirim HANYA ke User Webhook (isAdmin = false)
     pcall(function()
-        SendWebhook(false, false, true) -- isDisconnect = true
+        -- Kirim 1x saja ke Webhook Target (User)
+        SendWebhook(false, false, true) 
     end)
 end
 
--- [[ STOP LOOP PAS DISCONNECT ]] --
-local routineThread = task.spawn(function()
+-- [[ 🔄 LOOP RUTIN (IRIT KUOTA) ]] --
+local webhookThread = task.spawn(function()
     while true do
-        if _G.WebhookSent then break end -- Berhenti total kalau status DC aktif
+        if _G.HasSentDC then break end -- Berhenti total jika sedang proses keluar
         
-        -- Admin Log (ADMIN_URL)
+        -- Admin Log (Kirim ke Admin URL)
         SendWebhook(false, true, false) 
         
-        -- User Log (_G.WebhookURL)
+        -- User Report (Kirim ke User URL jika ON)
         if _G.WebhookEnabled and AutoFarm then
             SendWebhook(false, false, false)
         end
         
-        task.wait(WEBHOOK_INTERVAL or 50)
+        task.wait(WEBHOOK_INTERVAL or 60) -- Saran: Naikkan ke 60 detik biar irit kuota
     end
 end)
 
--- [[ EVENT DETECTOR ]] --
+-- [[ 🚨 DISCONNECT EVENTS ]] --
 game.Players.PlayerRemoving:Connect(function(player)
     if player == LP then
         OnSessionEnd()
-        if routineThread then task.cancel(routineThread) end -- Matikan loop paksa!
+        if webhookThread then task.cancel(webhookThread) end -- Matikan loop paksa
     end
 end)
 
 LP.OnTeleport:Connect(function()
     OnSessionEnd()
-    if routineThread then task.cancel(routineThread) end -- Matikan loop paksa!
+    if webhookThread then task.cancel(webhookThread) end -- Matikan loop paksa
 end)
-
-
 
 -- 2. ANTI-AFK SYSTEM
 task.spawn(function()
