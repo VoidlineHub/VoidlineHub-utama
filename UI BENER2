@@ -114,6 +114,9 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
                 {name = "👤 Player", value = LP.Name, inline = true},
                 {name = "🌐 Server Info", value = serverType .. " (" .. playerCount .. " Players)", inline = true},
                 {name = "🔑 Server Code", value = "```" .. serverCode .. "```", inline = false},
+                {name = "🧰 Job Select", 
+                    value = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or _G.AutoFarmBandung and "Bandung" or "Idle"), 
+                    inline = false
                 {name = "💵 Balance", value = FormatRupiah(MoneyValue.Value), inline = true},
                 {name = "📈 Earned", value = FormatRupiah(_G.TotalEarnedFix), inline = true},
                 {name = "📊 Income/Hr", value = estPerHour, inline = true},
@@ -123,13 +126,17 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     else
-        -- REPORT USER
+        -- REPORT USER (FIXED: Added Bandung & Missing Comma)
         table.insert(payload.embeds, {
             title = "📌 Farming Status Report",
             color = 2067276,
             thumbnail = { url = avatarImg },
             fields = {
-                {name = "🧰 Job Select", value = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or "Idle"), inline = false}
+                {
+                    name = "🧰 Job Select", 
+                    value = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or _G.AutoFarmBandung and "Bandung" or "Idle"), 
+                    inline = false
+                }, -- Koma di sini tadi hilang, sekarang udah aman
                 {name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true},
                 {name = "💰 Earned", value = FormatRupiah(_G.TotalEarnedFix), inline = true},
                 {name = "📈 Income/Hr", value = estPerHour, inline = false},
@@ -143,6 +150,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
     local req = syn and syn.request or http_request or request
     if req then pcall(function() req({Url = targetURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(payload)}) end) end
 end
+
 
 
 -- ==========================================
@@ -412,24 +420,6 @@ RunService.Heartbeat:Connect(function()
         end
     end
 end)
-
--- 4. DISCONNECT HANDLER (MAHA MILIK TEST)
-local function OnSessionEnd()
-    if _G.WebhookURL ~= "" then
-        SendWebhook(false, false, true) -- User DC Report
-    end
-    -- Admin juga dapet notif pas user DC
-    SendWebhook(false, true, true) 
-end
-
-Players.PlayerRemoving:Connect(function(player)
-    if player == LP then OnSessionEnd() end
-end)
-
-LP.OnTeleport:Connect(OnSessionEnd)
-
-
-
 
 
 -- ==========================================
