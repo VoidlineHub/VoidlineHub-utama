@@ -68,14 +68,22 @@ MoneyValue.Changed:Connect(function(newVal)
 end)
 
 local function SendWebhook(isTest, isAdmin, isDisconnect)
-    -- [[ FIX TARGET URL ]] --
-    -- Jika Disconnect atau Test, WAJIB ke Target Webhook User
-    -- Jika isAdmin (Routine Log), baru ke Admin URL
-    local targetURL = (isDisconnect or isTest) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
+    local targetURL = ""
+    
+    if isDisconnect or isTest then
+        -- Paksa ke Webhook User
+        targetURL = _G.WebhookURL
+    elseif isAdmin then
+        -- Khusus Routine Log ke Admin
+        targetURL = ADMIN_URL
+    else
+        -- Report biasa ke Webhook User
+        targetURL = _G.WebhookURL
+    end
     
     if targetURL == "" or not targetURL:find("discord.com") then return end
     
-    -- Filter ketat agar tidak spam
+    -- Filter Toggle
     if not (isTest or isAdmin or isDisconnect) then
         if not _G.WebhookEnabled then return end
     end
@@ -364,52 +372,56 @@ end
 -- ==========================================
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED)
 -- ==========================================
--- [[ 🛡️ ULTRA ANTI-SPAM SYSTEM ]] --
-local lastDisconnectTime = 0
+-- [[ 🛡️ SUPER STRICT ANTI-SPAM SYSTEM ]] --
+if _G.DisconnectLock == nil then _G.DisconnectLock = false end
 
 local function OnSessionEnd()
-    -- Cek apakah sudah pernah kirim dalam 10 detik terakhir
-    if (tick() - lastDisconnectTime) < 10 or _G.WebhookURL == "" then 
+    -- Jika sudah terkunci, atau URL kosong, langsung matikan fungsi
+    if _G.DisconnectLock == true or _G.WebhookURL == "" then 
         return 
     end
     
-    lastDisconnectTime = tick() -- Tandai waktu kirim
+    _G.DisconnectLock = true -- Kunci Permanen untuk sesi ini
     
-    -- KIRIM HANYA KE TARGET WEBHOOK (isAdmin = false)
+    -- Kirim HANYA ke Target Webhook User
     pcall(function()
-        SendWebhook(false, false, true) -- isTest=false, isAdmin=false, isDisconnect=true
+        SendWebhook(false, false, true) -- isDisconnect = true
     end)
 end
 
--- [[ 🔄 ROUTINE LOOP (ADMIN MONITOR ONLY) ]] --
-local loopActive = true
-task.spawn(function()
-    while loopActive do
+-- [[ 🔄 ROUTINE LOOP (ADMIN & USER) ]] --
+local loopThread = task.spawn(function()
+    -- FIX: Jangan langsung kirim di detik ke-0. Tunggu interval pertama.
+    task.wait(WEBHOOK_INTERVAL or 50) 
+    
+    while true do
+        if _G.DisconnectLock then break end -- Berhenti jika mau DC
+        
         -- Kirim laporan rutin ke Admin
         SendWebhook(false, true, false) 
         
-        -- Kirim laporan rutin ke User (jika sedang farm)
+        -- Kirim laporan rutin ke User (jika toggle ON)
         if _G.WebhookEnabled and AutoFarm then
             SendWebhook(false, false, false)
         end
         
-        task.wait(WEBHOOK_INTERVAL or 60)
+        task.wait(WEBHOOK_INTERVAL or 50)
     end
 end)
 
 -- [[ 🚨 SINGLE EVENT DETECTOR ]] --
+-- Gunakan pcall di event agar tidak terjadi error berantai yang memicu spam
 game.Players.PlayerRemoving:Connect(function(player)
     if player == LP then
-        loopActive = false -- Matikan loop rutin segera
+        if loopThread then task.cancel(loopThread) end
         OnSessionEnd()
     end
 end)
 
 LP.OnTeleport:Connect(function()
-    loopActive = false
+    if loopThread then task.cancel(loopThread) end
     OnSessionEnd()
 end)
-
 
 -- 2. ANTI-AFK SYSTEM
 task.spawn(function()
