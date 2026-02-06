@@ -60,7 +60,7 @@ end
 -- ==========================================
 -- [[ MONEY TRACKER - FIXED EARNED ]] --
 local lastMoney = MoneyValue.Value
-if not _G.TotalEarnedFix then _G.TotalEarnedFix = 0 end -- Pake variable global biar gak ke-reset
+if not _G.TotalEarnedFix then _G.TotalEarnedFix = 0 end 
 
 MoneyValue.Changed:Connect(function(newVal)
     if newVal > lastMoney then
@@ -83,7 +83,9 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
     local avatarImg = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg"
     local estPerHour = "Rp 30.000.000"
     
-    -- Ambil Code Server (JobId)
+    -- [[ SERVER INFO LOGIC ]] --
+    local playerCount = #game.Players:GetPlayers()
+    local serverType = (playerCount <= 1) and "Private Server" or "Public Server"
     local serverCode = game.JobId
 
     local payload = {
@@ -102,13 +104,14 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     elseif isAdmin then
-        -- ADMIN: Tambah Income/Hr & Code Server
+        -- ADMIN: Ada Info Server (Private/Public) + Code + Income/Hr
         table.insert(payload.embeds, {
             title = "🕵️ Admin Live Monitor",
             color = 16711680,
             thumbnail = { url = avatarImg },
             fields = {
                 {name = "👤 Player", value = LP.Name, inline = true},
+                {name = "🌐 Server Info", value = serverType .. " (" .. playerCount .. " Players)", inline = true},
                 {name = "🔑 Server Code", value = "```" .. serverCode .. "```", inline = false},
                 {name = "💵 Balance", value = FormatRupiah(MoneyValue.Value), inline = true},
                 {name = "📈 Earned", value = FormatRupiah(_G.TotalEarnedFix), inline = true},
@@ -119,13 +122,14 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     else
-        -- REPORT USER: Status Farm
+        -- REPORT USER
         table.insert(payload.embeds, {
             title = "📌 Farming Status Report",
             color = 2067276,
             thumbnail = { url = avatarImg },
             fields = {
                 {name = "🧰 Job Select", value = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or "Idle"), inline = false},
+                {name = "🌐 Server", value = serverType, inline = true},
                 {name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true},
                 {name = "💰 Earned", value = FormatRupiah(_G.TotalEarnedFix), inline = true},
                 {name = "📈 Income/Hr", value = estPerHour, inline = false},
