@@ -403,7 +403,7 @@ RunService.Heartbeat:Connect(function()
         local head = char:FindFirstChild("Head")
         if head then 
             for _, v in pairs(head:GetChildren()) do 
-                if v:IsA("illboardGui") then v.Enabled = false end 
+                if v:IsA("BillboardGui") then v.Enabled = false end 
             end 
         end
     end
