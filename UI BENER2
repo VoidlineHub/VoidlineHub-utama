@@ -26,7 +26,8 @@ _G.AntiAFK = true
 _G.HideNameEnabled = false
 _G.HideCharEnabled = false
 _G.WebhookEnabled = false
-_G.WebhookURL = "" -- Diisi oleh user via UI
+_G.WebhookURL = "" 
+_G.TotalEarnedFix = 0 -- Inisialisasi awal biar gak nil
 _G.Status = _G.Status or { Courier = "Waiting", Office = "Waiting", Pause = "Disabled" }
 
 -- Webhook Admin (Khusus buat lu)
@@ -41,15 +42,15 @@ local RoadName = "PrivateHighway_BillzzHub"
 local BlackScreenGui = nil
 
 -- Cari data uang (Sesuaikan path-nya jika perlu)
-local MoneyValue = LP:WaitForChild("PlayerData":WaitForChild("RPValue")
-
+local PlayerData = LP:WaitForChild("PlayerData", 10)
+local MoneyValue = PlayerData and PlayerData:WaitForChild("RPValue", 10)
 -- ==========================================
 -- 2. HELPER FUNCTIONS
 -- ==========================================
 local function FormatRupiah(num)
-    local s = tostring(num)
+    local s = tostring(math.floor(num or 0))
     local result = s:reverse():gsub("(%d%d%d)", "%1."):reverse()
-    return "Rp" .. (result:sub(1,1) == "." and result:sub(2) or result)
+    return "Rp " .. (result:sub(1,1) == "." and result:sub(2) or result)
 end
 
 local function FormatTime(sec)
