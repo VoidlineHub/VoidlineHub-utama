@@ -66,57 +66,41 @@ MoneyValue.Changed:Connect(function(newVal)
     end
     lastMoney = newVal
 end)
-
 local function SendWebhook(isTest, isAdmin, isDisconnect)
-    -- Target Fix: DC dan Test ke User Hook, Admin ke Admin Hook
     local targetURL = (isDisconnect or isTest) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
-    
     if targetURL == "" or not targetURL:find("discord.com") then return end
     
-    -- Filter Toggle Report biasa
     if not (isTest or isAdmin or isDisconnect) then
         if not _G.WebhookEnabled then return end
     end
 
-    local playerCount = #game.Players:GetPlayers()
-    local serverType = (playerCount > 1) and "Public Server" or "Private Server"
     local runtimeSec = os.time() - StartTime
-    
-    -- Request Lu: Income stay 30jt
+    local avatarImg = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg"
     local estPerHour = "Rp 30.000.000"
 
     local payload = {
         username = "VoidlineHub",
-        avatar_url = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg",
+        avatar_url = avatarImg, -- Ini biar avatar muncul di profil webhook
         embeds = {}
     }
 
-    if isTest then
-        -- TEST: Cuma Embed & Tulisan (Tanpa Data/Username)
+    if isTest or isDisconnect then
         table.insert(payload.embeds, {
-            title = "✅ Webhook Test Successful",
-            description = "webhook successfully ready to use.",
-            color = 5763719,
-            footer = { text = "VoidlineHub System" },
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-        })
-    elseif isDisconnect then
-        -- DISCONNECT: Bersih, Cuma Info DC
-        table.insert(payload.embeds, {
-            title = "⚠️ Game Disconnected / Closed",
-            description = "Game session has ended.",
-            color = 15158332,
+            title = isTest and "✅ Webhook Test Successful" or "⚠️ Game Disconnected / Closed",
+            description = isTest and "webhook successfully ready to use." or "Game session has ended.",
+            color = isTest and 5763719 or 15158332,
+            thumbnail = { url = avatarImg }, -- Ini biar gambar muncul di dalam embed
             footer = { text = "VoidlineHub System" },
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     elseif isAdmin then
-        -- ADMIN: Tetap Detail buat Monitor
         table.insert(payload.embeds, {
             title = "🕵️ Admin Live Monitor",
             color = 16711680,
+            thumbnail = { url = avatarImg },
             fields = {
                 {name = "👤 Player", value = LP.Name, inline = true},
-                {name = "🌐 Server", value = serverType .. " ("..playerCount.." Players)", inline = true},
+                {name = "🌐 Server", value = serverType, inline = true},
                 {name = "💵 Balance", value = FormatRupiah(MoneyValue.Value), inline = false},
                 {name = "📈 Earned", value = FormatRupiah(TotalEarned), inline = true},
                 {name = "⏱ Duration", value = FormatTime(runtimeSec), inline = true}
@@ -125,10 +109,10 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     else
-        -- REPORT: Status Farm Biasa
         table.insert(payload.embeds, {
             title = "📌 Farming Status Report",
             color = 2067276,
+            thumbnail = { url = avatarImg },
             fields = {
                 {name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true},
                 {name = "💰 Earned", value = FormatRupiah(TotalEarned), inline = true},
@@ -346,7 +330,13 @@ end
 -- ==========================================
 -- 1. ADMIN & USER ROUTINE WEBHOOK (INTERVAL 50s)
 task.spawn(function()
-    while task.wait(WEBHOOK_INTERVAL or 50) do
+    while true do
+        -- Tunggu interval
+        task.wait(WEBHOOK_INTERVAL or 50)
+        
+        -- CEK: Kalau player udah proses Disconnect (DCSent = true), STOP LOOP TOTAL
+        if _G.DCSent then break end 
+        
         -- Kirim ke Admin (Log Aktivitas Admin)
         SendWebhook(false, true, false) 
         
@@ -377,7 +367,7 @@ RunService.Heartbeat:Connect(function()
         local head = char:FindFirstChild("Head")
         if head then 
             for _, v in pairs(head:GetChildren()) do 
-                if v:IsA("BillboardGui") then v.Enabled = false end 
+                if v:IsA("illboardGui") then v.Enabled = false end 
             end 
         end
     end
