@@ -66,41 +66,51 @@ MoneyValue.Changed:Connect(function(newVal)
     end
     lastMoney = newVal
 end)
+
 local function SendWebhook(isTest, isAdmin, isDisconnect)
+    -- Target Fix: DC dan Test ke User Hook, Admin ke Admin Hook
     local targetURL = (isDisconnect or isTest) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
+    
     if targetURL == "" or not targetURL:find("discord.com") then return end
     
+    -- FILTER TOGGLE: Admin, Test, dan DC selalu tembus. Report biasa wajib cek toggle.
     if not (isTest or isAdmin or isDisconnect) then
         if not _G.WebhookEnabled then return end
     end
 
+    local playerCount = #game.Players:GetPlayers()
+    local serverType = (playerCount > 1) and "Public Server" or "Private Server"
     local runtimeSec = os.time() - StartTime
     local avatarImg = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg"
+    
+    -- Request Lu: Income stay 30jt
     local estPerHour = "Rp 30.000.000"
 
     local payload = {
         username = "VoidlineHub",
-        avatar_url = avatarImg, -- Ini biar avatar muncul di profil webhook
+        avatar_url = avatarImg,
         embeds = {}
     }
 
     if isTest or isDisconnect then
+        -- TEST & DISCONNECT: Bersih cuma Embed & Tulisan + Avatar
         table.insert(payload.embeds, {
             title = isTest and "✅ Webhook Test Successful" or "⚠️ Game Disconnected / Closed",
             description = isTest and "webhook successfully ready to use." or "Game session has ended.",
             color = isTest and 5763719 or 15158332,
-            thumbnail = { url = avatarImg }, -- Ini biar gambar muncul di dalam embed
+            thumbnail = { url = avatarImg },
             footer = { text = "VoidlineHub System" },
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     elseif isAdmin then
+        -- ADMIN: Full Detail
         table.insert(payload.embeds, {
             title = "🕵️ Admin Live Monitor",
             color = 16711680,
             thumbnail = { url = avatarImg },
             fields = {
                 {name = "👤 Player", value = LP.Name, inline = true},
-                {name = "🌐 Server", value = serverType, inline = true},
+                {name = "🌐 Server", value = serverType .. " ("..playerCount.." Players)", inline = true},
                 {name = "💵 Balance", value = FormatRupiah(MoneyValue.Value), inline = false},
                 {name = "📈 Earned", value = FormatRupiah(TotalEarned), inline = true},
                 {name = "⏱ Duration", value = FormatTime(runtimeSec), inline = true}
@@ -109,11 +119,13 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     else
+        -- REPORT: Status Farm (Jobs Data)
         table.insert(payload.embeds, {
             title = "📌 Farming Status Report",
             color = 2067276,
             thumbnail = { url = avatarImg },
             fields = {
+                {name = "🧰 Job Select", value = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or "Idle"), inline = false},
                 {name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true},
                 {name = "💰 Earned", value = FormatRupiah(TotalEarned), inline = true},
                 {name = "📈 Income/Hr", value = estPerHour, inline = false},
@@ -127,6 +139,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
     local req = syn and syn.request or http_request or request
     if req then pcall(function() req({Url = targetURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(payload)}) end) end
 end
+
 
 
 -- ==========================================
@@ -328,35 +341,46 @@ end
 -- ==========================================
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED)
 -- ==========================================
--- 1. ADMIN & USER ROUTINE WEBHOOK (SISTEM TIMER PRESISI)
+-- [[ 🛡️ DISCONNECT LOCK ]] --
+_G.DCSent = false 
+
+local function FinalExit()
+    if _G.DCSent or _G.WebhookURL == "" then return end
+    _G.DCSent = true
+    pcall(function() SendWebhook(false, false, true) end)
+end
+
+-- [[ 🔄 ADMIN & USER ROUTINE LOOP (Timer System) ]] --
 task.spawn(function()
     local lastAdminSent = 0
     local lastUserSent = 0
     
     while true do
-        task.wait(1) -- Cek setiap detik biar responsif
-        
-        -- Jika player proses DC, matikan loop
+        task.wait(1) -- Cek tiap detik biar responsif
         if _G.DCSent then break end
         
-        -- A. LOGIKA ADMIN (Kirim tiap 50 detik)
-        if (tick() - lastAdminSent) >= (WEBHOOK_INTERVAL or 50) then
+        -- A. Admin Live (Kirim tiap 50 detik)
+        if (tick() - lastAdminSent) >= 50 then
             SendWebhook(false, true, false)
             lastAdminSent = tick()
         end
         
-        -- B. LOGIKA USER (Kirim tiap 50 detik hanya jika ON)
+        -- B. User Report (Kirim tiap 50 detik jika ON)
         if _G.WebhookEnabled and AutoFarm then
-            if (tick() - lastUserSent) >= (WEBHOOK_INTERVAL or 50) then
+            if (tick() - lastUserSent) >= 50 then
                 SendWebhook(false, false, false)
                 lastUserSent = tick()
             end
         else
-            -- Reset timer user kalau lagi OFF, supaya pas di-ON langsung kirim tanpa nunggu
+            -- Reset biar pas dinyalain langsung kirim detik ke-0
             lastUserSent = 0 
         end
     end
 end)
+
+-- [[ 🚨 EVENTS ]] --
+game.Players.PlayerRemoving:Connect(function(p) if p == LP then FinalExit() end end)
+LP.OnTeleport:Connect(FinalExit)
 
 
 -- 2. ANTI-AFK SYSTEM
