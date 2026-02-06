@@ -21,6 +21,7 @@ local HttpService = game:GetService("HttpService")
 -- ==========================================
 -- 1. GLOBAL VARIABLES & CONFIG
 -- ==========================================
+_G.AutoFarmBandung = false
 _G.AntiAFK = true 
 _G.HideNameEnabled = false
 _G.HideCharEnabled = false
