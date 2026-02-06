@@ -76,7 +76,8 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
     if targetURL == "" or not targetURL:find("discord.com") then return end
 
     local runtimeSec = os.time() - StartTime
-    local avatarImg = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg"
+    local avatarImg = "[https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg](https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg)"
+    local estPerHour = "Rp 30.000.000"
     
     local playerCount = #game.Players:GetPlayers()
     local serverType = (playerCount <= 1) and "🔒 Private Server" or "🌐 Public Server"
@@ -91,50 +92,57 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
     }
 
     if isAdmin then
+        -- [[ ADMIN MONITOR REWORK ]] --
         local hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
-        local health = hum and math.floor(hum.Health) or 0
         local isSitting = (hum and hum.Sit) and "✅ Sitting (On Motor)" or "⚠️ Fell / Standing"
         
         table.insert(payload.embeds, {
             title = "💎 VOIDLINE LUXURY MONITOR 💎",
             description = "Status: `STABLE MONITORING`",
-            color = 0x2f3136, -- Warna Dark Premium (mirip background discord)
+            color = 0x2f3136, 
             thumbnail = { url = avatarImg },
             fields = {
-                {name = "👤 Target Player", value = "> **" .. LP.Name .. "**\n> ID: `" .. LP.UserId .. "`", inline = false},
-                {name = "🛰️ Server Environment", value = "> " .. serverType .. " (" .. playerCount .. " Players)", inline = true},
+                {name = "👤 Target Player", value = "> **" .. LP.Name .. "** (" .. LP.UserId .. ")", inline = false},
+                {name = "🛰️ Server Info", value = "> " .. serverType .. " (" .. playerCount .. " Players)", inline = true},
                 {name = "🆔 Session ID", value = "```" .. game.JobId .. "```", inline = false},
-                {name = "🔗 Direct Access", value = "🚀 [**Click to Teleport to Server**](" .. joinLink .. ")", inline = false},
+                {name = "🔗 Join Server", value = "👉 [Click to Join Target Server](" .. joinLink .. ")", inline = false}, -- Tetap Biru
                 {name = "▬▬▬▬▬▬▬  `Activity Monitor`  ▬▬▬▬▬▬▬", value = "```fix\n" ..
                     "» Status  : Farming Active ✨\n" ..
                     "» Vehicle : " .. isSitting .. "\n" ..
-                    "» Health  : " .. health .. " / 100 HP\n" ..
+                    "» Health  : " .. (hum and math.floor(hum.Health) or 0) .. " / 100 HP\n" ..
                     "» Earned  : " .. FormatRupiah(_G.TotalEarnedFix) .. "\n" ..
-                    "» Income  : Rp 30.000.000 / Hr\n```", inline = false},
+                    "» Income  : " .. estPerHour .. " / Hr\n```", inline = false},
                 {name = "💰 Financials", value = "• Total Balance: **" .. FormatRupiah(MoneyValue.Value) .. "**", inline = false}
             },
-            footer = { text = "VoidlineHub Deluxe Edition • " .. os.date("%X") },
+            footer = { text = "VoidlineHub Deluxe • Runtime: " .. FormatTime(runtimeSec) },
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
-        -- Footer luar biar makin pro
-        payload.content = "📅 **Log Date:** " .. os.date("%d/%m/%Y") .. " | ⏱️ **Runtime:** `" .. FormatTime(runtimeSec) .. "`"
     else
-        -- Layout User biasa (tetap rapi)
+        -- [[ TARGET USER REWORK (PREMIUM LOOK) ]] --
+        local jobName = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or _G.AutoFarmBandung and "Bandung" or "Idle")
+        local statusText = (AutoFarm and "Enabled (Farming)" or "Idle (Paused)")
+
         table.insert(payload.embeds, {
-            title = "📊 Farming Report",
-            color = 3066993,
+            title = "📌 VOIDLINE USER REPORT",
+            color = 0x2ecc71, -- Warna Hijau Premium
+            thumbnail = { url = avatarImg },
             fields = {
-                {name = "🧰 Active Job", value = "```" .. (_G.AutoFarmBarista and "Barista" or "Courier") .. "```", inline = true},
-                {name = "💰 Earned", value = "```" .. FormatRupiah(_G.TotalEarnedFix) .. "```", inline = true},
-                {name = "⏱ Duration", value = "`" .. FormatTime(runtimeSec) .. "`", inline = false}
+                {name = "🧰 Job Select", value = "> **" .. jobName .. "**", inline = true},
+                {name = "⚙️ Status", value = "> **" .. statusText .. "**", inline = true},
+                {name = "⏱️ Running Time", value = "```" .. FormatTime(runtimeSec) .. "```", inline = false},
+                {name = "💰 Balance", value = "```" .. FormatRupiah(MoneyValue.Value) .. "```", inline = false},
+                {name = "📈 Earned", value = "```" .. FormatRupiah(_G.TotalEarnedFix) .. "```", inline = true},
+                {name = "📊 Income / Hr", value = "```" .. estPerHour .. "```", inline = true},
             },
-            footer = { text = "VoidlineHub Free Version" }
+            footer = { text = "VoidlineHub System • Player: " .. LP.Name },
+            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     end
 
     local req = syn and syn.request or http_request or request
     if req then pcall(function() req({Url = targetURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(payload)}) end) end
 end
+
 
 
 
