@@ -57,74 +57,91 @@ end
 
 -- ==========================================
 -- 3. WEBHOOK SYSTEM (DUAL MODE)
--- ========================================
+-- ==========================================
+-- [[ MONEY TRACKER ]] --
+local lastMoney = MoneyValue.Value
+MoneyValue.Changed:Connect(function(newVal)
+    if newVal > lastMoney then
+        TotalEarned = TotalEarned + (newVal - lastMoney)
+    end
+    lastMoney = newVal
+end)
+
 local function SendWebhook(isTest, isAdmin, isDisconnect)
-    -- Target URL Logic: Test/DC/Report ke User Hook, Routine Log ke Admin Hook
-    local targetURL = (isTest or isDisconnect) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
+    -- Target Fix: DC dan Test ke User Hook, Admin ke Admin Hook
+    local targetURL = (isDisconnect or isTest) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
     
     if targetURL == "" or not targetURL:find("discord.com") then return end
     
-    -- Filter: Bypass buat Test/Admin/DC. Laporan rutin wajib cek toggle.
+    -- Filter Toggle Report biasa
     if not (isTest or isAdmin or isDisconnect) then
         if not _G.WebhookEnabled then return end
     end
 
+    local playerCount = #game.Players:GetPlayers()
+    local serverType = (playerCount > 1) and "Public Server" or "Private Server"
     local runtimeSec = os.time() - StartTime
-    local avatarImg = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg"
     
-    -- Request Lu: Stay di 30jt gausah nebak-nebak
-    local fixedIncome = "Rp 30.000.000"
+    -- Request Lu: Income stay 30jt
+    local estPerHour = "Rp 30.000.000"
 
     local payload = {
         username = "VoidlineHub",
-        avatar_url = avatarImg,
-        embeds = {{
-            title = isTest and "✅ Webhook Test Successful" or isDisconnect and "⚠️ Game Disconnected / Closed" or (isAdmin and "🕵️ Admin Live Monitor" or "📌 Jobs Data Report"),
-            color = (isTest and 5763719) or (isDisconnect and 15158332) or (isAdmin and 16711680) or 2067276,
-            thumbnail = { url = avatarImg },
-            fields = (isTest or isDisconnect) and {} or {
-                {
-                    name = "🧰 Job Select", 
-                    value = "" .. ( _G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or "Idle" ) .. "", 
-                    inline = false
-                },
-                {
-                    name = "⏱ Running Time", 
-                    value = "" .. FormatTime(runtimeSec) .. "", 
-                    inline = true
-                },
-                {
-                    name = "💰 Total Earning", 
-                    value = "" .. FormatRupiah(TotalEarned) .. "", 
-                    inline = true
-                },
-                {
-                    name = "📈 Est. Income / Hour", 
-                    value = "" .. fixedIncome .. "", 
-                    inline = true
-                },
-                {
-                    name = "💵 Current Money", 
-                    value = "" .. FormatRupiah(MoneyValue.Value) .. "", 
-                    inline = false
-                }
+        avatar_url = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg",
+        embeds = {}
+    }
+
+    if isTest then
+        -- TEST: Cuma Embed & Tulisan (Tanpa Data/Username)
+        table.insert(payload.embeds, {
+            title = "✅ Webhook Test Successful",
+            description = "webhook successfully ready to use.",
+            color = 5763719,
+            footer = { text = "VoidlineHub System" },
+            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        })
+    elseif isDisconnect then
+        -- DISCONNECT: Bersih, Cuma Info DC
+        table.insert(payload.embeds, {
+            title = "⚠️ Game Disconnected / Closed",
+            description = "Game session has ended.",
+            color = 15158332,
+            footer = { text = "VoidlineHub System" },
+            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        })
+    elseif isAdmin then
+        -- ADMIN: Tetap Detail buat Monitor
+        table.insert(payload.embeds, {
+            title = "🕵️ Admin Live Monitor",
+            color = 16711680,
+            fields = {
+                {name = "👤 Player", value = LP.Name, inline = true},
+                {name = "🌐 Server", value = serverType .. " ("..playerCount.." Players)", inline = true},
+                {name = "💵 Balance", value = FormatRupiah(MoneyValue.Value), inline = false},
+                {name = "📈 Earned", value = FormatRupiah(TotalEarned), inline = true},
+                {name = "⏱ Duration", value = FormatTime(runtimeSec), inline = true}
+            },
+            footer = { text = "Status: " .. (AutoFarm and "Farming" or "Idle") },
+            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        })
+    else
+        -- REPORT: Status Farm Biasa
+        table.insert(payload.embeds, {
+            title = "📌 Farming Status Report",
+            color = 2067276,
+            fields = {
+                {name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true},
+                {name = "💰 Earned", value = FormatRupiah(TotalEarned), inline = true},
+                {name = "📈 Income/Hr", value = estPerHour, inline = false},
+                {name = "💵 Balance", value = FormatRupiah(MoneyValue.Value), inline = false}
             },
             footer = { text = "VoidlineHub System" },
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-        }}
-    }
+        })
+    end
 
     local req = syn and syn.request or http_request or request
-    if req then 
-        pcall(function() 
-            req({
-                Url = targetURL, 
-                Method = "POST", 
-                Headers = {["Content-Type"] = "application/json"}, 
-                Body = HttpService:JSONEncode(payload)
-            }) 
-        end) 
-    end
+    if req then pcall(function() req({Url = targetURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(payload)}) end) end
 end
 
 
@@ -327,50 +344,18 @@ end
 -- ==========================================
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED)
 -- ==========================================
--- [[ 🛡️ ANTI-SPAM LOCK ]] --
-_G.DCSent = false 
-
-local function FinalExit()
-    if _G.DCSent or _G.WebhookURL == "" then return end
-    _G.DCSent = true
-    pcall(function() SendWebhook(false, false, true) end)
-end
-
--- [[ 🔄 ADMIN LOOP (50 Detik) ]] --
+-- 1. ADMIN & USER ROUTINE WEBHOOK (INTERVAL 50s)
 task.spawn(function()
-    while task.wait(50) do
-        if _G.DCSent then break end
-        SendWebhook(false, true, false)
-    end
-end)
-
--- [[ 🔄 USER LOOP (Instant ON) ]] --
-task.spawn(function()
-    local lastSent = 0
-    while true do
-        task.wait(1) 
-        if _G.DCSent then break end
+    while task.wait(WEBHOOK_INTERVAL or 50) do
+        -- Kirim ke Admin (Log Aktivitas Admin)
+        SendWebhook(false, true, false) 
         
+        -- Kirim ke User (Hanya jika Toggle On & sedang Farm)
         if _G.WebhookEnabled and AutoFarm then
-            -- Langsung ngirim pas pertama kali ON (lastSent masi 0)
-            if (tick() - lastSent) >= 50 then
-                SendWebhook(false, false, false)
-                lastSent = tick()
-            end
-        else
-            -- Reset biar pas dinyalain lagi langsung kirim
-            lastSent = 0 
+            SendWebhook(false, false, false)
         end
     end
 end)
-
--- [[ 🚨 EVENT DETECT ]] --
-game.Players.PlayerRemoving:Connect(function(p) 
-    if p == LP then FinalExit() end 
-end)
-
-LP.OnTeleport:Connect(FinalExit)
-
 
 -- 2. ANTI-AFK SYSTEM
 task.spawn(function()
@@ -391,27 +376,33 @@ RunService.Heartbeat:Connect(function()
     if _G.HideNameEnabled then
         local head = char:FindFirstChild("Head")
         if head then 
-            for _, v in pairs(head:GetChildren()) do if v:IsA("BillboardGui") then v.Enabled = false end end 
+            for _, v in pairs(head:GetChildren()) do 
+                if v:IsA("BillboardGui") then v.Enabled = false end 
+            end 
         end
     end
     if _G.HideCharEnabled then
-        for _, v in pairs(char:GetDescendants()) do if v:IsA("BasePart") or v:IsA("Decal") then v.Transparency = 1 end end
+        for _, v in pairs(char:GetDescendants()) do 
+            if v:IsA("BasePart") or v:IsA("Decal") then v.Transparency = 1 end 
+        end
     end
 end)
 
--- 4. SESSION END HANDLER
+-- 4. DISCONNECT HANDLER (MAHA MILIK TEST)
 local function OnSessionEnd()
-    -- Report to User Hook
-    if _G.WebhookURL ~= "" then SendWebhook(false, false, true) end
-    -- Report to Admin Hook
-    SendWebhook(false, true, true)
+    if _G.WebhookURL ~= "" then
+        SendWebhook(false, false, true) -- User DC Report
+    end
+    -- Admin juga dapet notif pas user DC
+    SendWebhook(false, true, true) 
 end
 
-game.Players.PlayerRemoving:Connect(function(player)
+Players.PlayerRemoving:Connect(function(player)
     if player == LP then OnSessionEnd() end
 end)
 
 LP.OnTeleport:Connect(OnSessionEnd)
+
 
 
 
