@@ -128,8 +128,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
             color = 2067276,
             thumbnail = { url = avatarImg },
             fields = {
-                {name = "🧰 Job Select", value = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or "Idle"), inline = false},
-                {name = "🌐 Server", value = serverType, inline = true},
+                {name = "🧰 Job Select", value = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or "Idle"), inline = false}
                 {name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true},
                 {name = "💰 Earned", value = FormatRupiah(_G.TotalEarnedFix), inline = true},
                 {name = "📈 Income/Hr", value = estPerHour, inline = false},
@@ -663,10 +662,11 @@ local AutoFarmTab = Window:Tab({
     })
 
 AutoFarmTab:Section({ Title = "Bandung Farm" })
-
 local BandungToggle = AutoFarmTab:Toggle({
     Title = "Auto Farm Bandung",
     Callback = function(v)
+        _G.AutoFarmBandung = v -- Simpan status ke variabel Global buat Webhook
+        
         if v then
             local motor = LP.Character 
                 and LP.Character:FindFirstChild("Humanoid")
@@ -675,20 +675,23 @@ local BandungToggle = AutoFarmTab:Toggle({
             if not motor then
                 WindUI:Notify({
                     Title = "Error",
-                    Content = "Duduk di mobil dulu!",
+                    Content = "sit in the vehicle first!",
                     Duration = 3
                 })
-                BandungToggle:Set(false) -- matikan toggle lagi
+                _G.AutoFarmBandung = false -- Reset variabel global
+                BandungToggle:Set(false)
                 return
             end
 
             SetBlackScreen(true)
             StartRoute()
         else
-            StopRoute() -- sudah matikan blackscreen di dalam
+            StopRoute()
         end
     end
 })
+
+
 
 AutoFarmTab:Section({ Title = "courier farm" })
 
