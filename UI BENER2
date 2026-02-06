@@ -328,24 +328,36 @@ end
 -- ==========================================
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED)
 -- ==========================================
--- 1. ADMIN & USER ROUTINE WEBHOOK (INTERVAL 50s)
+-- 1. ADMIN & USER ROUTINE WEBHOOK (SISTEM TIMER PRESISI)
 task.spawn(function()
+    local lastAdminSent = 0
+    local lastUserSent = 0
+    
     while true do
-        -- Tunggu interval
-        task.wait(WEBHOOK_INTERVAL or 50)
+        task.wait(1) -- Cek setiap detik biar responsif
         
-        -- CEK: Kalau player udah proses Disconnect (DCSent = true), STOP LOOP TOTAL
-        if _G.DCSent then break end 
+        -- Jika player proses DC, matikan loop
+        if _G.DCSent then break end
         
-        -- Kirim ke Admin (Log Aktivitas Admin)
-        SendWebhook(false, true, false) 
+        -- A. LOGIKA ADMIN (Kirim tiap 50 detik)
+        if (tick() - lastAdminSent) >= (WEBHOOK_INTERVAL or 50) then
+            SendWebhook(false, true, false)
+            lastAdminSent = tick()
+        end
         
-        -- Kirim ke User (Hanya jika Toggle On & sedang Farm)
+        -- B. LOGIKA USER (Kirim tiap 50 detik hanya jika ON)
         if _G.WebhookEnabled and AutoFarm then
-            SendWebhook(false, false, false)
+            if (tick() - lastUserSent) >= (WEBHOOK_INTERVAL or 50) then
+                SendWebhook(false, false, false)
+                lastUserSent = tick()
+            end
+        else
+            -- Reset timer user kalau lagi OFF, supaya pas di-ON langsung kirim tanpa nunggu
+            lastUserSent = 0 
         end
     end
 end)
+
 
 -- 2. ANTI-AFK SYSTEM
 task.spawn(function()
