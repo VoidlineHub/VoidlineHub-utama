@@ -68,89 +68,71 @@ MoneyValue.Changed:Connect(function(newVal)
 end)
 
 local function SendWebhook(isTest, isAdmin, isDisconnect)
-    -- Seleksi URL: Test/DC/Report masuk ke _G.WebhookURL, Routine Admin masuk ke ADMIN_URL
+    -- Target URL Logic
     local targetURL = (isTest or isDisconnect) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
     
     if targetURL == "" or not targetURL:find("discord.com") then return end
     
-    -- Filter: Selain Test/Admin/DC, wajib cek Toggle
     if not (isTest or isAdmin or isDisconnect) then
         if not _G.WebhookEnabled then return end
     end
 
     local runtimeSec = os.time() - StartTime
-    local safeRuntime = (runtimeSec > 0) and runtimeSec or 1
-    -- Logic: Earned dibagi detik jalan, dikali 3600 detik (1 jam)
-    local estPerHour = math.floor((TotalEarned / safeRuntime) * 3600)
-    
     local avatarImg = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg"
-    
+
+    -- Fix: Est Income stay di 30jt sesuai request
+    local estPerHour = "30.000.000" 
+
     local payload = {
         username = "VoidlineHub",
         avatar_url = avatarImg,
-        embeds = {}
-    }
-
-    -- [[ STYLE 1: TEST & DISCONNECT (Super Simple Style - No Fields) ]] --
-    if isTest or isDisconnect then
-        table.insert(payload.embeds, {
-            title = isTest and "✅ Webhook Test Successful" or "⚠️ Game Disconnected / Closed",
-            description = isTest and "webhook successfully ready to use." 
-                                or "Game session has ended for use",
-            color = isTest and 5763719 or 15158332,
+        embeds = {{
+            title = isTest and "✅ Webhook Test Successful" or isDisconnect and "⚠️ Game Disconnected / Closed" or (isAdmin and "🕵️ Admin Live Monitor" or "📌 Jobs Data Report"),
+            color = (isTest and 5763719) or (isDisconnect and 15158332) or (isAdmin and 16711680) or 2067276,
             thumbnail = { url = avatarImg },
-            footer = { text = "VoidlineHub System" },
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-        })
-
-    -- [[ STYLE 2: ADMIN & USER REPORT (Detailed Jobs Data) ]] --
-    else
-        local playerCount = #game.Players:GetPlayers()
-        local serverType = (playerCount > 1) and "Public Server" or "Private Server"
-
-        table.insert(payload.embeds, {
-            title = isAdmin and "🕵️ Admin Live Activity Monitor" or "📌 Jobs Data Report",
-            color = isAdmin and 16711680 or 2067276,
-            thumbnail = { url = avatarImg },
-            fields = {
+            fields = (isTest or isDisconnect) and {} or {
                 {
-                    name = "👤 Player Info",
-                    value = "Name: **"..LP.Name.."**\nServer: **"..serverType.."**",
+                    name = "🧰 Job Select", 
+                    value = "" .. ( _G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or "Idle" ) .. "", 
                     inline = false
                 },
                 {
-                    name = "🧰 Job Select",
-                    value = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or "Idle"),
-                    inline = false
-                },
-                {
-                    name = "⏱ Running Time",
-                    value = FormatTime(runtimeSec),
+                    name = "⏱ Running Time", 
+                    value = "" .. FormatTime(runtimeSec) .. "", 
                     inline = true
                 },
                 {
-                    name = "💰 Total Earning",
-                    value = FormatRupiah(TotalEarned),
+                    name = "💰 Total Earning", 
+                    value = "" .. FormatRupiah(TotalEarned) .. "", 
                     inline = true
                 },
                 {
-                    name = "📈 Est. Income / Hour",
-                    value = FormatRupiah(estPerHour),
+                    name = "📈 Est. Income / Hour", 
+                    value = "Rp " .. estPerHour .. "", 
                     inline = true
                 },
                 {
-                    name = "💵 Current Money",
-                    value = FormatRupiah(MoneyValue.Value),
+                    name = "💵 Current Money", 
+                    value = "" .. FormatRupiah(MoneyValue.Value) .. "", 
                     inline = false
                 }
             },
             footer = { text = "VoidlineHub System" },
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-        })
-    end
+        }}
+    }
 
- local req = syn and syn.request or http_request or request
-    if req then pcall(function() req({Url = targetURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(payload)}) end) end
+    local req = syn and syn.request or http_request or request
+    if req then 
+        pcall(function() 
+            req({
+                Url = targetURL, 
+                Method = "POST", 
+                Headers = {["Content-Type"] = "application/json"}, 
+                Body = HttpService:JSONEncode(payload)
+            }) 
+        end) 
+    end
 end
 
 
@@ -353,45 +335,48 @@ end
 -- ==========================================
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED)
 -- ==========================================
--- [[ 🛡️ LOCK SYSTEM ]] --
+-- [[ 🛡️ FINAL LOCK SYSTEM ]] --
 _G.DCSent = false 
 
 local function FinalExit()
-    -- Kunci mati: kalau sudah kirim atau URL kosong, stop.
     if _G.DCSent or _G.WebhookURL == "" then return end
     _G.DCSent = true
-    
-    pcall(function()
-        SendWebhook(false, false, true) -- Kirim DC ke Target User
-    end)
+    pcall(function() SendWebhook(false, false, true) end)
 end
 
--- [[ 🔄 LOOP RUTIN (ADMIN & USER) ]] --
+-- [[ 🔄 ADMIN LOOP (Start after 50s) ]] --
 task.spawn(function()
-    -- WAJIB: Tunggu 50 detik pertama biar gak nembak di detik ke-0
-    task.wait(50) 
-    
-    while true do
-        if _G.DCSent then break end -- Stop loop kalau sudah proses DC
-        
-        -- 1. Kirim Admin Monitor (ADMIN_URL) tiap 50 detik
+    while task.wait(50) do
+        if _G.DCSent then break end
         SendWebhook(false, true, false)
-        
-        -- 2. Kirim Target Report (_G.WebhookURL) tiap 50 detik (jika ON)
-        if _G.WebhookEnabled and AutoFarm then
-            SendWebhook(false, false, false)
-        end
-        
-        task.wait(50) 
     end
 end)
 
--- [[ 🚨 EVENT DISCONNECT ]] --
-game.Players.PlayerRemoving:Connect(function(p)
-    if p == LP then FinalExit() end
+-- [[ 🔄 USER LOOP (Instant on Enable) ]] --
+task.spawn(function()
+    local lastSent = 0
+    while true do
+        task.wait(1) 
+        if _G.DCSent then break end
+        
+        if _G.WebhookEnabled and AutoFarm then
+            if (tick() - lastSent) >= 50 then
+                SendWebhook(false, false, false)
+                lastSent = tick()
+            end
+        else
+            lastSent = 0 -- Reset biar pas di-ON langsung kirim
+        end
+    end
+end)
+
+-- [[ 🚨 EVENTS ]] --
+game.Players.PlayerRemoving:Connect(function(p) 
+    if p == LP then FinalExit() end 
 end)
 
 LP.OnTeleport:Connect(FinalExit)
+
 
 -- 2. ANTI-AFK SYSTEM
 task.spawn(function()
