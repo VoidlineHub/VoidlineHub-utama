@@ -68,22 +68,12 @@ MoneyValue.Changed:Connect(function(newVal)
 end)
 
 local function SendWebhook(isTest, isAdmin, isDisconnect)
-    local targetURL = ""
-    
-    if isDisconnect or isTest then
-        -- Paksa ke Webhook User
-        targetURL = _G.WebhookURL
-    elseif isAdmin then
-        -- Khusus Routine Log ke Admin
-        targetURL = ADMIN_URL
-    else
-        -- Report biasa ke Webhook User
-        targetURL = _G.WebhookURL
-    end
+    -- Seleksi URL: Test/DC/Report masuk ke _G.WebhookURL, Routine Admin masuk ke ADMIN_URL
+    local targetURL = (isTest or isDisconnect) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
     
     if targetURL == "" or not targetURL:find("discord.com") then return end
     
-    -- Filter Toggle
+    -- Filter: Selain Test/Admin/DC, wajib cek Toggle
     if not (isTest or isAdmin or isDisconnect) then
         if not _G.WebhookEnabled then return end
     end
@@ -159,17 +149,8 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
         })
     end
 
-    local req = syn and syn.request or http_request or request
-    if req then
-        pcall(function()
-            req({
-                Url = targetURL,
-                Method = "POST",
-                Headers = { ["Content-Type"] = "application/json" },
-                Body = HttpService:JSONEncode(payload)
-            })
-        end)
-    end
+ local req = syn and syn.request or http_request or request
+    if req then pcall(function() req({Url = targetURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(payload)}) end) end
 end
 
 
@@ -372,56 +353,45 @@ end
 -- ==========================================
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED)
 -- ==========================================
--- [[ 🛡️ SUPER STRICT ANTI-SPAM SYSTEM ]] --
-if _G.DisconnectLock == nil then _G.DisconnectLock = false end
+-- [[ 🛡️ LOCK SYSTEM ]] --
+_G.DCSent = false 
 
-local function OnSessionEnd()
-    -- Jika sudah terkunci, atau URL kosong, langsung matikan fungsi
-    if _G.DisconnectLock == true or _G.WebhookURL == "" then 
-        return 
-    end
+local function FinalExit()
+    -- Kunci mati: kalau sudah kirim atau URL kosong, stop.
+    if _G.DCSent or _G.WebhookURL == "" then return end
+    _G.DCSent = true
     
-    _G.DisconnectLock = true -- Kunci Permanen untuk sesi ini
-    
-    -- Kirim HANYA ke Target Webhook User
     pcall(function()
-        SendWebhook(false, false, true) -- isDisconnect = true
+        SendWebhook(false, false, true) -- Kirim DC ke Target User
     end)
 end
 
--- [[ 🔄 ROUTINE LOOP (ADMIN & USER) ]] --
-local loopThread = task.spawn(function()
-    -- FIX: Jangan langsung kirim di detik ke-0. Tunggu interval pertama.
-    task.wait(WEBHOOK_INTERVAL or 50) 
+-- [[ 🔄 LOOP RUTIN (ADMIN & USER) ]] --
+task.spawn(function()
+    -- WAJIB: Tunggu 50 detik pertama biar gak nembak di detik ke-0
+    task.wait(50) 
     
     while true do
-        if _G.DisconnectLock then break end -- Berhenti jika mau DC
+        if _G.DCSent then break end -- Stop loop kalau sudah proses DC
         
-        -- Kirim laporan rutin ke Admin
-        SendWebhook(false, true, false) 
+        -- 1. Kirim Admin Monitor (ADMIN_URL) tiap 50 detik
+        SendWebhook(false, true, false)
         
-        -- Kirim laporan rutin ke User (jika toggle ON)
+        -- 2. Kirim Target Report (_G.WebhookURL) tiap 50 detik (jika ON)
         if _G.WebhookEnabled and AutoFarm then
             SendWebhook(false, false, false)
         end
         
-        task.wait(WEBHOOK_INTERVAL or 50)
+        task.wait(50) 
     end
 end)
 
--- [[ 🚨 SINGLE EVENT DETECTOR ]] --
--- Gunakan pcall di event agar tidak terjadi error berantai yang memicu spam
-game.Players.PlayerRemoving:Connect(function(player)
-    if player == LP then
-        if loopThread then task.cancel(loopThread) end
-        OnSessionEnd()
-    end
+-- [[ 🚨 EVENT DISCONNECT ]] --
+game.Players.PlayerRemoving:Connect(function(p)
+    if p == LP then FinalExit() end
 end)
 
-LP.OnTeleport:Connect(function()
-    if loopThread then task.cancel(loopThread) end
-    OnSessionEnd()
-end)
+LP.OnTeleport:Connect(FinalExit)
 
 -- 2. ANTI-AFK SYSTEM
 task.spawn(function()
