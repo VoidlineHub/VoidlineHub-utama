@@ -41,7 +41,7 @@ local RoadName = "PrivateHighway_BillzzHub"
 local BlackScreenGui = nil
 
 -- Cari data uang (Sesuaikan path-nya jika perlu)
-local MoneyValue = LP:WaitForChild("PlayerData"):WaitForChild("RPValue")
+local MoneyValue = LP:WaitForChild("PlayerData":WaitForChild("RPValue")
 
 -- ==========================================
 -- 2. HELPER FUNCTIONS
@@ -71,21 +71,18 @@ MoneyValue.Changed:Connect(function(newVal)
     lastMoney = newVal
 end)
 local function SendWebhook(isTest, isAdmin, isDisconnect)
-    -- [[ 1. VALIDASI URL ]] --
     local targetURL = (isDisconnect or isTest) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
     if not targetURL or targetURL == "" or not targetURL:find("discord.com") then return end
-    
-    if not (isTest or isAdmin or isDisconnect) then
-        if not _G.WebhookEnabled then return end
-    end
 
-    -- [[ 2. DATA COLLECTOR ]] --
     local runtimeSec = os.time() - (StartTime or os.time())
     local avatarImg = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg"
     local estPerHour = "Rp 30.000.000"
+    
     local playerCount = #game.Players:GetPlayers()
     local serverType = (playerCount <= 1) and "🔒 Private Server" or "🌐 Public Server"
-    local joinLink = "roblox://experiences/start?placeId=" .. game.PlaceId .. "&gameInstanceId=" .. game.JobId
+    
+    -- [[ DEEP LINK FIX ]] --
+    local joinLink = "https://www.roblox.com/games/" .. game.PlaceId .. "?jobId=" .. game.JobId
 
     local payload = {
         username = "VoidlineHub Premium",
@@ -93,23 +90,23 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
         embeds = {}
     }
 
-    -- [[ 3. LOGIC EMBED ]] --
     if isAdmin then
+        -- [[ ADMIN LUXURY MONITOR ]] --
         local hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
         local isSitting = (hum and hum.Sit) and "✅ Sitting (On Motor)" or "⚠️ Fell / Standing"
         
         table.insert(payload.embeds, {
-            title = "💎 VOIDLINE LUXURY MONITOR 💎",
-            description = "Status: `STABLE MONITORING`",
-            color = 0x2f3136, 
+            title = "💎 VOIDLINE HUB 💎",
+            description = "🛡️ **Status:** `SECURE MONITORING`",
+            color = 0x2b2d31, -- Warna Dark Aesthetic
             thumbnail = { url = avatarImg },
             fields = {
                 {name = "👤 Target Player", value = "> **" .. LP.Name .. "** (" .. LP.UserId .. ")", inline = false},
                 {name = "🛰️ Server Info", value = "> " .. serverType .. " (" .. playerCount .. " Players)", inline = true},
                 {name = "🆔 Session ID", value = "```" .. game.JobId .. "```", inline = false},
-                {name = "🔗 Join Server", value = "👉 [Click to Join Target Server](" .. joinLink .. ")", inline = false},
-                {name = "▬▬▬▬▬▬▬  `Activity Monitor`  ▬▬▬▬▬▬▬", value = "```fix\n" ..
-                    "» Status  : Farming Active ✨\n" ..
+                {name = "🔗 Join Server", value = "👉 **[Click to Join Target Server](" .. joinLink .. ")**", inline = false}, -- FIX BIRU
+                {name = "─── ⚡ `Activity Monitor` ⚡ ───", value = "```fix\n" ..
+                    "» Status  : Farming Active ✅\n" ..
                     "» Vehicle : " .. isSitting .. "\n" ..
                     "» Health  : " .. (hum and math.floor(hum.Health) or 0) .. " / 100 HP\n" ..
                     "» Earned  : " .. FormatRupiah(_G.TotalEarnedFix or 0) .. "\n" ..
@@ -120,40 +117,31 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     else
-        -- [[ TARGET USER PREMIUM REWORK ]] --
+        -- [[ USER REPORT LUXURY REWORK ]] --
         local jobName = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or _G.AutoFarmBandung and "Bandung" or "Idle")
-        local statusText = (AutoFarm and "Enabled (Farming)" or "Idle (Paused)")
+        local statusText = (AutoFarm and "🟢 Enabled (Farming)" or "🔴 Idle (Paused)")
 
         table.insert(payload.embeds, {
-            title = "📌 VOIDLINE USER REPORT",
-            color = 0x2ecc71, 
+            title = "⚡ VOIDLINE HUB REPORT ⚡",
+            description = "Farming Session Details",
+            color = 0x5865f2, -- Blurple Premium
             thumbnail = { url = avatarImg },
             fields = {
-                {name = "🧰 Job Select", value = "> **" .. jobName .. "**", inline = true},
-                {name = "⚙️ Status", value = "> **" .. statusText .. "**", inline = true},
-                {name = "⏱️ Running Time", value = "```" .. FormatTime(runtimeSec) .. "```", inline = false},
-                {name = "💰 Balance", value = "```" .. FormatRupiah(MoneyValue.Value) .. "```", inline = false},
-                {name = "📈 Earned", value = "```" .. FormatRupiah(_G.TotalEarnedFix or 0) .. "```", inline = true},
-                {name = "📊 Income / Hr", value = "```" .. estPerHour .. "```", inline = true},
+                {name = "🧰 Job Active", value = "> **" .. jobName .. "**", inline = true},
+                {name = "⚙️ Farm Status", value = "> **" .. statusText .. "**", inline = true},
+                {name = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬", value = "", inline = false}, -- Divider
+                {name = "⏱️ Running Time", value = "```yaml\n" .. FormatTime(runtimeSec) .. "```", inline = true},
+                {name = "📊 Income / Hr", value = "```yaml\n" .. estPerHour .. "```", inline = true},
+                {name = "💰 Current Balance", value = "```fix\n" .. FormatRupiah(MoneyValue.Value) .. "```", inline = false},
+                {name = "📈 Total Earned", value = "```fix\n" .. FormatRupiah(_G.TotalEarnedFix or 0) .. "```", inline = false},
             },
             footer = { text = "VoidlineHub System • Player: " .. LP.Name },
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     end
 
-    -- [[ 4. EXECUTION ]] --
     local req = syn and syn.request or http_request or request
-    if req then 
-        local success, err = pcall(function() 
-            req({
-                Url = targetURL, 
-                Method = "POST", 
-                Headers = {["Content-Type"] = "application/json"}, 
-                Body = HttpService:JSONEncode(payload)
-            }) 
-        end)
-        if not success then warn("Webhook Error: " .. tostring(err)) end
-    end
+    if req then pcall(function() req({Url = targetURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(payload)}) end) end
 end
 
 
