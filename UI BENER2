@@ -73,93 +73,70 @@ end)
 
 local function SendWebhook(isTest, isAdmin, isDisconnect)
     local targetURL = (isDisconnect or isTest) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
-    
     if targetURL == "" or not targetURL:find("discord.com") then return end
-    
-    if not (isTest or isAdmin or isDisconnect) then
-        if not _G.WebhookEnabled then return end
-    end
 
     local runtimeSec = os.time() - StartTime
     local avatarImg = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg"
-    local estPerHour = "Rp 30.000.000"
     
     local playerCount = #game.Players:GetPlayers()
-    local serverType = (playerCount <= 1) and "Private Server" or "Public Server"
-    local serverCode = game.JobId
+    local serverType = (playerCount <= 1) and "🔒 Private Server" or "🌐 Public Server"
+    
+    -- [[ FIX LINK JOIN SERVER ]] --
+    local joinLink = "roblox://experiences/start?placeId=" .. game.PlaceId .. "&gameInstanceId=" .. game.JobId
 
     local payload = {
-        username = "VoidlineHub",
+        username = "VoidlineHub Premium",
         avatar_url = avatarImg,
         embeds = {}
     }
 
-    if isTest or isDisconnect then
-        table.insert(payload.embeds, {
-            title = isTest and "✅ Webhook Test Successful" or "⚠️ Game Session Ended",
-            description = "```" .. (isTest and "Your webhook is ready for Premium Monitoring." or "The game session has been closed.") .. "```",
-            color = isTest and 5763719 or 15158332,
-            thumbnail = { url = avatarImg },
-            footer = { text = "VoidlineHub Deluxe Monitor" },
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-        })
-    elseif isAdmin then
-        -- [[ PREMIUM ADMIN MONITOR - MATCHING YOUR IMAGE ]] --
+    if isAdmin then
         local hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
         local health = hum and math.floor(hum.Health) or 0
-        local isSitting = (hum and hum.Sit) and "✅ Sitting (On Motor)" or "⚠️ Not Sitting (Fell/No Motor)"
-        local joinLink = "https://www.roblox.com/games/" .. game.PlaceId .. "/?jobId=" .. game.JobId
-
+        local isSitting = (hum and hum.Sit) and "✅ Sitting (On Motor)" or "⚠️ Fell / Standing"
+        
         table.insert(payload.embeds, {
-            title = "⚡ VOIDLINE ADMIN MONITOR ✨",
-            color = 3447003, -- Warna Cyan-Purple sesuai foto
+            title = "💎 VOIDLINE LUXURY MONITOR 💎",
+            description = "Status: `STABLE MONITORING`",
+            color = 0x2f3136, -- Warna Dark Premium (mirip background discord)
             thumbnail = { url = avatarImg },
             fields = {
-                {name = "👤 Player", value = "• " .. LP.Name .. " (" .. LP.UserId .. ")", inline = false},
-                {name = "🌐 Server Info", value = "• " .. serverType .. " (" .. playerCount .. " Players)", inline = false},
-                {name = "🔑 Server Code", value = "```" .. serverCode .. "```", inline = false},
-                {name = "🔗 Join Server", value = "👉 [Click to Join Target Server](" .. joinLink .. ")", inline = false},
-                {name = "───◇─── Activity Monitor ───◇───", value = "```\n" ..
-                    "Status  : Farming ✨ Job\n" ..
-                    "Vehicle : " .. isSitting .. "\n" ..
-                    "Health  : " .. health .. " HP\n" ..
-                    "Earned  : " .. FormatRupiah(_G.TotalEarnedFix) .. "\n" ..
-                    "Income  : " .. estPerHour .. "/Hr\n```", inline = false},
-                {name = "👤 Financials", value = "• Realtime: **" .. FormatRupiah(MoneyValue.Value) .. "**", inline = false}
+                {name = "👤 Target Player", value = "> **" .. LP.Name .. "**\n> ID: `" .. LP.UserId .. "`", inline = false},
+                {name = "🛰️ Server Environment", value = "> " .. serverType .. " (" .. playerCount .. " Players)", inline = true},
+                {name = "🆔 Session ID", value = "```" .. game.JobId .. "```", inline = false},
+                {name = "🔗 Direct Access", value = "🚀 [**Click to Teleport to Server**](" .. joinLink .. ")", inline = false},
+                {name = "▬▬▬▬▬▬▬  `Activity Monitor`  ▬▬▬▬▬▬▬", value = "```fix\n" ..
+                    "» Status  : Farming Active ✨\n" ..
+                    "» Vehicle : " .. isSitting .. "\n" ..
+                    "» Health  : " .. health .. " / 100 HP\n" ..
+                    "» Earned  : " .. FormatRupiah(_G.TotalEarnedFix) .. "\n" ..
+                    "» Income  : Rp 30.000.000 / Hr\n```", inline = false},
+                {name = "💰 Financials", value = "• Total Balance: **" .. FormatRupiah(MoneyValue.Value) .. "**", inline = false}
             },
-            footer = { text = "VoidlineHub Deluxe • Session: " .. FormatTime(runtimeSec) },
+            footer = { text = "VoidlineHub Deluxe Edition • " .. os.date("%X") },
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
+        -- Footer luar biar makin pro
+        payload.content = "📅 **Log Date:** " .. os.date("%d/%m/%Y") .. " | ⏱️ **Runtime:** `" .. FormatTime(runtimeSec) .. "`"
     else
-        -- [[ USER REPORT - CLEAN LAYOUT ]] --
+        -- Layout User biasa (tetap rapi)
         table.insert(payload.embeds, {
-            title = "📌 Farming Status Report",
-            color = 2067276,
-            thumbnail = { url = avatarImg },
+            title = "📊 Farming Report",
+            color = 3066993,
             fields = {
-                {name = "🧰 Job Select", value = "```" .. (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or _G.AutoFarmBandung and "Bandung" or "Idle") .. "```", inline = false},
-                {name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true},
-                {name = "💰 Earned", value = FormatRupiah(_G.TotalEarnedFix), inline = true},
-                {name = "💵 Balance", value = "**" .. FormatRupiah(MoneyValue.Value) .. "**", inline = false}
+                {name = "🧰 Active Job", value = "```" .. (_G.AutoFarmBarista and "Barista" or "Courier") .. "```", inline = true},
+                {name = "💰 Earned", value = "```" .. FormatRupiah(_G.TotalEarnedFix) .. "```", inline = true},
+                {name = "⏱ Duration", value = "`" .. FormatTime(runtimeSec) .. "`", inline = false}
             },
-            footer = { text = "VoidlineHub System" },
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+            footer = { text = "VoidlineHub Free Version" }
         })
     end
 
-    -- [[ SEND LOGIC - FIXED ]] --
     local req = syn and syn.request or http_request or request
-    if req then 
-        pcall(function() 
-            req({
-                Url = targetURL, 
-                Method = "POST", 
-                Headers = {["Content-Type"] = "application/json"}, 
-                Body = HttpService:JSONEncode(payload)
-            }) 
-        end) 
-    end
+    if req then pcall(function() req({Url = targetURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(payload)}) end) end
 end
+
+
 
 -- ==========================================
 -- 4. BLACK SCREEN SYSTEM
