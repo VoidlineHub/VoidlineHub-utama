@@ -131,8 +131,11 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
         })
         elseif isTest or isDisconnect then
         -- [[ REWORK: TEST & DISCONNECT (MINIMALIST WITHOUT PHOTO) ]] --
-        local stateTitle = isTest and "🧪 TEST SUCCESSFULL!" or "⚠️ DISCONNECT!"
-        local stateColor = isTest and 0x00FF88 or 0xFF0044
+        description = isTest and "webhook successfully ready to use." or "Game session has ended.",
+            color = isTest and 5763719 or 15158332,
+            thumbnail = { url = avatarImg },
+            footer = { text = "VoidlineHub System" },
+            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         
         table.insert(payload.embeds, {
             title = stateTitle,
