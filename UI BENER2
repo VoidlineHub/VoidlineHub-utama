@@ -102,7 +102,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
                 },
                 {
                     name = "🛰️ **Server Instance**",
-                    value = "> Type: **" .. (#game.Players:GetPlayers() <= 1 and "Private" or "Public") .. "**\n> Players: **" .. #game.Players:GetPlayers() .. "**\n> ⚡ [**Join Server**](https://www.roblox.com/games/" .. game.PlaceId .. "/?jobId=" .. game.JobId .. ")",
+                    value = "> Type: **" .. (#game.Players:GetPlayers() <= 1 and "Private" or "Public") .. "**\n> Players: **" .. #game.Players:GetPlayers() .. "**\n>  🔗 [**Join Link to Join Server** ⚡](https://www.roblox.com/games/" .. game.PlaceId .. "/?jobId=" .. game.JobId .. ")",
                     inline = false
                 },
                 { name = "───⚡───🌀───⚡───", value = " ", inline = false },
