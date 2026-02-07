@@ -78,36 +78,30 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
 
     local runtimeSec = os.time() - (StartTime or os.time())
     local pName = tostring(LP.Name or "Unknown")
-    local avatarImg = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg"
     
+    -- [[ 1. FIX NIL VARIABLES (Anti-Error) ]]
+    local earnedVal = _G.TotalEarnedFix or 0
+    local balanceVal = (MoneyValue and MoneyValue.Value) or 0
+    local jobName = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or _G.AutoFarmBandung and "Bandung" or "Idle")
+
     local payload = {
         username = "VoidlineHub ⚡",
-        avatar_url = avatarImg,
         embeds = {}
     }
 
     if isAdmin then
-        -- [[ NO 2: ADMIN LIVE MONITOR (SUDAH OK 100) ]] --
+        -- [[ NO 2: ADMIN LIVE (SIMETRIS 100%) ]]
         local hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
         local rawSitting = (hum and hum.Sit) and "Sitting (On Motor)" or "Standing"
-        local earnedStr = FormatRupiah(_G.TotalEarnedFix or 0)
         local healthStr = (hum and math.floor(hum.Health) or 0) .. " HP"
 
         table.insert(payload.embeds, {
             title = "⚡ **VOIDLINE ADMIN MONITOR** ⚡",
             color = 0x00A2FF,
             fields = {
-                {
-                    name = "👤 **User Identity**",
-                    value = "> Name: **" .. pName .. "**\n> ID: `" .. tostring(LP.UserId) .. "`\n> 🔗 [**Roblox Profile**](https://www.roblox.com/users/" .. tostring(LP.UserId) .. "/profile)",
-                    inline = false
-                },
-                {
-                    name = "🛰️ **Server Instance**",
-                    value = "> Type: **" .. (#game.Players:GetPlayers() <= 1 and "Private" or "Public") .. "**\n> Players: **" .. #game.Players:GetPlayers() .. "**\n> 🔗 [**Join Link to Join Server** ⚡](https://www.roblox.com/games/" .. game.PlaceId .. "/?jobId=" .. game.JobId .. ")",
-                    inline = false
-                },
-                { name = "───⚡───🌀───⚡───", value = " ", inline = false },
+                {name = "👤 **User Identity**", value = "> Name: **"..pName.."**\n> ID: `"..tostring(LP.UserId).."`", inline = false},
+                {name = "🛰️ **Server Instance**", value = "> 🔗 [**Join Link to Join Server** ⚡](https://www.roblox.com/games/"..game.PlaceId.."/?jobId="..game.JobId..")", inline = false},
+                {name = "───⚡───🌀───⚡───", value = " ", inline = false},
                 {
                     name = "💀 **Activity Monitor**",
                     value = "```fix\n" ..
@@ -115,51 +109,36 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
                             "║ Status  : Farming ⚡ Job         ║\n" ..
                             "║ Vehicle : " .. string.format("%-22s", rawSitting) .. " ║\n" ..
                             "║ Health  : " .. string.format("%-22s", healthStr) .. " ║\n" ..
-                            "║ Earned  : " .. string.format("%-22s", earnedStr) .. " ║\n" ..
+                            "║ Earned  : " .. string.format("%-22s", FormatRupiah(earnedVal)) .. " ║\n" ..
                             "║ Income  : Rp 30.000.000/Hr       ║\n" ..
                             "╚══════════════════════════════════╝```",
                     inline = false
                 },
-                {
-                    name = "💰 **Financial Status**",
-                    value = "🕒 **Ralatime:** **" .. FormatRupiah(MoneyValue and MoneyValue.Value or 0) .. "**\n" ..
-                            "⚡ **VoidlineHub Deluxe Monitor** • " .. os.date("%Y-%m-%d %X"),
-                    inline = false
-                }
-            },
-            footer = { text = "Voidline System | Session: " .. FormatTime(runtimeSec) }
+                {name = "💰 **Financials**", value = "🕒 **Ralatime:** **" .. FormatRupiah(balanceVal) .. "**", inline = false}
+            }
         })
-        elseif isTest or isDisconnect then
-        -- [[ REWORK: TEST & DISCONNECT (MINIMALIST WITHOUT PHOTO) ]] --
-        description = isTest and "webhook successfully ready to use." or "Game session has ended.",
-            color = isTest and 5763719 or 15158332,
-            thumbnail = { url = avatarImg },
-            footer = { text = "VoidlineHub System" },
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-        
-        table.insert(payload.embeds, {
-            title = stateTitle,
-            color = stateColor,
-            footer = { text = "Voidline Security System • Admin Only" }
-        })
-    else
-        -- [[ NO 1: TARGET USER REPORT (FIXED WITH BANDUNG) ]] --
-        local jobName = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or _G.AutoFarmBandung and "Bandung" or "Idle")
-        local estPerHour = "Rp 30.000.000/Hr" -- Sesuaikan dengan variabel income lu bre
 
+    elseif isTest or isDisconnect then
+        -- [[ NO 1: TEST & DISCONNECT (MINIMALIST) ]]
+        table.insert(payload.embeds, {
+            title = isTest and "✅ TEST SUCCESSFULL!" or "⚠️ DISCONNECT!",
+            description = isTest and "webhook successfully ready to use." or "Game session has ended.",
+            color = isTest and 5763719 or 15158332,
+            footer = { text = "VoidlineHub System • Admin Only" }
+        })
+
+    else
+        -- [[ NO 1: TARGET USER REPORT (FIXED KOMA & BANDUNG) ]]
         table.insert(payload.embeds, {
             title = "📌 Farming Status Report",
             color = 2067276,
-            thumbnail = { url = avatarImg },
             fields = {
-                { name = "🧰 Job Select", value = jobName, inline = false },
-                { name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true },
-                { name = "💰 Earned", value = FormatRupiah(_G.TotalEarnedFix or 0), inline = true },
-                { name = "📈 Income/Hr", value = estPerHour, inline = false },
-                { name = "💵 Balance", value = FormatRupiah(MoneyValue.Value), inline = false }
+                {name = "🧰 Job Select", value = jobName, inline = false},
+                {name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true},
+                {name = "💰 Earned", value = FormatRupiah(earnedVal), inline = true},
+                {name = "💵 Balance", value = FormatRupiah(balanceVal), inline = false}
             },
-            footer = { text = "VoidlineHub System" },
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+            footer = { text = "VoidlineHub System" }
         })
     end
 
