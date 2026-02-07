@@ -129,15 +129,14 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
             },
             footer = { text = "Voidline System | Session: " .. FormatTime(runtimeSec) }
         })
-    elseif isTest or isDisconnect then
-        -- [[ REWORK: TEST & DISCONNECT (MINIMALIST + PHOTO BELOW) ]] --
-        local stateTitle = isTest and "✅ TEST SUCCESSFULL!" or "⚠️ DISCONNECT!"
+        elseif isTest or isDisconnect then
+        -- [[ REWORK: TEST & DISCONNECT (MINIMALIST WITHOUT PHOTO) ]] --
+        local stateTitle = isTest and "🧪 TEST SUCCESSFULL!" or "⚠️ DISCONNECT!"
         local stateColor = isTest and 0x00FF88 or 0xFF0044
         
         table.insert(payload.embeds, {
             title = stateTitle,
             color = stateColor,
-            image = { url = avatarImg }, -- Foto ditaruh di bawah (besar)
             footer = { text = "Voidline Security System • Admin Only" }
         })
     else
