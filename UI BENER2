@@ -73,81 +73,81 @@ MoneyValue.Changed:Connect(function(newVal)
 end)
 
 local function SendWebhook(isTest, isAdmin, isDisconnect)
-    -- Pastikan URL tidak nil
     local targetURL = (isDisconnect or isTest) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
     if not targetURL or targetURL == "" then return end
 
     local runtimeSec = os.time() - (StartTime or os.time())
-    
-    -- [[ ICON SET - Dikasih pengaman biar gak nil ]]
-    local icUser = "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/user-circle-2.png"
-    local icServer = "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/globe-2.png"
-    local icWallet = "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/coins.png"
-    local icActivity = "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/component.png"
-    local icClock = "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/clock.png"
-
-    -- Data Player (Dikasih tostring biar aman dari nil)
     local pName = tostring(LP.Name or "Unknown")
     local pId = tostring(LP.UserId or "0")
-    local balance = FormatRupiah(MoneyValue and MoneyValue.Value or 0)
-    local earned = FormatRupiah(_G.TotalEarnedFix or 0)
     
     local payload = {
-        username = "VoidlineHub",
+        username = "VoidlineHub ⚡",
         avatar_url = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg",
         embeds = {}
     }
 
     if isAdmin then
-        -- [[ NO 2: ADMIN LIVE MONITOR (1:1 Mimic) ]]
+        -- [[ NO 2: ADMIN LIVE MONITOR (SANGAR ⚡ EDITION) ]] --
         local hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
-        local isSitting = (hum and hum.Sit) and "✅ Sitting (On Motor)" or "⚠️ Standing"
+        local isSitting = (hum and hum.Sit) and "⚡ Sitting (On Motor)" or "⚠️ Standing"
         
         table.insert(payload.embeds, {
-            title = "🛰️ **VOIDLINE ADMIN MONITOR** ✨",
-            color = 0xff00ff, -- Pink-Purple Gradasi Mimic
+            title = "⚡ **VOIDLINE ADMIN MONITOR** ⚡",
+            color = 0x00A2FF, -- Cyan Blue Sangar
             fields = {
                 {
-                    name = " ",
-                    value = "👤 **Player:** " .. pName .. " (" .. pId .. ")\n" ..
-                            "🌐 **Server Info:** " .. (#game.Players:GetPlayers() <= 1 and "Private" or "Public") .. " (" .. #game.Players:GetPlayers() .. " Players)\n" ..
-                            "🛡️ **Server Code:** `" .. tostring(game.JobId) .. "`\n" ..
-                            "🔗 [**Join Link to Join Server** ⚡](https://www.roblox.com/games/" .. game.PlaceId .. "/?jobId=" .. game.JobId .. ")",
+                    name = "👤 **User Identity**",
+                    value = "> Name: **" .. pName .. "**\n> ID: `" .. pId .. "`\n> 🔗 [**Roblox Profile**](https://www.roblox.com/users/" .. pId .. "/profile)",
                     inline = false
                 },
-                { name = "───◇───💠───◇───", value = " ", inline = false },
                 {
-                    name = "🚀 **Activity Monitor**",
+                    name = "🛰️ **Server Instance**",
+                    value = "> Type: **" .. (#game.Players:GetPlayers() <= 1 and "Private" or "Public") .. "**\n> Players: **" .. #game.Players:GetPlayers() .. "**\n> ⚡ [**Join Server**](https://www.roblox.com/games/" .. game.PlaceId .. "/?jobId=" .. game.JobId .. ")",
+                    inline = false
+                },
+                { name = "───⚡───🌀───⚡───", value = " ", inline = false },
+                {
+                    name = "💀 **Activity Monitor**",
                     value = "```fix\n" ..
                             "╔══════════════════════════════════╗\n" ..
                             "║ Status  : Farming ⚡ Job         ║\n" ..
                             "║ Vehicle : " .. string.format("%-22s", isSitting) .. " ║\n" ..
                             "║ Health  : " .. (hum and math.floor(hum.Health) or 0) .. " HP               ║\n" ..
-                            "║ Earned  : " .. string.format("%-22s", earned) .. " ║\n" ..
+                            "║ Earned  : " .. string.format("%-22s", FormatRupiah(_G.TotalEarnedFix or 0)) .. " ║\n" ..
                             "║ Income  : Rp 30.000.000/Hr       ║\n" ..
                             "╚══════════════════════════════════╝```",
                     inline = false
                 },
                 {
                     name = "💰 **Financials**",
-                    value = "🕒 **Ralatime:** **" .. balance .. "**\n" ..
-                            "⏱️ **VoidlineHub Deluxe Monitor** • " .. os.date("%Y-%m-%d %H:%M:%S"),
+                    value = "🕒 **Ralatime:** **" .. FormatRupiah(MoneyValue and MoneyValue.Value or 0) .. "**\n" ..
+                            "⚡ **VoidlineHub Deluxe Monitor** • " .. os.date("%Y-%m-%d %X"),
                     inline = false
                 }
             },
-            footer = { text = "Session: " .. FormatTime(runtimeSec) .. " | " .. os.date("%d/%m/%Y") }
+            footer = { text = "Voidline System | Session: " .. FormatTime(runtimeSec) }
+        })
+    elseif isTest or isDisconnect then
+        -- [[ REWORK: TEST & DISCONNECT (SIMPLE EMBED) ]] --
+        local stateTitle = isTest and "🧪 TEST CONNECTION" or "⚠️ PLAYER DISCONNECT"
+        local stateDesc = isTest and "Webhook is successfully connected to **VoidlineHub** ⚡" or "Player **" .. pName .. "** has left the game/disconnected."
+        local stateColor = isTest and 0x00FF88 or 0xFF0044
+
+        table.insert(payload.embeds, {
+            title = "⚡ " .. stateTitle,
+            description = ">>> " .. stateDesc .. "\n\n**Time:** `" .. os.date("%X") .. "`",
+            color = stateColor,
+            footer = { text = "Voidline Security Log" }
         })
     else
-        -- [[ NO 1: TARGET / USER REPORT ]]
-        local statusColor = isDisconnect and 0xff4747 or 0x00ffcc
+        -- [[ TARGET USER REPORT (CLEAN) ]] --
         table.insert(payload.embeds, {
-            title = isDisconnect and "❌ PLAYER DISCONNECTED" or "📡 VOIDLINE USER REPORT",
-            color = statusColor,
+            title = "📡 **VOIDLINE USER REPORT**",
+            color = 0x00A2FF,
             fields = {
                 {name = "👤 **Player**", value = "> " .. pName:sub(1,1) .. "***" .. pName:sub(-1), inline = true},
                 {name = "⏱️ **Uptime**", value = "> " .. FormatTime(runtimeSec), inline = true},
-                {name = "───◇───💠───◇───", value = " ", inline = false},
-                {name = "📈 **Statistics**", value = "• Earned: **" .. earned .. "**\n• Balance: **" .. balance .. "**", inline = false}
+                {name = "📊 **Stats**", value = "• Earned: **" .. FormatRupiah(_G.TotalEarnedFix or 0) .. "**\n• Balance: **" .. FormatRupiah(MoneyValue and MoneyValue.Value or 0) .. "**", inline = false}
             }
         })
     end
@@ -155,6 +155,8 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
     local req = syn and syn.request or http_request or request
     if req then pcall(function() req({Url = targetURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = game:GetService("HttpService"):JSONEncode(payload)}) end) end
 end
+
+
 
 -- ==========================================
 -- 4. BLACK SCREEN SYSTEM
