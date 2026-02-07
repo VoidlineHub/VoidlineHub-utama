@@ -71,7 +71,6 @@ MoneyValue.Changed:Connect(function(newVal)
     end
     lastMoney = newVal
 end)
-
 local function SendWebhook(isTest, isAdmin, isDisconnect)
     local targetURL = (isDisconnect or isTest) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
     if not targetURL or targetURL == "" then return end
@@ -87,13 +86,18 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
     }
 
     if isAdmin then
-        -- [[ NO 2: ADMIN LIVE MONITOR (SANGAR ⚡ EDITION) ]] --
+        -- [[ NO 2: ADMIN LIVE MONITOR (FIX SYMMETRY) ]] --
         local hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
-        local isSitting = (hum and hum.Sit) and "⚡ Sitting (On Motor)" or "⚠️ Standing"
         
+        -- Kita buat string mentah dulu biar itungan string.format akurat (font monospaced)
+        local rawSitting = (hum and hum.Sit) and "Sitting (On Motor)" or "Standing"
+        local earnedStr = FormatRupiah(_G.TotalEarnedFix or 0)
+        local healthStr = (hum and math.floor(hum.Health) or 0) .. " HP"
+        local incomeStr = "Rp 30.000.000/Hr"
+
         table.insert(payload.embeds, {
             title = "⚡ **VOIDLINE ADMIN MONITOR** ⚡",
-            color = 0x00A2FF, -- Cyan Blue Sangar
+            color = 0x00A2FF,
             fields = {
                 {
                     name = "👤 **User Identity**",
@@ -102,7 +106,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
                 },
                 {
                     name = "🛰️ **Server Instance**",
-                    value = "> Type: **" .. (#game.Players:GetPlayers() <= 1 and "Private" or "Public") .. "**\n> Players: **" .. #game.Players:GetPlayers() .. "**\n>  🔗 [**Join Link to Join Server** ⚡](https://www.roblox.com/games/" .. game.PlaceId .. "/?jobId=" .. game.JobId .. ")",
+                    value = "> Type: **" .. (#game.Players:GetPlayers() <= 1 and "Private" or "Public") .. "**\n> Players: **" .. #game.Players:GetPlayers() .. "**\n> 🔗 [**Join Link to Join Server** ⚡](https://www.roblox.com/games/" .. game.PlaceId .. "/?jobId=" .. game.JobId .. ")",
                     inline = false
                 },
                 { name = "───⚡───🌀───⚡───", value = " ", inline = false },
@@ -111,15 +115,15 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
                     value = "```fix\n" ..
                             "╔══════════════════════════════════╗\n" ..
                             "║ Status  : Farming ⚡ Job         ║\n" ..
-                            "║ Vehicle : " .. string.format("%-22s", isSitting) .. " ║\n" ..
-                            "║ Health  : " .. (hum and math.floor(hum.Health) or 0) .. " HP               ║\n" ..
-                            "║ Earned  : " .. string.format("%-22s", FormatRupiah(_G.TotalEarnedFix or 0)) .. " ║\n" ..
-                            "║ Income  : Rp 30.000.000/Hr       ║\n" ..
+                            "║ Vehicle : " .. string.format("%-22s", rawSitting) .. " ║\n" ..
+                            "║ Health  : " .. string.format("%-22s", healthStr) .. " ║\n" ..
+                            "║ Earned  : " .. string.format("%-22s", earnedStr) .. " ║\n" ..
+                            "║ Income  : " .. string.format("%-22s", incomeStr) .. " ║\n" ..
                             "╚══════════════════════════════════╝```",
                     inline = false
                 },
                 {
-                    name = "💰 **Financials**",
+                    name = "💰 **Financial Status**",
                     value = "🕒 **Ralatime:** **" .. FormatRupiah(MoneyValue and MoneyValue.Value or 0) .. "**\n" ..
                             "⚡ **VoidlineHub Deluxe Monitor** • " .. os.date("%Y-%m-%d %X"),
                     inline = false
@@ -128,27 +132,29 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
             footer = { text = "Voidline System | Session: " .. FormatTime(runtimeSec) }
         })
     elseif isTest or isDisconnect then
-        -- [[ REWORK: TEST & DISCONNECT (SIMPLE EMBED) ]] --
-        local stateTitle = isTest and "🧪 TEST CONNECTION" or "⚠️ PLAYER DISCONNECT"
-        local stateDesc = isTest and "Webhook is successfully connected to **VoidlineHub** ⚡" or "Player **" .. pName .. "** has left the game/disconnected."
+        -- [[ REWORK: TEST & DISCONNECT (SIMPLE EMBED ONLY) ]] --
+        local stateTitle = isTest and "🧪 CONNECTION TEST" or "⚠️ DISCONNECT LOG"
         local stateColor = isTest and 0x00FF88 or 0xFF0044
+        local stateMsg = isTest and "Webhook berhasil terhubung ke **VoidlineHub** ⚡" or "Pemain **" .. pName .. "** telah keluar dari permainan."
 
         table.insert(payload.embeds, {
             title = "⚡ " .. stateTitle,
-            description = ">>> " .. stateDesc .. "\n\n**Time:** `" .. os.date("%X") .. "`",
+            description = ">>> " .. stateMsg .. "\n\n**Waktu:** `" .. os.date("%X") .. "`\n**User:** `" .. pName .. "`",
             color = stateColor,
-            footer = { text = "Voidline Security Log" }
+            footer = { text = "Voidline Security System" }
         })
     else
-        -- [[ TARGET USER REPORT (CLEAN) ]] --
+        -- [[ NO 1: NORMAL TARGET REPORT ]] --
         table.insert(payload.embeds, {
             title = "📡 **VOIDLINE USER REPORT**",
             color = 0x00A2FF,
             fields = {
                 {name = "👤 **Player**", value = "> " .. pName:sub(1,1) .. "***" .. pName:sub(-1), inline = true},
                 {name = "⏱️ **Uptime**", value = "> " .. FormatTime(runtimeSec), inline = true},
-                {name = "📊 **Stats**", value = "• Earned: **" .. FormatRupiah(_G.TotalEarnedFix or 0) .. "**\n• Balance: **" .. FormatRupiah(MoneyValue and MoneyValue.Value or 0) .. "**", inline = false}
-            }
+                {name = "───⚡───🌀───⚡───", value = " ", inline = false},
+                {name = "📊 **Statistics**", value = "• Earned: **" .. FormatRupiah(_G.TotalEarnedFix or 0) .. "**\n• Balance: **" .. FormatRupiah(MoneyValue and MoneyValue.Value or 0) .. "**", inline = false}
+            },
+            footer = { text = "VoidlineHub • " .. os.date("%X") }
         })
     end
 
