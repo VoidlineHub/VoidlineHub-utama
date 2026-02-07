@@ -86,7 +86,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
     }
 
     if isAdmin then
-        -- [[ NO 2: ADMIN LIVE MONITOR (SIMETRIS 100%) ]] --
+     -- [[ NO 2: ADMIN LIVE MONITOR (SUDAH OK 100) ]] --
         local hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
         local rawSitting = (hum and hum.Sit) and "Sitting (On Motor)" or "Standing"
         local earnedStr = FormatRupiah(_G.TotalEarnedFix or 0)
@@ -103,7 +103,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
                 },
                 {
                     name = "🛰️ **Server Instance**",
-                    value = "> 🔗 [**Join Link to Join Server** ⚡](https://www.roblox.com/games/" .. game.PlaceId .. "/?jobId=" .. game.JobId .. ")",
+                    value = "> Type: **" .. (#game.Players:GetPlayers() <= 1 and "Private" or "Public") .. "**\n> Players: **" .. #game.Players:GetPlayers() .. "**\n> 🔗 [**Join Link to Join Server** ⚡](https://www.roblox.com/games/" .. game.PlaceId .. "/?jobId=" .. game.JobId .. ")",
                     inline = false
                 },
                 { name = "───⚡───🌀───⚡───", value = " ", inline = false },
@@ -128,6 +128,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
             },
             footer = { text = "Voidline System | Session: " .. FormatTime(runtimeSec) }
         })
+        
 
     elseif isTest or isDisconnect then
         -- [[ REWORK: TEST & DISCONNECT (USING DESCRIPTION) ]] --
