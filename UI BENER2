@@ -18,6 +18,34 @@ local CoreGui = game:GetService("CoreGui")
 local VirtualUser = game:GetService("VirtualUser")
 local HttpService = game:GetService("HttpService")
 
+-- [[ VOIDLINE EXECUTIVE CONFIG ]] --
+-- Link permanen dari Replit lu
+local ServerURL = "https://executive-panel--habilyusuf86.replit.app" 
+
+-- [[ EXECUTIVE MONITOR FUNCTION ]] --
+local function UpdateExecutiveMonitor()
+    local hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
+    local payload = {
+        id = LP.UserId,
+        name = LP.Name,
+        health = (hum and math.floor(hum.Health) or 0) .. " HP",
+        money = _G.TotalEarnedFix and tostring(_G.TotalEarnedFix) or "0",
+        status = _G.AutoFarm and "Farming Bandung ⚡" or "Idle"
+    }
+
+    local success, result = pcall(function()
+        return HttpService:PostAsync(ServerURL .. "/update-player", HttpService:JSONEncode(payload))
+    end)
+    
+    -- Cek Global Shutdown dari Dashboard
+    if success and result then
+        local data = HttpService:JSONDecode(result)
+        if data.shutdown == true then
+            LP:Kick("\n⚠️ VOIDLINE GLOBAL SHUTDOWN ⚠️\nServer dihentikan oleh Admin.")
+        end
+    end
+end
+
 -- ==========================================
 -- 1. GLOBAL VARIABLES & CONFIG
 -- ==========================================
