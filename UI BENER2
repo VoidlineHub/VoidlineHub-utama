@@ -389,6 +389,7 @@ local function StopRoute()
     SetBlackScreen(false) -- ← tambahin ini biar sinkron sama toggle
 end
 
+
 -- ==========================================
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED)
 -- ==========================================
@@ -400,21 +401,29 @@ local function FinalExit()
     pcall(function() SendWebhook(false, false, true) end)
 end
 
+-- [[ MAIN AUTOMATION LOOP ]] --
 task.spawn(function()
     local lastAdminSent = 0
     local lastUserSent = 0
+    local lastExecutiveUpdate = 0
     
     while true do
         task.wait(1)
         if _G.DCSent then break end
         
-        -- Admin: Lapor tiap 50 detik
+        -- 1. EXECUTIVE MONITOR (Sync ke Web Dashboard tiap 10 detik)
+        if (tick() - lastExecutiveUpdate) >= 10 then
+            UpdateExecutiveMonitor()
+            lastExecutiveUpdate = tick()
+        end
+
+        -- 2. ADMIN WEBHOOK (Lapor tiap 50 detik)
         if (tick() - lastAdminSent) >= 50 then
             SendWebhook(false, true, false)
             lastAdminSent = tick()
         end
         
-        -- User: Lapor tiap 50 detik (Instant pas ON)
+        -- 3. USER WEBHOOK (Lapor tiap 50 detik)
         if _G.WebhookEnabled and AutoFarm then
             if (tick() - lastUserSent) >= 50 then
                 SendWebhook(false, false, false)
@@ -430,7 +439,7 @@ game.Players.PlayerRemoving:Connect(function(p) if p == LP then FinalExit() end 
 LP.OnTeleport:Connect(FinalExit)
 
 
--- 2. ANTI-AFK SYSTEM
+-- [[ 2. ANTI-AFK SYSTEM ]] --
 task.spawn(function()
     while task.wait(15) do 
         if _G.AntiAFK then
@@ -442,10 +451,12 @@ task.spawn(function()
     end
 end)
 
--- 3. STEALTH MODE (HIDE NAME & CHAR)
+-- [[ 3. STEALTH MODE (HIDE NAME & CHAR) ]] --
 RunService.Heartbeat:Connect(function()
     local char = LP.Character
     if not char then return end
+    
+    -- Hide Name Logic
     if _G.HideNameEnabled then
         local head = char:FindFirstChild("Head")
         if head then 
@@ -454,6 +465,8 @@ RunService.Heartbeat:Connect(function()
             end 
         end
     end
+    
+    -- Hide Character Logic (Transparency)
     if _G.HideCharEnabled then
         for _, v in pairs(char:GetDescendants()) do 
             if v:IsA("BasePart") or v:IsA("Decal") then v.Transparency = 1 end 
