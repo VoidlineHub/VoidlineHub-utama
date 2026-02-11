@@ -1,6 +1,4 @@
--- ==========================================
--- 🔱 VOIDLINE EXECUTIVE PROTECTION (INJECTED)
--- ==========================================
+--BOT KICK
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local LP = Players.LocalPlayer
@@ -52,9 +50,8 @@ task.spawn(function()
     end
 end)
 
--- ==========================================
--- ========== WINDUI LOAD (MAIN SCRIPT) =====
--- ==========================================
+--windui load
+
 local WindUI
 local success, result = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
