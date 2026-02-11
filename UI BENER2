@@ -86,8 +86,6 @@ local function UpdateExecutiveMonitor()
     local success, result = pcall(function()
         return HttpService:PostAsync(ServerURL .. "/update-player", HttpService:JSONEncode(payload))
     end)
-end
-
 
 -- ==========================================
 -- 1. GLOBAL VARIABLES & CONFIG
