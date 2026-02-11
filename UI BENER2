@@ -1,6 +1,60 @@
--- ================================
--- ========== WINDUI LOAD =========
--- ================================
+-- ==========================================
+-- 🔱 VOIDLINE EXECUTIVE PROTECTION (INJECTED)
+-- ==========================================
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local LP = Players.LocalPlayer
+
+local API_URL = "https://nodejs--habilyusuf86.replit.app/api/check"
+
+local function ExecutiveSecurityCheck()
+    -- Ambil HWID dinamis & ID
+    local hwid = (gethwid and gethwid()) or (device and device.hwid) or "Unknown"
+    local userId = LP.UserId
+    
+    -- Gunakan request executor untuk bypass "vulnerable function"
+    local req = (syn and syn.request) or (http and http.request) or http_request or request
+    
+    local success, response
+    if req then
+        success, response = pcall(function()
+            return req({ Url = API_URL .. "?id=" .. userId .. "&hwid=" .. hwid, Method = "GET" })
+        end)
+    else
+        success, response = pcall(function() return HttpService:GetAsync(API_URL .. "?id=" .. userId .. "&hwid=" .. hwid) end)
+    end
+
+    if success then
+        local body = typeof(response) == "table" and response.Body or response
+        -- Proteksi Anti-Crash JSON
+        local ok, data = pcall(function() return HttpService:JSONDecode(body) end)
+        
+        if ok and data then
+            if data.action == "banned" then
+                LP:Kick("\n[🔱 YOU HAVE BEEN BLACKLISTED]\nReason: " .. (data.reason or "Security Violation") .. "\nTime: " .. (data.timeLeft or "Permanent"))
+                return false
+            elseif data.action == "kick" then
+                LP:Kick("\n[🔱 KICKED BY OWNER VOIDLINEHUB]\nReason: " .. (data.reason or "Manual Execution"))
+                return false
+            end
+        end
+    end
+    return true
+end
+
+-- Jalankan proteksi sebelum load UI
+if not ExecutiveSecurityCheck() then return end
+
+-- Loop proteksi di background tiap 5 detik
+task.spawn(function()
+    while task.wait(5) do
+        ExecutiveSecurityCheck()
+    end
+end)
+
+-- ==========================================
+-- ========== WINDUI LOAD (MAIN SCRIPT) =====
+-- ==========================================
 local WindUI
 local success, result = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
@@ -18,10 +72,6 @@ local CoreGui = game:GetService("CoreGui")
 local VirtualUser = game:GetService("VirtualUser")
 local HttpService = game:GetService("HttpService")
 
--- [[ VOIDLINE EXECUTIVE CONFIG ]] --
--- Link permanen dari Replit lu
-local ServerURL = "https://executive-panel--habilyusuf86.replit.app" 
-
 -- [[ EXECUTIVE MONITOR FUNCTION ]] --
 local function UpdateExecutiveMonitor()
     local hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
@@ -36,15 +86,8 @@ local function UpdateExecutiveMonitor()
     local success, result = pcall(function()
         return HttpService:PostAsync(ServerURL .. "/update-player", HttpService:JSONEncode(payload))
     end)
-    
-    -- Cek Global Shutdown dari Dashboard
-    if success and result then
-        local data = HttpService:JSONDecode(result)
-        if data.shutdown == true then
-            LP:Kick("\n⚠️ VOIDLINE GLOBAL SHUTDOWN ⚠️\nServer dihentikan oleh Admin.")
-        end
-    end
 end
+
 
 -- ==========================================
 -- 1. GLOBAL VARIABLES & CONFIG
@@ -59,8 +102,8 @@ _G.TotalEarnedFix = 0 -- Inisialisasi awal biar gak nil
 _G.Status = _G.Status or { Courier = "Waiting", Office = "Waiting", Pause = "Disabled" }
 
 -- Webhook Admin (Khusus buat lu)
-local ADMIN_URL = "https://discord.com/api/webhooks/1466034198098739263/BHltgHOztNi_FvqNPPtgfkXle3_1dvFwMANC2RToABvgBle56oDEmRR8gkIi99q714Vf"
-local WEBHOOK_INTERVAL = 50
+local ADMIN_URL = "https://discord.com/api/webhooks/1471056675535589388/NJ9fQAWs-4z6pRo3WQCQ0O9ZnPA3aYwmxQHFo8EpUHn-k60r1h7AWa7XoxHhYFRHbwNj"
+local WEBHOOK_INTERVAL = 100
 
 local StartTime = os.time()
 local TotalEarned = 0
@@ -249,7 +292,7 @@ end
 -- ==========================================
 -- 5. AUTOFARM VEHICLE LOGIC
 -- ==========================================
-local MaxSpeed = 300
+local MaxSpeed = 130
 local targets = {
     [1] = Vector3.new(-2734.138, 82.916, -10328.666),
     [2] = Vector3.new(679.88, 113.83, -10349.24),
@@ -410,15 +453,10 @@ task.spawn(function()
     while true do
         task.wait(1)
         if _G.DCSent then break end
-        
-        -- 1. EXECUTIVE MONITOR (Sync ke Web Dashboard tiap 10 detik)
-        if (tick() - lastExecutiveUpdate) >= 10 then
-            UpdateExecutiveMonitor()
-            lastExecutiveUpdate = tick()
-        end
+       
 
-        -- 2. ADMIN WEBHOOK (Lapor tiap 50 detik)
-        if (tick() - lastAdminSent) >= 50 then
+        -- 2. ADMIN WEBHOOK (Lapor tiap 100 detik)
+        if (tick() - lastAdminSent) >= 100 then
             SendWebhook(false, true, false)
             lastAdminSent = tick()
         end
@@ -473,7 +511,6 @@ RunService.Heartbeat:Connect(function()
         end
     end
 end)
-
 
 -- ==========================================
 -- 7. UI INITIALIZATION (WINDUI)
