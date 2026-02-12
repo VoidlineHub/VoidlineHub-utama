@@ -1,7 +1,6 @@
 -- [[ 🔱 VOIDLINE HUB SECURITY & LOGGER ]] --
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
-local RunService = game:GetService("RunService") -- Pastiin ini ada di atas bre
 local LP = Players.LocalPlayer
 
 local API_URL = "https://nodejs--habilyusuf86.replit.app/api/check"
@@ -57,6 +56,17 @@ local success, result = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 end)
 if success then WindUI = result else return end
+
+-- [[ VOIDLINE HUB - MASTER TEMPLATE ]] --
+
+local Players = game:GetService("Players")
+local LP = Players.LocalPlayer
+local RS = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local VirtualUser = game:GetService("VirtualUser")
+local HttpService = game:GetService("HttpService")
 
 -- ==========================================
 -- 1. GLOBAL VARIABLES & CONFIG
