@@ -68,16 +68,15 @@ _G.HideCharEnabled = false
 _G.WebhookEnabled = false
 _G.WebhookURL = "" 
 _G.TotalEarnedFix = 0
-_G.Status = _G.Status or { Courier = "Waiting", Office = "Waiting", Pause = "Disabled" }
 
+-- URL CONFIG
+local API_URL = "https://nodejs--habilyusuf86.replit.app/api/check"
 local ADMIN_URL = "https://discord.com/api/webhooks/1471056675535589388/NJ9fQAWs-4z6pRo3WQCQ0O9ZnPA3aYwmxQHFo8EpUHn-k60r1h7AWa7XoxHhYFRHbwNj"
-local StartTime = os.time()
-local PlayerData = LP:WaitForChild("PlayerData", 10)
-local MoneyValue = PlayerData and PlayerData:WaitForChild("RPValue", 10)
 
 -- ==========================================
--- 2. HELPER FUNCTIONS
--- ==========================local function GetPlayerHWID()
+-- 1. HELPER FUNCTIONS (DIATAS BIAR GAK NIL)
+-- ==========================================
+local function GetPlayerHWID()
     return (gethwid and gethwid()) or (device and device.hwid) or "Unknown/Mobile"
 end
 
@@ -92,7 +91,23 @@ local function FormatTime(sec)
 end
 
 -- ==========================================
--- 3. WEBHOOK SYSTEM (DUAL MODE)
+-- 2. GLOBAL VARIABLES & CONFIG
+-- ==========================================
+_G.AutoFarmBandung = false
+_G.AntiAFK = true 
+_G.HideNameEnabled = false
+_G.HideCharEnabled = false
+_G.WebhookEnabled = false
+_G.WebhookURL = "" 
+_G.TotalEarnedFix = 0
+_G.Status = _G.Status or { Courier = "Waiting", Office = "Waiting", Pause = "Disabled" }
+
+local StartTime = os.time()
+local PlayerData = LP:WaitForChild("PlayerData", 10)
+local MoneyValue = PlayerData and PlayerData:WaitForChild("RPValue", 10)
+
+-- ==========================================
+-- 3. WEBHOOK SYSTEM (FIXED FOR ADMIN)
 -- ==========================================
 local function SendWebhook(isTest, isAdmin, isDisconnect)
     local targetURL = (isDisconnect or isTest) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
@@ -100,6 +115,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
 
     local runtimeSec = os.time() - StartTime
     local pName = tostring(LP.Name or "Unknown")
+    local pHwid = GetPlayerHWID()
     
     local payload = {
         username = "VoidlineHub ⚡",
@@ -123,7 +139,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
                             "> HWID: `" .. pHwid .. "`\n" .. 
                             "> 🔗 [**Roblox Profile**](https://www.roblox.com/users/" .. tostring(LP.UserId) .. "/profile)",
                     inline = false
-                  },
+                },
                 {
                     name = "🛰️ **Server Instance**",
                     value = "> Type: **" .. (#game.Players:GetPlayers() <= 1 and "Private" or "Public") .. "**\n> Players: **" .. #game.Players:GetPlayers() .. "**\n> [**Join Link** ⚡](https://www.roblox.com/games/" .. game.PlaceId .. "/?jobId=" .. game.JobId .. ")",
@@ -133,7 +149,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
                     name = "💀 **Activity Monitor**",
                     value = "```fix\n" ..
                             "╔══════════════════════════════════╗\n" ..
-                            "║ Status  : Farming ⚡ Job         ║\n" ..
+                            "║ Status  : Online & Running       ║\n" ..
                             "║ Vehicle : " .. string.format("%-22s", rawSitting) .. " ║\n" ..
                             "║ Health  : " .. string.format("%-22s", healthStr) .. " ║\n" ..
                             "║ Earned  : " .. string.format("%-22s", earnedStr) .. " ║\n" ..
@@ -141,9 +157,9 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
                     inline = false
                 }
             },
-            footer = { text = "Voidline System | Session: " .. FormatTime(runtimeSec) }
+            footer = { text = "Voidline System | " .. os.date("%X") }
         })
-
+    
     elseif isTest or isDisconnect then
         -- [[ REWORK: TEST & DISCONNECT (USING DESCRIPTION) ]] --
         table.insert(payload.embeds, {
@@ -175,13 +191,14 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
     end
 
     local req = syn and syn.request or http_request or request
-    if req then pcall(function() req({Url = targetURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = game:GetService("HttpService"):JSONEncode(payload)}) end) end
+    if req then pcall(function() req({Url = targetURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(payload)}) end) end
 end
 
 -- [[ AUTO-SEND PAS EXECUTE ]] --
 task.spawn(function()
     pcall(function() SendWebhook(false, true, false) end)
 end)
+
 
 -- ==========================================
 -- 4. BLACK SCREEN SYSTEM
