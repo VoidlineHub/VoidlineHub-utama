@@ -75,8 +75,14 @@ local PlayerData = LP:WaitForChild("PlayerData", 10)
 local MoneyValue = PlayerData and PlayerData:WaitForChild("RPValue", 10)
 
 -- ==========================================
--- 2. HELPER FUNCTIONS
+-- 2. HELPER FUNCTIONS (FIXED ORDER)
 -- ==========================================
+
+-- Fungsi HWID harus di atas agar tidak error "nil value" saat dipanggil SendWebhook
+local function GetPlayerHWID()
+    return (gethwid and gethwid()) or (device and device.hwid) or "Unknown/Mobile"
+end
+
 local function FormatRupiah(num)
     local s = tostring(math.floor(num or 0))
     local result = s:reverse():gsub("(%d%d%d)", "%1."):reverse()
@@ -96,6 +102,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
 
     local runtimeSec = os.time() - StartTime
     local pName = tostring(LP.Name or "Unknown")
+    local pHwid = GetPlayerHWID() -- Memanggil fungsi helper di atas
     
     local payload = {
         username = "VoidlineHub ⚡",
@@ -103,6 +110,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
     }
 
     if isAdmin then
+        -- [[ NO 2: ADMIN LIVE MONITOR DENGAN HWID ]] --
         local hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
         local rawSitting = (hum and hum.Sit) and "Sitting (On Motor)" or "Standing"
         local earnedStr = FormatRupiah(_G.TotalEarnedFix or 0)
@@ -116,7 +124,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
                     name = "👤 **User Identity**",
                     value = "> Name: **" .. pName .. "**\n" ..
                             "> ID: `" .. tostring(LP.UserId) .. "`\n" ..
-                            "> HWID: `" .. GetPlayerHWID() .. "`\n" .. -- HWID MASUK SINI RAPI
+                            "> HWID: `" .. pHwid .. "`\n" .. 
                             "> 🔗 [**Roblox Profile**](https://www.roblox.com/users/" .. tostring(LP.UserId) .. "/profile)",
                     inline = false
                 },
@@ -141,7 +149,7 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
         })
 
     elseif isTest or isDisconnect then
-        -- [[ REWORK: TEST & DISCONNECT (USING DESCRIPTION) ]] --
+        -- [[ REWORK: TEST & DISCONNECT ]] --
         table.insert(payload.embeds, {
             title = isTest and "✅ TEST SUCCESSFULL!" or "⚠️ DISCONNECT!",
             description = isTest and "Webhook is successfully ready to use for **VoidlineHub** ⚡" or "The player has left the game. Session ended safely.",
@@ -151,9 +159,9 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
         })
 
     else
-        -- [[ NO 1: TARGET USER REPORT (FIXED SYNC) ]] --
+        -- [[ NO 1: TARGET USER REPORT ]] --
         local jobName = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or _G.AutoFarmBandung and "Bandung" or "Idle")
-        local balanceVal = (MoneyValue and MoneyValue.Value) or 0 -- Proteksi agar tidak nil
+        local balanceVal = (MoneyValue and MoneyValue.Value) or 0
 
         table.insert(payload.embeds, {
             title = "📌 Farming Status Report",
@@ -171,8 +179,23 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
     end
 
     local req = syn and syn.request or http_request or request
-    if req then pcall(function() req({Url = targetURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = game:GetService("HttpService"):JSONEncode(payload)}) end) end
+    if req then 
+        pcall(function() 
+            req({
+                Url = targetURL, 
+                Method = "POST", 
+                Headers = {["Content-Type"] = "application/json"}, 
+                Body = game:GetService("HttpService"):JSONEncode(payload)
+            }) 
+        end) 
+    end
 end
+
+-- [[ AUTO-SEND PAS EXECUTE ]] --
+task.spawn(function()
+    SendWebhook(false, true, false)
+end)
+
 
 
 -- ==========================================
