@@ -119,6 +119,18 @@ local MoneyValue = PlayerData and PlayerData:WaitForChild("RPValue", 10)
 -- ==========================================
 -- 3. WEBHOOK SYSTEM (FIXED FOR ADMIN)
 -- ==========================================
+-- [[ MONEY TRACKER - FIXED EARNED ]] --
+local lastMoney = MoneyValue.Value
+if not _G.TotalEarnedFix then _G.TotalEarnedFix = 0 end 
+
+MoneyValue.Changed:Connect(function(newVal)
+    if newVal > lastMoney then
+        local gain = newVal - lastMoney
+        _G.TotalEarnedFix = _G.TotalEarnedFix + gain
+    end
+    lastMoney = newVal
+end)
+
 local function SendWebhook(isTest, isAdmin, isDisconnect)
     local targetURL = (isDisconnect or isTest) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
     if not targetURL or targetURL == "" then return end
