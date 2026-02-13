@@ -831,19 +831,21 @@ local BaristaToggle = AutoFarmTab:Toggle({
     })
 
 local VehicleTab = Window:Tab({ Title = "Vehicle", Icon = "car-front",  })
+
 VehicleTab:Section({ Title = "Vehicle Config" })
+
+-- 1. VEHICLE SPEED
 VehicleTab:Input({
     Title = "Vehicle Speed",
-    Placeholder = "Enter speed",
+    Placeholder = "Enter speed (e.g. 500)",
     Callback = function(v)
         local num = tonumber(v)
         if num then
-            _G.Speed = num or 300
-            
+            _G.Speed = num
         else
             WindUI:Notify({
                 Title = "Invalid Input",
-                Content = "enter the correct speed!",
+                Content = "Please enter a valid number!",
                 Type = "Error",
                 Duration = 3
             })
@@ -851,42 +853,45 @@ VehicleTab:Input({
     end
 })
 
+-- 2. INCREMENT
 VehicleTab:Input({
-    Title = "increment",
-    Placeholder = "Enter incremer",
+    Title = "Increment",
+    Placeholder = "Enter increment (e.g. 50)",
     Callback = function(v)
         local num = tonumber(v)
         if num then
-            _G.Increment = num or 50
-            
+            _G.Increment = num
         else
             WindUI:Notify({
                 Title = "Invalid Input",
-                Content = "enter the correct increment!",
+                Content = "Please enter a valid number!",
                 Type = "Error",
                 Duration = 3
             })
         end
     end
 })
+
+-- 3. INTERVAL
 VehicleTab:Input({
-    Title = "interval",
-    Placeholder = "Enter interval",
+    Title = "Interval",
+    Placeholder = "Enter interval (e.g. 0.1)",
     Callback = function(v)
         local num = tonumber(v)
         if num then
-            _G.Interval  = num or 0.5
-            
+            _G.Interval = num
         else
             WindUI:Notify({
                 Title = "Invalid Input",
-                Content = "enter the correct interval!",
+                Content = "Please enter a valid number!",
                 Type = "Error",
                 Duration = 3
             })
         end
     end
 })
+
+
 VehicleTab:Section({ Title = "enable Config" })
 local VehicleToggle = VehicleTab:Toggle({
     Title = "enable boost",
