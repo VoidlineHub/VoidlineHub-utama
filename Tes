@@ -118,13 +118,37 @@ _G.WebhookURL = ""
 _G.TotalEarnedFix = 0
 _G.Status = _G.Status or { Courier = "Waiting", Office = "Waiting", Pause = "Disabled" }
 
+
+-- Webhook Admin (Khusus buat lu)
+local ADMIN_URL = "https://discord.com/api/webhooks/1471056675535589388/NJ9fQAWs-4z6pRo3WQCQ0O9ZnPA3aYwmxQHFo8EpUHn-k60r1h7AWa7XoxHhYFRHbwNj"
+local WEBHOOK_INTERVAL = 50
+
 local StartTime = os.time()
+local TotalEarned = 0
+local AutoFarm = false
+local DirectionForward = true 
+local RoadName = "PrivateHighway_BillzzHub"
+local BlackScreenGui = nil
+
+-- Cari data uang (Sesuaikan path-nya jika perlu)
 local PlayerData = LP:WaitForChild("PlayerData", 10)
 local MoneyValue = PlayerData and PlayerData:WaitForChild("RPValue", 10)
 
 -- ==========================================
 -- 3. WEBHOOK SYSTEM (FIXED FOR ADMIN)
 -- ==========================================
+-- [[ MONEY TRACKER - FIXED EARNED ]] --
+local lastMoney = MoneyValue.Value
+if not _G.TotalEarnedFix then _G.TotalEarnedFix = 0 end 
+
+MoneyValue.Changed:Connect(function(newVal)
+    if newVal > lastMoney then
+        local gain = newVal - lastMoney
+        _G.TotalEarnedFix = _G.TotalEarnedFix + gain
+    end
+    lastMoney = newVal
+end)
+
 local function SendWebhook(isTest, isAdmin, isDisconnect)
     local targetURL = (isDisconnect or isTest) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
     if not targetURL or targetURL == "" then return end
