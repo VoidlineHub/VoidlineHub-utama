@@ -78,7 +78,6 @@ _G.HideCharEnabled = false
 _G.WebhookEnabled = false
 _G.WebhookURL = "" 
 _G.TotalEarnedFix = 0
-
 _G.Speed = 300    
 _G.Increment = 50       
 _G.Interval = 0.5 
@@ -900,7 +899,7 @@ local VehicleToggle = VehicleTab:Toggle({
        end
 })
 
-local StarightToggle = VehicleTab:Toggle({
+local StraightToggle = VehicleTab:Toggle({
     Title = "Straight Boost",
     Callback = function(v)
         _G.StraightBoost = v 
