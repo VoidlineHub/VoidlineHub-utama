@@ -148,7 +148,6 @@ MoneyValue.Changed:Connect(function(newVal)
     end
     lastMoney = newVal
 end)
-
 local function SendWebhook(isTest, isAdmin, isDisconnect)
     local targetURL = (isDisconnect or isTest) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
     if not targetURL or targetURL == "" then return end
@@ -238,6 +237,7 @@ end
 task.spawn(function()
     pcall(function() SendWebhook(false, true, false) end)
 end)
+
 
 
 -- ==========================================
