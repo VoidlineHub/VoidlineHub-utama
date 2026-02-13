@@ -4,8 +4,7 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService") -- Pastiin ini ada di atas bre
 local LP = Players.LocalPlayer
 
-local API_URL = "https://nodejs--habilyusuf86.replit.app/api/check"
-
+local API_URL = "https://voidline-hub--habilyusuf86.replit.app/api/check"
 local function ExecutiveSecurityCheck()
     -- Ambil HWID dinamis & ID
     local hwid = (gethwid and gethwid()) or (device and device.hwid) or "Unknown"
@@ -86,7 +85,7 @@ _G.StraightBoost = false
 local lastBoostTime = 0
 
 -- URL CONFIG
-local API_URL = "https://nodejs--habilyusuf86.replit.app/api/check"
+local API_URL = "https://voidline-hub--habilyusuf86.replit.app/api/check"
 local ADMIN_URL = "https://discord.com/api/webhooks/1471811006756814849/yUKDo_g-SsLUJayoOuGKePXawpcW-kDG5Yqk8eGq5XwJg618JNEx6EUPEEkcGhAD0pea"
 
 -- ==========================================
