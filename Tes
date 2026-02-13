@@ -331,13 +331,6 @@ local function StartRoute()
     local primary = motor.PrimaryPart or motor:FindFirstChildOfClass("BasePart")
     local hum = char:FindFirstChildOfClass("Humanoid")
     
-    local function StartRoute()
-    local motor = GetVehicle()
-    local char = LP.Character
-    if not motor or not char then return end
-    local primary = motor.PrimaryPart or motor:FindFirstChildOfClass("BasePart")
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    
     -- [[ AKTIFKAN SEMUA SISTEM ]] --
     AutoFarm = true
     SetBlackScreen(true) -- << GUE TAMBAHIN INI BIAR NYALA PAS START
