@@ -452,12 +452,15 @@ task.spawn(function()
 end)
 
 -- [[ 3. MULTI-LOGIC (STEALTH & VEHICLE BOOST) ]] --
--- Digabung dalam satu Heartbeat agar efisien dan variabel 'char' terbaca semua
+   -- --- A. Stealth Mode Logic ---
+    -- 1. TARUH DI LUAR (DI ATAS HEARTBEAT)
+local lastBoostTime = 0 
+
+-- 2. BARU MASUK KE HEARTBEAT
 RunService.Heartbeat:Connect(function()
     local char = LP.Character
     if not char then return end
-    
-    -- --- A. Stealth Mode Logic ---
+
     if _G.HideNameEnabled then
         local head = char:FindFirstChild("Head")
         if head then 
@@ -474,13 +477,6 @@ RunService.Heartbeat:Connect(function()
     end
 
     -- --- B. Vehicle Boost Logic ---
-    -- 1. TARUH DI LUAR (DI ATAS HEARTBEAT)
-local lastBoostTime = 0 
-
--- 2. BARU MASUK KE HEARTBEAT
-RunService.Heartbeat:Connect(function()
-    local char = LP.Character
-    if not char then return end
 
     -- (Logika Stealth kamu tetap di sini)
 
