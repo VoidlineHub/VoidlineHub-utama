@@ -474,28 +474,39 @@ RunService.Heartbeat:Connect(function()
     end
 
     -- --- B. Vehicle Boost Logic ---
+    -- 1. TARUH DI LUAR (DI ATAS HEARTBEAT)
+local lastBoostTime = 0 
+
+-- 2. BARU MASUK KE HEARTBEAT
+RunService.Heartbeat:Connect(function()
+    local char = LP.Character
+    if not char then return end
+
+    -- (Logika Stealth kamu tetap di sini)
+
+    -- 3. LOGIKA BOOST YANG SUDAH DI-FIX
     local hum = char:FindFirstChildOfClass("Humanoid")
     local seat = hum and hum.SeatPart
     
     if _G.BoostEnabled and seat then
         local vehicle = seat:FindFirstAncestorOfClass("Model")
-        if vehicle and vehicle.PrimaryPart then
-            -- Kontrol Interval menggunakan variabel global
+        local root = (vehicle and vehicle.PrimaryPart) or seat -- Pakai seat kalau gak ada PrimaryPart
+        
+        if root then
+            -- Cek interval
             if tick() - lastBoostTime >= (_G.Interval or 0.5) then
-                local currentVel = vehicle.PrimaryPart.AssemblyLinearVelocity
-                
-                -- Arah dorongan (Negative LookVector)
-                local boostDirection = -vehicle.PrimaryPart.CFrame.LookVector
+                local currentVel = root.AssemblyLinearVelocity
+                local boostDirection = -root.CFrame.LookVector
 
                 if _G.StraightBoost then
                     boostDirection = Vector3.new(boostDirection.X, 0, boostDirection.Z).Unit
                 end
                 
-                -- Cek apakah kecepatan saat ini di bawah batas _G.Speed
-                if currentVel.Magnitude < (_G.Speed or 200) then
-                    vehicle.PrimaryPart.AssemblyLinearVelocity = currentVel + (boostDirection * (_G.Increment or 50))
+                -- PERBAIKAN: Gunakan 500 sebagai default limit, jangan 200 (karena 200 terlalu pelan)
+                if currentVel.Magnitude < (_G.Speed or 300) then
+                    root.AssemblyLinearVelocity = currentVel + (boostDirection * (_G.Increment or 50))
+                    lastBoostTime = tick() -- Sekarang ini bakal kesimpan karena variabelnya ada di LUAR
                 end
-                lastBoostTime = tick()
             end
         end
     end
@@ -827,13 +838,8 @@ VehicleTab:Input({
     Callback = function(v)
         local num = tonumber(v)
         if num then
-            _G.Speed = num
-            WindUI:Notify({
-                Title = "Speed Updated",
-                Content = "speed set to : " .. num,
-                Type = "Success", -- Bisa "Success", "Error", "Warning", atau "Info"
-                Duration = 3
-            })
+            _G.Speed = num or 300
+            
         else
             WindUI:Notify({
                 Title = "Invalid Input",
@@ -851,13 +857,8 @@ VehicleTab:Input({
     Callback = function(v)
         local num = tonumber(v)
         if num then
-            _G.Increment = num
-            WindUI:Notify({
-                Title = "increment  Updated",
-                Content = "increment set to : " .. num,
-                Type = "Success", -- Bisa "Success", "Error", "Warning", atau "Info"
-                Duration = 3
-            })
+            _G.Increment = num or 50
+            
         else
             WindUI:Notify({
                 Title = "Invalid Input",
@@ -874,13 +875,8 @@ VehicleTab:Input({
     Callback = function(v)
         local num = tonumber(v)
         if num then
-            _G.Interval  = num
-            WindUI:Notify({
-                Title = "interval Updated",
-                Content = "interval set to : " .. num,
-                Type = "Success", -- Bisa "Success", "Error", "Warning", atau "Info"
-                Duration = 3
-            })
+            _G.Interval  = num or 0.5
+            
         else
             WindUI:Notify({
                 Title = "Invalid Input",
