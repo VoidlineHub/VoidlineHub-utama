@@ -58,6 +58,16 @@ local success, result = pcall(function()
 end)
 if success then WindUI = result else return end
 
+--penting
+local Players = game:GetService("Players")
+local LP = Players.LocalPlayer
+local RS = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local VirtualUser = game:GetService("VirtualUser")
+local HttpService = game:GetService("HttpService")
+
 -- ==========================================
 -- 1. GLOBAL VARIABLES & CONFIG
 -- ==========================================
