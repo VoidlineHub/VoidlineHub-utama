@@ -79,7 +79,7 @@ _G.WebhookEnabled = false
 _G.WebhookURL = "" 
 _G.TotalEarnedFix = 0
 
-_G.Speed = 200    
+_G.Speed = 300    
 _G.Increment = 50       
 _G.Interval = 0.5 
 _G.BoostEnabled = false
