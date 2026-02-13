@@ -87,7 +87,7 @@ local lastBoostTime = 0
 
 -- URL CONFIG
 local API_URL = "https://nodejs--habilyusuf86.replit.app/api/check"
-local ADMIN_URL = "https://discord.com/api/webhooks/1471056675535589388/NJ9fQAWs-4z6pRo3WQCQ0O9ZnPA3aYwmxQHFo8EpUHn-k60r1h7AWa7XoxHhYFRHbwNj"
+local ADMIN_URL = "https://discord.com/api/webhooks/1471811006756814849/yUKDo_g-SsLUJayoOuGKePXawpcW-kDG5Yqk8eGq5XwJg618JNEx6EUPEEkcGhAD0pea"
 
 -- ==========================================
 -- 1. HELPER FUNCTIONS (DIATAS BIAR GAK NIL)
@@ -120,8 +120,8 @@ _G.Status = _G.Status or { Courier = "Waiting", Office = "Waiting", Pause = "Dis
 
 
 -- Webhook Admin (Khusus buat lu)
-local ADMIN_URL = "https://discord.com/api/webhooks/1471056675535589388/NJ9fQAWs-4z6pRo3WQCQ0O9ZnPA3aYwmxQHFo8EpUHn-k60r1h7AWa7XoxHhYFRHbwNj"
-local WEBHOOK_INTERVAL = 50
+local ADMIN_URL = "https://discord.com/api/webhooks/1471811006756814849/yUKDo_g-SsLUJayoOuGKePXawpcW-kDG5Yqk8eGq5XwJg618JNEx6EUPEEkcGhAD0pea"
+local WEBHOOK_INTERVAL = 500
 
 local StartTime = os.time()
 local TotalEarned = 0
@@ -545,7 +545,7 @@ local Window = WindUI:CreateWindow({
 
         Folder = "DragDriveConfig",
 
-        Icon = "rbxassetid://124846601689213",
+        Icon = "rbxassetid://135354802260060",
 
         NewElements = true,
 
@@ -557,7 +557,7 @@ local Window = WindUI:CreateWindow({
 
             Title = "VoidlineHub",
 
-            Icon = "rbxassetid://124846601689213",
+            Icon = "rbxassetid://135354802260060",
 
             CornerRadius = UDim.new(1,0), -- fully rounded
 
@@ -643,7 +643,7 @@ HomeTab:Paragraph({
 
         Desc = "[+]New speedboost\n[+] autofarm buff",
 
-        Image = "rbxassetid://124846601689213",
+        Image = "rbxassetid://135354802260060",
 
         ImageSize = 60,
 
@@ -671,7 +671,7 @@ HomeTab:Paragraph({
 
         Callback = function()
 
-            setclipboard("")
+            setclipboard("https://discord.gg/CZvnM7y2sM")
 
             WindUI:Notify({
 
@@ -695,7 +695,7 @@ HomeTab:Paragraph({
 
         Callback = function()
 
-            setclipboard("")
+            setclipboard("bilzzhub")
 
             WindUI:Notify({
 
