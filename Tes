@@ -257,7 +257,7 @@ local function StartShuttle()
 
     if not isCar or isBike then return end
 
-    _G.Aktiv = true
+    _G.AutofarmMobil = true
     
     -- [[ 3. AKTIFKAN BLACKSCREEN SAAT START ]] --
     if SetBlackScreen then
@@ -269,7 +269,7 @@ local function StartShuttle()
 
     -- Bypass Safety
     task.spawn(function()
-        while _G.Aktiv do
+        while _G.AutofarmMobil do
             getgenv().OS = 0
             getgenv().Clock = 999
             RunService.Heartbeat:Wait()
@@ -278,9 +278,9 @@ local function StartShuttle()
 
     -- Movement Loop
     task.spawn(function()
-        while _G.Aktiv do
+        while _G.AutofarmMobil do
             if not hum.SeatPart or hum.SeatPart.Parent ~= vehicle then
-                _G.Aktiv = false
+                _G.AutofarmMobil = false
                 if SetBlackScreen then SetBlackScreen(false) end -- Matiin pas turun
                 break
             end
@@ -319,7 +319,7 @@ local function StartShuttle()
                 primary.CanCollide = true
             end
 
-            if _G.Aktiv then
+            if _G.AutofarmMobil then
                 primary.AssemblyLinearVelocity = Vector3.zero
                 task.wait(1.5)
             end
