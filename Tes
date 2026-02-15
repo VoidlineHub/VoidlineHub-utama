@@ -229,9 +229,6 @@ end
 
 
 -- [[ VOIDLINE SHUTTLE V.4.1 - BLACKSCREEN INTEGRATED ]] --
-local LP = game:GetService("Players").LocalPlayer
-local RunService = game:GetService("RunService")
-
 local PosA = Vector3.new(-853.855, 4.181, -629.521)
 local PosB = Vector3.new(3776.853, 12.801, -601.395)
 
@@ -292,7 +289,7 @@ local function StartShuttle()
             local distance = (PosA - PosB).Magnitude
             local traveled = 0
             
-            while traveled < distance and _G.Aktiv do
+            while traveled < distance and _G.AutofarmMobil do
                 local dt = RunService.Heartbeat:Wait()
                 local currentSpeed = 280
                 local distLeft = distance - traveled
@@ -331,8 +328,6 @@ local function StartShuttle()
     end)
 end
 
--- Jalankan
-StartShuttle()
 
 -- ==========================================
 -- 5. AUTOFARM VEHICLE LOGIC
