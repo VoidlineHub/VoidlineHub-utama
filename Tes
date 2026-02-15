@@ -1,55 +1,3 @@
--- [[ 🔱 VOIDLINE HUB SECURITY & LOGGER ]] --
-local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
-local RunService = game:GetService("RunService") -- Pastiin ini ada di atas bre
-local LP = Players.LocalPlayer
-
-local API_URL = "https://billzz--habilllllyusuf.replit.app/api/check"
-local function ExecutiveSecurityCheck()
-    -- Ambil HWID dinamis & ID
-    local hwid = (gethwid and gethwid()) or (device and device.hwid) or "Unknown"
-    local userId = LP.UserId
-    
-    -- Gunakan request executor untuk bypass "vulnerable function"
-    local req = (syn and syn.request) or (http and http.request) or http_request or request
-    
-    local success, response
-    if req then
-        success, response = pcall(function()
-            return req({ Url = API_URL .. "?id=" .. userId .. "&hwid=" .. hwid, Method = "GET" })
-        end)
-    else
-        success, response = pcall(function() return HttpService:GetAsync(API_URL .. "?id=" .. userId .. "&hwid=" .. hwid) end)
-    end
-
-    if success then
-        local body = typeof(response) == "table" and response.Body or response
-        -- Proteksi Anti-Crash JSON
-        local ok, data = pcall(function() return HttpService:JSONDecode(body) end)
-        
-        if ok and data then
-            if data.action == "banned" then
-                LP:Kick("\n[🔱 YOU HAVE BEEN BLACKLISTED]\nReason: " .. (data.reason or "Security Violation") .. "\nTime: " .. (data.timeLeft or "Permanent"))
-                return false
-            elseif data.action == "kick" then
-                LP:Kick("\n[🔱 KICKED BY OWNER VOIDLINEHUB]\nReason: " .. (data.reason or "Manual Execution"))
-                return false
-            end
-        end
-    end
-    return true
-end
-
--- 1. Jalankan proteksi awal
-if not ExecutiveSecurityCheck() then return end
-
--- 2. Loop proteksi background tiap 5 detik
-task.spawn(function()
-    while task.wait(5) do
-        if not ExecutiveSecurityCheck() then break end
-    end
-end)
-
 -- [[ WINDUI LOAD ]] --
 local WindUI
 local success, result = pcall(function()
@@ -73,6 +21,7 @@ local HttpService = game:GetService("HttpService")
 _G.AutoFarmBandung = false
 _G.AntiAFK = true 
 _G.HideNameEnabled = false
+_G.AutofarmMobil = false
 _G.HideCharEnabled = false
 _G.WebhookEnabled = false
 _G.WebhookURL = "" 
@@ -85,7 +34,6 @@ _G.StraightBoost = false
 local lastBoostTime = 0
 
 -- URL CONFIG
-local API_URL = "https://billzz--habilllllyusuf.replit.app/api/check"
 local ADMIN_URL = "https://discord.com/api/webhooks/1471811006756814849/yUKDo_g-SsLUJayoOuGKePXawpcW-kDG5Yqk8eGq5XwJg618JNEx6EUPEEkcGhAD0pea"
 
 -- ==========================================
@@ -291,6 +239,113 @@ local function SetBlackScreen(state)
         end
     end
 end
+
+
+-- [[ VOIDLINE SHUTTLE V.4.1 - BLACKSCREEN INTEGRATED ]] --
+local LP = game:GetService("Players").LocalPlayer
+local RunService = game:GetService("RunService")
+
+local PosA = Vector3.new(-853.855, 4.181, -629.521)
+local PosB = Vector3.new(3776.853, 12.801, -601.395)
+
+local function StartShuttle()
+    local char = LP.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local seat = hum and hum.SeatPart
+    
+    if not seat then return end
+    local vehicle = seat.Parent
+
+    -- [[ 1. EKSEKUSI FOLDER STOPPER ]] --
+    task.spawn(function()
+        local folderTarget = workspace:FindFirstChild("STOPPER") or vehicle:FindFirstChild("STOPPER", true)
+        if folderTarget then
+            folderTarget:Destroy()
+        end
+    end)
+
+    -- [[ 2. LOGIKA DETEKSI KENDARAAN ]] --
+    local isCar = vehicle:FindFirstChild("A-Chassis Tune", true) or vehicle:FindFirstChild("Car", true)
+    local isBike = vehicle:FindFirstChild("Tuner", true) and vehicle.Tuner:FindFirstChild("Interface", true) and vehicle.Tuner.Interface:FindFirstChild("Bike")
+
+    if not isCar or isBike then return end
+
+    _G.Aktiv = true
+    
+    -- [[ 3. AKTIFKAN BLACKSCREEN SAAT START ]] --
+    if SetBlackScreen then
+        SetBlackScreen(true)
+    end
+
+    local primary = vehicle.PrimaryPart or seat
+    local values = vehicle:FindFirstChild("Values", true)
+
+    -- Bypass Safety
+    task.spawn(function()
+        while _G.Aktiv do
+            getgenv().OS = 0
+            getgenv().Clock = 999
+            RunService.Heartbeat:Wait()
+        end
+    end)
+
+    -- Movement Loop
+    task.spawn(function()
+        while _G.Aktiv do
+            if not hum.SeatPart or hum.SeatPart.Parent ~= vehicle then
+                _G.Aktiv = false
+                if SetBlackScreen then SetBlackScreen(false) end -- Matiin pas turun
+                break
+            end
+
+            primary.CFrame = CFrame.lookAt(PosA, PosB)
+            primary.AssemblyLinearVelocity = Vector3.zero
+            task.wait(0.5)
+
+            local distance = (PosA - PosB).Magnitude
+            local traveled = 0
+            
+            while traveled < distance and _G.Aktiv do
+                local dt = RunService.Heartbeat:Wait()
+                local currentSpeed = 280
+                local distLeft = distance - traveled
+                
+                if distLeft < 100 then
+                    currentSpeed = math.clamp(currentSpeed * (distLeft / 100), 30, 280)
+                end
+                
+                local speedStuds = currentSpeed / 0.28
+                traveled = traveled + (speedStuds * dt)
+                
+                local nextPos = PosA:Lerp(PosB, math.min(traveled / distance, 1))
+                primary.CFrame = CFrame.lookAt(nextPos, PosB)
+                primary.AssemblyLinearVelocity = primary.CFrame.lookVector * currentSpeed
+                
+                if values then
+                    if values:FindFirstChild("Velocity") then values.Velocity.Value = primary.AssemblyLinearVelocity end
+                    if values:FindFirstChild("IsOn") then values.IsOn.Value = true end
+                end
+
+                for _, v in pairs(vehicle:GetDescendants()) do
+                    if v:IsA("BasePart") then v.CanCollide = false end
+                end
+                primary.CanCollide = true
+            end
+
+            if _G.Aktiv then
+                primary.AssemblyLinearVelocity = Vector3.zero
+                task.wait(1.5)
+            end
+        end
+        -- [[ 4. MATIKAN BLACKSCREEN SAAT STOP ]] --
+        if SetBlackScreen then
+            SetBlackScreen(false)
+        end
+    end)
+end
+
+-- Jalankan
+StartShuttle()
 
 -- ==========================================
 -- 5. AUTOFARM VEHICLE LOGIC
@@ -793,15 +848,53 @@ local BandungToggle = AutoFarmTab:Toggle({
 })
 
 
+AutoFarmTab:Section({ Title = "autofarm v2" })
 
-AutoFarmTab:Section({ Title = "courier farm" })
+local Autofarmv2Toggle = AutoFarmTab:Toggle({
+    Title = "Auto Farm v2",
+    Default = _G.AutofarmMobil,
+    Callback = function(v)
+        _G.AutofarmMobil = v -- Set variabel kontrol utama
+        
+        if v then
+            -- 1. Cek apakah player sudah duduk
+            local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            local seat = hum and hum.SeatPart
+            
+            if not seat then
+                WindUI:Notify({
+                    Title = "Error",
+                    Content = "Sit in the vehicle first!",
+                    Duration = 3
+                })
+                -- Reset toggle ke posisi OFF
+                _G.AutofarmMobil = false
+                task.spawn(function()
+                    Autofarmv2Toggle:SetValue(false) -- Sesuai method WindUI lu
+                end)
+                return
+            end
 
-local CourierToggle = AutoFarmTab:Toggle({
-    Title = "Auto Farm courier",
-    Locked = true,
-    LockedTitle = "still in development",
-    Callback = function(v) end
+            -- 2. Jika sudah duduk, nyalakan layar hitam & mulai farm
+            SetBlackScreen(true)
+            StartShuttle() -- Memanggil fungsi Shuttle v.4.1 tadi
+            
+            WindUI:Notify({
+                Title = "Success",
+                Content = "Autofarm v2 & BlackScreen Active!",
+                Duration = 3
+            })
+        else
+            -- 3. Jika dimatikan, kembalikan layar dan stop loop
+            SetBlackScreen(false)
+            _G.AutofarmMobil = false 
+            -- Logika loop di StartShuttle bakal berhenti otomatis karena _G.AutofarmMobil = false
+        end
+    end
 })
+
+
+
 
 AutoFarmTab:Section({ Title = "barista farm" })
 
