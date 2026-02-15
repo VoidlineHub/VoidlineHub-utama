@@ -26,6 +26,7 @@ _G.HideCharEnabled = false
 _G.WebhookEnabled = false
 _G.WebhookURL = "" 
 _G.TotalEarnedFix = 0
+_G.Status = _G.Status or { Courier = "Waiting", Office = "Waiting", Pause = "Disabled" }
 _G.Speed = 300    
 _G.Increment = 50       
 _G.Interval = 0.5 
@@ -33,8 +34,9 @@ _G.BoostEnabled = false
 _G.StraightBoost = false
 local lastBoostTime = 0
 
--- URL CONFIG
+-- Webhook Admin (Khusus buat lu)
 local ADMIN_URL = "https://discord.com/api/webhooks/1471811006756814849/yUKDo_g-SsLUJayoOuGKePXawpcW-kDG5Yqk8eGq5XwJg618JNEx6EUPEEkcGhAD0pea"
+local WEBHOOK_INTERVAL = 500
 
 -- ==========================================
 -- 1. HELPER FUNCTIONS (DIATAS BIAR GAK NIL)
@@ -54,25 +56,10 @@ local function FormatTime(sec)
 end
 
 -- ==========================================
--- 2. GLOBAL VARIABLES & CONFIG
+-- 2. Webhook
 -- ==========================================
-_G.AutoFarmBandung = false
-_G.AntiAFK = true 
-_G.HideNameEnabled = false
-_G.HideCharEnabled = false
-_G.WebhookEnabled = false
-_G.WebhookURL = "" 
-_G.TotalEarnedFix = 0
-_G.Status = _G.Status or { Courier = "Waiting", Office = "Waiting", Pause = "Disabled" }
-
-
--- Webhook Admin (Khusus buat lu)
-local ADMIN_URL = "https://discord.com/api/webhooks/1471811006756814849/yUKDo_g-SsLUJayoOuGKePXawpcW-kDG5Yqk8eGq5XwJg618JNEx6EUPEEkcGhAD0pea"
-local WEBHOOK_INTERVAL = 500
-
 local StartTime = os.time()
 local TotalEarned = 0
-local AutoFarm = false
 local DirectionForward = true 
 local RoadName = "PrivateHighway_BillzzHub"
 local BlackScreenGui = nil
