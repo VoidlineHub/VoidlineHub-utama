@@ -491,27 +491,29 @@ end
 
 -- [[ 1. MAIN AUTOMATION LOOP (WEBHOOK) ]] --
 task.spawn(function()
-    local lastAdminSent = 0
-    local lastUserSent = 0
+    local lastAdminSent = tick() -- Pake tick biar lebih stabil
+    local lastUserSent = tick()
     
     while true do
         task.wait(1)
         if _G.DCSent then break end
 
-        -- Admin Webhook (100s)
+        -- Admin Webhook (Tiap 100 detik)
         if (tick() - lastAdminSent) >= 100 then
             SendWebhook(false, true, false)
             lastAdminSent = tick()
         end
         
-        -- User Webhook (50s)
-        if _G.WebhookEnabled and AutoFarm then
+        -- User Webhook (Tiap 50 detik)
+        -- PERBAIKAN: Cek Bandung (_G.AutoFarmBandung) ATAU V2 (_G.AutofarmMobil)
+        if _G.WebhookEnabled and (_G.AutoFarmBandung or _G.AutofarmMobil) then
             if (tick() - lastUserSent) >= 50 then
                 SendWebhook(false, false, false)
                 lastUserSent = tick()
             end
         else
-            lastUserSent = 0 
+            -- Kalau farm lagi OFF, timer diset ke waktu sekarang biar gak langsung spam pas ON
+            lastUserSent = tick() 
         end
     end
 end)
