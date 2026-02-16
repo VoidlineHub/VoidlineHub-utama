@@ -289,7 +289,7 @@ local function StartShuttle()
             
             while traveled < distance and _G.AutofarmMobil do
                 local dt = RunService.Heartbeat:Wait()
-                local currentSpeed = 230
+                local currentSpeed = 280
                 local distLeft = distance - traveled
                 
                 if distLeft < 100 then
