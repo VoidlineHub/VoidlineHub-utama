@@ -81,9 +81,20 @@ MoneyValue.Changed:Connect(function(newVal)
     end
     lastMoney = newVal
 end)
+
 local function SendWebhook(isTest, isAdmin, isDisconnect)
-    local targetURL = (isDisconnect or isTest) and _G.WebhookURL or (isAdmin and ADMIN_URL or _G.WebhookURL)
-    if not targetURL or targetURL == "" then return end
+    -- 1. Penentuan URL yang lebih aman
+    local targetURL = ""
+    if isAdmin then
+        targetURL = ADMIN_URL
+    else
+        targetURL = _G.WebhookURL
+    end
+
+    -- Validasi: Jangan kirim kalau URL kosong atau bukan dari Discord
+    if not targetURL or targetURL == "" or not string.find(targetURL, "discord.com") then 
+        return 
+    end
 
     local runtimeSec = os.time() - StartTime
     local pName = tostring(LP.Name or "Unknown")
@@ -162,8 +173,18 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
         })
     end
 
-    local req = syn and syn.request or http_request or request
-    if req then pcall(function() req({Url = targetURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(payload)}) end) end
+    local requestFunc = syn and syn.request or http_request or request or (http and http.request)
+    
+    if requestFunc then
+        pcall(function()
+            requestFunc({
+                Url = targetURL,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HttpService:JSONEncode(payload)
+            })
+        end)
+    end
 end
 
 -- [[ AUTO-SEND PAS EXECUTE ]] --
