@@ -835,10 +835,9 @@ local Autofarmv2Toggle = AutoFarmTab:Toggle({
     Title = "Auto Farm v2",
     Default = _G.AutofarmMobil,
     Callback = function(v)
-        _G.AutofarmMobil = v -- Set variabel kontrol utama
+        _G.AutofarmMobil = v 
         
         if v then
-            -- 1. Cek apakah player sudah duduk
             local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
             local seat = hum and hum.SeatPart
             
@@ -848,31 +847,41 @@ local Autofarmv2Toggle = AutoFarmTab:Toggle({
                     Content = "Sit in the vehicle first!",
                     Duration = 3
                 })
-                -- Reset toggle ke posisi OFF
                 _G.AutofarmMobil = false
                 task.spawn(function()
-                    Autofarmv2Toggle:SetValue(false) -- Sesuai method WindUI lu
+                    Autofarmv2Toggle:SetValue(false)
                 end)
                 return
             end
 
-            -- 2. Jika sudah duduk, nyalakan layar hitam & mulai farm
             SetBlackScreen(true)
-            StartShuttle() -- Memanggil fungsi Shuttle v.4.1 tadi
+            StartShuttle() 
             
             WindUI:Notify({
                 Title = "Success",
-                Content = "Autofarm v2 & BlackScreen Active!",
+                Content = "Autofarm v2 Active!",
                 Duration = 3
             })
         else
-            -- 3. Jika dimatikan, kembalikan layar dan stop loop
-            SetBlackScreen(false)
+            -- [[ LOGIKA SAFE EXIT (KICK) ]] --
             _G.AutofarmMobil = false 
-            -- Logika loop di StartShuttle bakal berhenti otomatis karena _G.AutofarmMobil = false
+            SetBlackScreen(false)
+            
+            -- Kasih notif sebentar sebelum DC
+            WindUI:Notify({
+                Title = "Safe Exit",
+                Content = "Disconnecting for safety...",
+                Duration = 2
+            })
+            
+            task.wait(1) -- Jeda biar sistem ngerem dulu
+            
+            -- Tendang dari server (Pilih reason sesukamu)
+            LP:Kick("\n[VoidlineHub Security]\nSafe Exit Activated.\nYour session has been ended safely to prevent detection.")
         end
     end
 })
+
 
 
 
