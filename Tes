@@ -1028,14 +1028,43 @@ local StraightToggle = VehicleTab:Toggle({
 })
 
 local WebhookTab = Window:Tab({
-        Title = "Webhook",
-        Icon = "globe",
-        Color = primaryColor
-    })
+    Title = "Webhook",
+    Icon = "globe",
+    Color = primaryColor
+})
 
-WebhookTab:Section({ Title = "Webhook Log" })WebhookTab:Input({ Title = "Webhook URL", Callback = function(v) _G.WebhookURL = v end })
-WebhookTab:Toggle({ Title = "Enable Webhook Log", Callback = function(v) _G.WebhookEnabled = v end })
-WebhookTab:Button({ Title = "Test Send Webhook", Callback = function() SendWebhook(true) end })
+WebhookTab:Section({ Title = "Webhook Log" })
+
+WebhookTab:Input({ 
+    Title = "Webhook URL", 
+    Placeholder = "Paste Discord Webhook URL here",
+    Callback = function(v) 
+        _G.WebhookURL = v 
+    end 
+})
+
+WebhookTab:Toggle({ 
+    Title = "Enable Webhook Log", 
+    Default = _G.WebhookEnabled,
+    Callback = function(v) 
+        _G.WebhookEnabled = v 
+    end 
+})
+
+WebhookTab:Button({ 
+    Title = "Test Send Webhook", 
+    Callback = function() 
+        -- Memanggil SendWebhook(isTest, isAdmin, isDisconnect)
+        -- Kita set isTest = true, isAdmin = false, isDisconnect = false
+        SendWebhook(true, false, false) 
+        
+        WindUI:Notify({
+            Title = "Webhook",
+            Content = "Testing webhook... Check your Discord!",
+            Duration = 3
+        })
+    end 
+})
 
 -- SETTINGS TAB with PAUSE BYPASS
     local SettingsTab = Window:Tab({
