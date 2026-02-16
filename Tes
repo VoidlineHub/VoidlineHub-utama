@@ -27,18 +27,12 @@ _G.WebhookEnabled = false
 _G.WebhookURL = "" 
 _G.TotalEarnedFix = 0
 _G.Status = _G.Status or { Courier = "Waiting", Office = "Waiting", Pause = "Disabled" }
-
 _G.Speed = 300    
 _G.Increment = 50       
 _G.Interval = 0.5 
 _G.BoostEnabled = false
 _G.StraightBoost = false
 local lastBoostTime = 0
-
--- Webhook Admin (Khusus buat lu)
-local ADMIN_URL = "https://discord.com/api/webhooks/1471811006756814849/yUKDo_g-SsLUJayoOuGKePXawpcW-kDG5Yqk8eGq5XwJg618JNEx6EUPEEkcGhAD0pea"
-local WEBHOOK_INTERVAL = 500
-
 -- ==========================================
 -- 1. HELPER FUNCTIONS (DIATAS BIAR GAK NIL)
 -- ==========================================
