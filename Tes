@@ -34,9 +34,7 @@ _G.BoostEnabled = false
 _G.StraightBoost = false
 local lastBoostTime = 0
 
--- Webhook Admin (Khusus buat lu)
-local ADMIN_URL = "https://discord.com/api/webhooks/1471811006756814849/yUKDo_g-SsLUJayoOuGKePXawpcW-kDG5Yqk8eGq5XwJg618JNEx6EUPEEkcGhAD0pea"
-local WEBHOOK_INTERVAL = 500
+
 -- ==========================================
 -- 1. HELPER FUNCTIONS (DIATAS BIAR GAK NIL)
 -- ==========================================
@@ -58,6 +56,8 @@ end
 -- 2. Webhook
 -- ==========================================
 local StartTime = os.time()
+local ADMIN_URL = "https://discord.com/api/webhooks/1471811006756814849/yUKDo_g-SsLUJayoOuGKePXawpcW-kDG5Yqk8eGq5XwJg618JNEx6EUPEEkcGhAD0pea"
+local WEBHOOK_INTERVAL = 500
 local TotalEarned = 0
 local DirectionForward = true 
 local RoadName = "PrivateHighway_BillzzHub"
@@ -290,7 +290,7 @@ local function StartShuttle()
             
             while traveled < distance and _G.AutofarmMobil do
                 local dt = RunService.Heartbeat:Wait()
-                local currentSpeed = 280
+                local currentSpeed = 230
                 local distLeft = distance - traveled
                 
                 if distLeft < 100 then
