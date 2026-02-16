@@ -787,51 +787,55 @@ task.spawn(function()
     end
 end)
 
--- ============ AUTO FARM TAB ===========
+
+-- ============ AUTO FARM TAB =========== --
 local AutoFarmTab = Window:Tab({
+    Title = "Auto Farm",
+    Icon = "solar:cpu-bold",
+    Color = primaryColor
+})
 
-        Title = "Auto Farm",
+-- [[ FIX: DEKLARASI VARIABLE DI AWAL BIAR GAK NIL ]] --
+local BandungToggle
+local Autofarmv2Toggle
 
-        Icon = "solar:cpu-bold",
-
-        Color = primaryColor
-
-    })
-
+-- ============ SECTION: BANDUNG FARM =========== --
 AutoFarmTab:Section({ Title = "Bandung Farm" })
-local BandungToggle = AutoFarmTab:Toggle({
+BandungToggle = AutoFarmTab:Toggle({
     Title = "Auto Farm Bandung",
     Callback = function(v)
-        _G.AutoFarmBandung = v -- Simpan status ke variabel Global buat Webhook
+        _G.AutoFarmBandung = v
         
         if v then
-            local motor = LP.Character 
-                and LP.Character:FindFirstChild("Humanoid")
-                and LP.Character.Humanoid.SeatPart
+            local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            local seat = hum and hum.SeatPart
 
-            if not motor then
+            if not seat then
                 WindUI:Notify({
                     Title = "Error",
-                    Content = "sit in the vehicle first!",
+                    Content = "Sit in the vehicle first!",
                     Duration = 3
                 })
-                _G.AutoFarmBandung = false -- Reset variabel global
-                BandungToggle:Set(false)
+                _G.AutoFarmBandung = false
+                task.spawn(function() BandungToggle:SetValue(false) end) -- Sesuaikan method UI lu
                 return
             end
 
             SetBlackScreen(true)
             StartRoute()
         else
+            -- [[ SAFE EXIT UNTUK BANDUNG ]] --
             StopRoute()
+            SetBlackScreen(false)
+            task.wait(1)
+            LP:Kick("\n[VoidlineHub Security]\nSafe Exit: Bandung Farm Stopped.")
         end
     end
 })
 
-
-AutoFarmTab:Section({ Title = "autofarm v2" })
-
-local Autofarmv2Toggle = AutoFarmTab:Toggle({
+-- ============ SECTION: AUTOFARM V2 =========== --
+AutoFarmTab:Section({ Title = "Autofarm V2" })
+Autofarmv2Toggle = AutoFarmTab:Toggle({
     Title = "Auto Farm v2",
     Default = _G.AutofarmMobil,
     Callback = function(v)
@@ -848,9 +852,7 @@ local Autofarmv2Toggle = AutoFarmTab:Toggle({
                     Duration = 3
                 })
                 _G.AutofarmMobil = false
-                task.spawn(function()
-                    Autofarmv2Toggle:SetValue(false)
-                end)
+                task.spawn(function() Autofarmv2Toggle:SetValue(false) end)
                 return
             end
 
@@ -863,26 +865,21 @@ local Autofarmv2Toggle = AutoFarmTab:Toggle({
                 Duration = 3
             })
         else
-            -- [[ LOGIKA SAFE EXIT (KICK) ]] --
+            -- [[ SAFE EXIT UNTUK V2 ]] --
             _G.AutofarmMobil = false 
             SetBlackScreen(false)
             
-            -- Kasih notif sebentar sebelum DC
             WindUI:Notify({
                 Title = "Safe Exit",
                 Content = "Disconnecting for safety...",
                 Duration = 2
             })
             
-            task.wait(1) -- Jeda biar sistem ngerem dulu
-            
-            -- Tendang dari server (Pilih reason sesukamu)
-            LP:Kick("\n[VoidlineHub Security]\nSafe Exit Activated.\nYour session has been ended safely to prevent detection.")
+            task.wait(1) 
+            LP:Kick("\n[VoidlineHub Security]\nSafe Exit Activated.\nYour session ended safely.")
         end
     end
 })
-
-
 
 
 
