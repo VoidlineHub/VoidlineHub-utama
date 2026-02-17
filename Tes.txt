@@ -621,31 +621,32 @@ local AutofarmToggle = AutoFarmTab:Tloggle({
 })
 
 
+
+-- ============ stats tab =========== --
 local StatsTab = Window:Tab({
     Title = "Stats",
-    Icon = "trending-up", -- Icon trending yang lebih umum di WindUI
+    Icon = "trending-up",
     Color = primaryColor
 })
 
 StatsTab:Section({ Title = "Live Status" })
 
--- 1. Tambahin Paragraph buat Status Balap (Job Info)
-local JobStatusLabel = StatsTab:Paragraph({
-    Title = "Mandalika Job Info",
+-- 1. Ganti Paragraph jadi Button
+local JobStatusButton = StatsTab:Button({
+    Title = "Current Job Status",
     Desc = "Waiting for Autofarm...",
-    Image = "rbxassetid://135354802260060",
-    ImageSize = 35
+    Icon = "activity" -- Icon biar estetik
 })
 
 StatsTab:Section({ Title = "Game Information" })
 
--- 2. Objek UI lainnya
+-- Objek UI lainnya tetep sama
 local CurrentMoney = StatsTab:Button({ Title = "Money", Desc = "Rp0", Icon = "banknote" })
 local FpsLabel = StatsTab:Button({ Title = "FPS", Desc = "0 FPS", Icon = "monitor" })
 local PingLabel = StatsTab:Button({ Title = "Ping", Desc = "0 ms", Icon = "signal" })
 local GameTime = StatsTab:Button({ Title = "Uptime", Desc = "00:00:00", Icon = "clock" })
 
--- LOGIC UPDATE STATS
+-- [[ LOGIC UPDATE STATS ]] --
 local fpsTick = 0
 RunService.Heartbeat:Connect(function() fpsTick = fpsTick + 1 end)
 local StartTime = os.time()
@@ -674,17 +675,18 @@ task.spawn(function()
             CurrentMoney:SetDesc(FormatRupiah(MoneyValue.Value))
         end
 
-        -- UPDATE JOB INFO (Sesuai permintaan lu)
+        -- UPDATE JOB INFO (Sekarang pakai SetDesc buat Button)
         if _G.AutoFarm then
-            -- Ini narik status: Preparing, Running (Timer), atau Success
-            JobStatusLabel:SetDesc(_G.Status.Pause or "Processing...")
+            -- Bakal nampil: Preparing, Running (Timer), atau Success
+            JobStatusButton:SetDesc(_G.Status.Pause or "Processing...")
         else
-            JobStatusLabel:SetDesc("Idle - Autofarm is Disabled")
+            JobStatusButton:SetDesc("Idle - Autofarm is Disabled")
         end
         
         task.wait(1)
     end
 end)
+
 
 
 
