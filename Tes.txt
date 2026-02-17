@@ -587,7 +587,7 @@ local AutoFarmTab = Window:Tab({
 })
 
 AutoFarmTab:Section({ Title = "Mandalika autorace" })
-local AutofarmToggle = AutoFarmTab:Tloggle({
+local AutofarmToggle = AutoFarmTab:Toggle({
     Title = "AutoRace Mandalika",
     Locked = false, -- Buka kuncinya karena sekarang udah di map Mandalika
     Callback = function(v)
