@@ -1128,17 +1128,25 @@ WebhookTab:Toggle({
 WebhookTab:Button({ 
     Title = "Test Send Webhook", 
     Callback = function() 
-        -- Memanggil SendWebhook(isTest, isAdmin, isDisconnect)
-        -- Kita set isTest = true, isAdmin = false, isDisconnect = false
-        SendWebhook(true, false, false) 
-        
-        WindUI:Notify({
-            Title = "Webhook",
-            Content = "Testing webhook... Check your Discord!",
-            Duration = 3
-        })
+        if _G.WebhookURL and _G.WebhookURL ~= "" then
+            -- Sesuaikan dengan fungsi lu: SendWebhook(isTest, isDisconnect)
+            SendWebhook(true, false) 
+            
+            WindUI:Notify({
+                Title = "Webhook",
+                Content = "Testing webhook... Check your Discord!",
+                Duration = 3
+            })
+        else
+            WindUI:Notify({
+                Title = "Error",
+                Content = "Please paste a Webhook URL first!",
+                Duration = 3
+            })
+        end
     end 
 })
+
 
 -- SETTINGS TAB with PAUSE BYPASS
     local SettingsTab = Window:Tab({
