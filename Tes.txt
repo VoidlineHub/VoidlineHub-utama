@@ -13,11 +13,14 @@ local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local VirtualUser = game:GetService("VirtualUser")
-local LP = Players.LocalPlayer
 
+-- [[ 2. PLAYER & REMOTE SETUP ]] --
+local LP = Players.LocalPlayer -- Fix Error Baris 61
+local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10) -- Timeout 10 detik biar gak stuck
 -- ==========================================
 -- 2. GLOBAL VARIABLES & CONFIG
 -- ==========================================
+_G.AutoFarm = false
 _G.AntiAFK = true 
 _G.HideNameEnabled = false
 _G.HideCharEnabled = false
@@ -195,6 +198,168 @@ local function SetBlackScreen(state)
     end
 end
 
+-- [[ CONFIGURATION ]] --
+_G.AutoFarm = false
+local Speed = 200
+local Height = 1
+local StartSpeed = 25 
+local StartHitbox = Vector3.new(-386.94, 6.5, -1616.52)
+
+-- [[ DATA COORDINATES ]] --
+local Route = {
+    {id = "Checkpoint1", pos = Vector3.new(-229.05, 14.91, -1615.53)},
+    {id = "Checkpoint2", pos = Vector3.new(1122.35, 14.94, -1615.53)},
+    {id = "Checkpoint3", pos = Vector3.new(1373.58, 14.93, -1110.91)},
+    {id = "Checkpoint4", pos = Vector3.new(1049.25, 14.91, -732.12)},
+    {id = "Checkpoint5", pos = Vector3.new(904.14, 14.89, -416.51)},
+    {id = "Checkpoint6", pos = Vector3.new(1193.71, 14.88, 203.63)},
+    {id = "Checkpoint7", pos = Vector3.new(945.44, 14.85, 871.16)},
+    {id = "Checkpoint8", pos = Vector3.new(464.40, 14.82, 1209.74)},
+    {id = "Checkpoint9", pos = Vector3.new(-145.63, 14.80, 1255.10)},
+    {id = "Checkpoint10", pos = Vector3.new(-620.04, 14.78, 1526.12)},
+    {id = "Checkpoint11", pos = Vector3.new(-1603.34, 14.76, 1792.87)},
+    {id = "Checkpoint12", pos = Vector3.new(-1544.35, 14.76, 894.57)},
+    {id = "Checkpoint13", pos = Vector3.new(-787.45, 14.76, 604.22)},
+    {id = "Checkpoint14", pos = Vector3.new(-579.08, 14.76, -368.90)},
+    {id = "Checkpoint15", pos = Vector3.new(-1159.44, 14.76, -843.26)},
+    {id = "Checkpoint16", pos = Vector3.new(-1456.18, 14.76, -1703.13)},
+    {id = "Checkpoint17", pos = Vector3.new(-1320.92, 14.76, -2145.68)},
+    {id = "Checkpoint18", pos = Vector3.new(-1116.99, 14.76, -1933.47)},
+    {id = "Checkpoint19", pos = Vector3.new(-218.36, 6.20, -1616.18)},
+}
+
+-- [[ 1. ANTI-RAGDOLL & ANCHOR BYPASS ]] --
+task.spawn(function()
+    while _G.AutoFarm do
+        pcall(function()
+            local char = player.Character
+            if char then
+                if char:FindFirstChild("RagDollDeathScript") then char.RagDollDeathScript:Destroy() end
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                    local seat = hum.SeatPart
+                    if seat then
+                        local v = seat:FindFirstAncestorOfClass("Model")
+                        if v then
+                            for _, p in pairs(v:GetDescendants()) do
+                                if p:IsA("BasePart") and p.Anchored then p.Anchored = false end
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+        task.wait(0.5)
+    end
+end)
+
+-- [[ 2. MAP & WHEELS CLEANER ]] --
+task.spawn(function()
+    while _G.AutoFarm do
+        -- 1. Hapus Map Mandalika (Biar ringan)
+        local m = workspace:FindFirstChild("MANDALIKA")
+        if m then
+            for _, v in pairs(m:GetDescendants()) do
+                if v:IsA("BasePart") or v:IsA("Model") then v:Destroy() end
+            end
+        end
+
+        -- 2. Hapus Wheels Motor Lu (Berdasarkan Karakter Lu)
+        pcall(function()
+            local char = player.Character
+            if char then
+                -- Cari model di workspace yang namanya mengandung nama lu
+                for _, model in pairs(workspace:GetChildren()) do
+                    if model:IsA("Model") and string.find(model.Name, player.Name) then
+                        local wheels = model:FindFirstChild("Wheels")
+                        if wheels then 
+                            wheels:Destroy()
+                        end
+                    end
+                end
+            end
+        end)
+
+        task.wait(2)
+    end
+end)
+
+
+-- [[ 3. MAIN FUNCTIONS ]] --
+local function getVehicle()
+    local char = player.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    return (hum and hum.SeatPart and (hum.SeatPart:FindFirstAncestorOfClass("Model") or hum.SeatPart.Parent)) or nil
+end
+
+local function moveTo(targetPos, moveSpeed, stopDistance)
+    local v = getVehicle()
+    if not v then return end
+    local root = v:FindFirstChild("DriveSeat") or v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart", true)
+    
+    while (root.Position - targetPos).Magnitude > stopDistance and _G.AutoFarm do
+        RunService.Heartbeat:Wait()
+        local direction = (targetPos - root.Position).Unit
+        root.AssemblyLinearVelocity = direction * moveSpeed
+        root.CFrame = CFrame.new(root.Position, Vector3.new(targetPos.X, root.Position.Y, targetPos.Z))
+        root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    end
+    root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+end
+
+-- Logika sinkronisasi GO yang baru
+local raceStarted = false
+Remotes.ShowCountdown.OnClientEvent:Connect(function(seconds)
+    raceStarted = false
+    task.wait(seconds) -- Nunggu tepat sesuai durasi countdown dari server
+    raceStarted = true
+end)
+
+local function startFarm()
+    while _G.AutoFarm do
+        if not getVehicle() then 
+            warn("DUDUK DULU!") 
+            task.wait(2)
+        else
+            -- STEP 1: Ke Start
+            moveTo(StartHitbox, StartSpeed, 2)
+            
+            -- CATAT WAKTU START
+            local startTime = tick()
+            
+            -- STEP 2: Nunggu 30 Detik (Gantiin Sinyal Server)
+            raceStarted = false
+            
+            repeat 
+                -- Logika jaga posisi (Tween Lu yang Mulus)
+                local v = getVehicle()
+                if v then
+                    local root = v:FindFirstChild("DriveSeat") or v.PrimaryPart
+                    if root and (root.Position - StartHitbox).Magnitude > 5 then
+                        root.CFrame = CFrame.new(StartHitbox, StartHitbox + Vector3.new(1,0,0))
+                    end
+                end
+                task.wait(0.1) 
+            until (tick() - startTime) >= 30 or not _G.AutoFarm
+
+            -- STEP 3: Balapan
+            task.wait(0.1) -- Delay super tipis biar aman
+
+            for _, point in ipairs(Route) do
+                if not _G.AutoFarm then break end
+                -- stopDistance diubah ke 7 biar checkpoint gak gampang kelewat
+                moveTo(point.pos + Vector3.new(0, Height, 0), Speed, 7)
+                
+                -- Jeda tipis banget biar server sempet registrasi koordinat CP
+                task.wait(0.05) 
+            end
+            task.wait(3) -- Jeda 3 detik sebelum balik lagi ke start
+        end
+    end
+end
+
 
 -- ==========================================
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED & MERGED)
@@ -318,7 +483,7 @@ end)
 
 -- [[ 2. CREATE WINDOW ]] --
 local Window = WindUI:CreateWindow({
-    Title = "VoidlineHub ⚡",
+    Title = "VoidlineHub | premium",
     SubTitle = "v1.0",
     Folder = "VoidlineData",
     Icon = "rbxassetid://135354802260060",
@@ -326,7 +491,7 @@ local Window = WindUI:CreateWindow({
     Color = primaryColor,
     HideSearchBar = false,
     OpenButton = {
-        Title = "Voidline",
+        Title = "Voidline | premium",
         Icon = "rbxassetid://135354802260060",
         CornerRadius = UDim.new(1, 0),
         StrokeThickness = 3,
@@ -449,14 +614,38 @@ local AutoFarmTab = Window:Tab({
 })
 
 AutoFarmTab:Section({ Title = "Mandalika autorace" })
-    local AutofarmToggle = AutoFarmTab:Toggle({
-        Title = "AutoRace mandalika",
-        Locked = true,
-        LockedTitle = "Only mandalika",
-        Callback = function(v)
-            -- This won't execute because it's locked
+local AutofarmToggle = AutoFarmTab:Toggle({
+    Title = "AutoRace Mandalika",
+    Locked = false, -- Buka kuncinya karena sekarang udah di map Mandalika
+    Callback = function(v)
+        _G.AutoFarm = v
+        
+        if v then
+            -- Jalankan Black Screen biar hemat spek HP
+            if SetBlackScreen then SetBlackScreen(true) end
+            
+            -- Jalankan fungsi utama farming
+            task.spawn(function()
+                startFarm()
+            end)
+            
+            WindUI:Notify({
+                Title = "Voidline Hub",
+                Content = "Mandalika AutoFarm Enabled!",
+                Duration = 3
+            })
+        else
+            -- Matikan Black Screen
+            if SetBlackScreen then SetBlackScreen(false) end
+            
+            WindUI:Notify({
+                Title = "Voidline Hub",
+                Content = "Mandalika AutoFarm Disabled!",
+                Duration = 3
+            })
         end
-    })
+    end
+})
 
 
 
