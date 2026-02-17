@@ -86,99 +86,54 @@ MoneyValue.Changed:Connect(function(newVal)
     lastMoney = newVal
 end)
 
-local function SendWebhook(isTest, isAdmin, isDisconnect)
-    -- 1. Penentuan URL yang lebih aman
-    local targetURL = ""
-    if isAdmin then
-        targetURL = ADMIN_URL
-    else
-        targetURL = _G.WebhookURL
-    end
+local function SendWebhook(isTest, isDisconnect)
+    -- Ambil URL dari Config User
+    local targetURL = _G.WebhookURL
 
-    -- Validasi: Jangan kirim kalau URL kosong atau bukan dari Discord
+    -- Validasi URL
     if not targetURL or targetURL == "" or not string.find(targetURL, "discord.com") then 
         return 
     end
 
     local runtimeSec = os.time() - StartTime
-    local pName = tostring(LP.Name or "Unknown")
-    local pHwid = GetPlayerHWID()
+    local balanceVal = (MoneyValue and MoneyValue.Value) or 0
     
     local payload = {
         username = "VoidlineHub ⚡",
         embeds = {}
     }
 
-    if isAdmin then
-        local hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
-        local rawSitting = (hum and hum.Sit) and "Sitting (On Motor)" or "Standing"
-        local earnedStr = FormatRupiah(_G.TotalEarnedFix or 0)
-        local healthStr = (hum and math.floor(hum.Health) or 0) .. " HP"
-
+    if isTest or isDisconnect then
+        -- Embed khusus Test atau Disconnect
         table.insert(payload.embeds, {
-            title = "⚡ **VOIDLINE ADMIN MONITOR** ⚡",
-            color = 0x00A2FF,
-            fields = {
-                {
-                    name = "👤 **User Identity**",
-                    value = "> Name: **" .. pName .. "**\n" ..
-                            "> ID: `" .. tostring(LP.UserId) .. "`\n" ..
-                            "> HWID: `" .. pHwid .. "`\n" .. 
-                            "> 🔗 [**Roblox Profile**](https://www.roblox.com/users/" .. tostring(LP.UserId) .. "/profile)",
-                    inline = false
-                },
-                {
-                    name = "🛰️ **Server Instance**",
-                    value = "> Type: **" .. (#game.Players:GetPlayers() <= 1 and "Private" or "Public") .. "**\n> Players: **" .. #game.Players:GetPlayers() .. "**\n> [**Join Link** ⚡](https://www.roblox.com/games/" .. game.PlaceId .. "/?jobId=" .. game.JobId .. ")",
-                    inline = false
-                },
-                {
-                    name = "💀 **Activity Monitor**",
-                    value = "```fix\n" ..
-                            "╔══════════════════════════════════╗\n" ..
-                            "║ Status  : Online & Running       ║\n" ..
-                            "║ Vehicle : " .. string.format("%-22s", rawSitting) .. " ║\n" ..
-                            "║ Health  : " .. string.format("%-22s", healthStr) .. " ║\n" ..
-                            "║ Earned  : " .. string.format("%-22s", earnedStr) .. " ║\n" ..
-                            "╚══════════════════════════════════╝```",
-                    inline = false
-                }
-            },
-            footer = { text = "Voidline System | " .. os.date("%X") }
-        })
-    
-    elseif isTest or isDisconnect then
-        -- [[ REWORK: TEST & DISCONNECT (USING DESCRIPTION) ]] --
-        table.insert(payload.embeds, {
-            title = isTest and "✅ TEST SUCCESSFULL!" or "⚠️ DISCONNECT!",
-            description = isTest and "Webhook is successfully ready to use for **VoidlineHub** ⚡" or "The player has left the game. Session ended safely.",
+            title = isTest and "✅ WEBHOOK READY!" or "⚠️ SESSION ENDED!",
+            description = isTest and "Webhook berhasil terhubung dengan **VoidlineHub** ⚡" or "Player telah keluar dari game/Server Disconnect.",
             color = isTest and 0x00FF88 or 0xFF0044,
-            footer = { text = "Voidline Security System • Admin Only" },
+            footer = { text = "Voidline System" },
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
-
     else
-        -- [[ NO 1: TARGET USER REPORT (FIXED SYNC) ]] --
-        local jobName = (_G.AutoFarmBarista and "Barista" or _G.AutoFarmCourier and "Courier" or _G.AutoFarmBandung and "Bandung" or "Idle")
-        local balanceVal = (MoneyValue and MoneyValue.Value) or 0 -- Proteksi agar tidak nil
+        -- Embed Laporan Farming (Main Report)
+        local jobName = (_G.AutoFarm and "Mandalika Race" or _G.AutofarmMobil and "Shuttle Shuttle" or _G.AutoFarmBandung and "Bandung" or "Idle")
 
         table.insert(payload.embeds, {
             title = "📌 Farming Status Report",
-            color = 2067276,
+            color = 0x1F8B4C,
             fields = {
-                { name = "🧰 Job Select", value = jobName, inline = false },
+                { name = "👤 Player", value = player.Name, inline = true },
+                { name = "🧰 Active Job", value = jobName, inline = true },
                 { name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true },
                 { name = "💰 Earned", value = FormatRupiah(_G.TotalEarnedFix or 0), inline = true },
-                { name = "📈 Income/Hr", value = "Rp 30.000.000/Hr", inline = false },
-                { name = "💵 Balance", value = FormatRupiah(balanceVal), inline = false }
+                { name = "💵 Balance", value = FormatRupiah(balanceVal), inline = true },
+                { name = "📈 Est. Income", value = "Rp 30.000.000/Hr", inline = false }
             },
             footer = { text = "VoidlineHub System" },
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     end
 
+    -- Eksekusi Kirim
     local requestFunc = syn and syn.request or http_request or request or (http and http.request)
-    
     if requestFunc then
         pcall(function()
             requestFunc({
@@ -191,10 +146,9 @@ local function SendWebhook(isTest, isAdmin, isDisconnect)
     end
 end
 
--- [[ AUTO-SEND PAS EXECUTE ]] --
-task.spawn(function()
-    pcall(function() SendWebhook(false, true, false) end)
-end)
+-- [[ AUTO-SEND TEST SAAT TOGGLE WEBHOOK ON ]] --
+-- Jangan panggil otomatis di awal kalau URL user belum diisi. 
+-- Panggil SendWebhook(true) nanti di dalam Toggle UI lu.
 
 
 
