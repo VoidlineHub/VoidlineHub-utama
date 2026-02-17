@@ -287,27 +287,40 @@ task.spawn(function()
 end)
 
 
--- [[ 3. MAIN FUNCTIONS ]] --
+-- [[ 3. MAIN FUNCTIONS - FIXED ]] --
+
 local function getVehicle()
-    local char = player.Character
+    -- Ganti 'player' jadi 'LP' supaya sesuai dengan baris 61 script lu
+    local char = LP.Character 
+    
+    -- Safety check: pastiin karakter ada sebelum lanjut
     local hum = char and char:FindFirstChildOfClass("Humanoid")
+    
+    -- Ambil model kendaraan berdasarkan tempat duduk
     return (hum and hum.SeatPart and (hum.SeatPart:FindFirstAncestorOfClass("Model") or hum.SeatPart.Parent)) or nil
 end
 
 local function moveTo(targetPos, moveSpeed, stopDistance)
     local v = getVehicle()
-    if not v then return end
+    if not v then return end -- Langsung stop kalau lu gak di kendaraan
+    
     local root = v:FindFirstChild("DriveSeat") or v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart", true)
+    if not root then return end -- Proteksi tambahan biar gak error
     
     while (root.Position - targetPos).Magnitude > stopDistance and _G.AutoFarm do
         RunService.Heartbeat:Wait()
         local direction = (targetPos - root.Position).Unit
+        
+        -- Gerakkan kendaraan
         root.AssemblyLinearVelocity = direction * moveSpeed
         root.CFrame = CFrame.new(root.Position, Vector3.new(targetPos.X, root.Position.Y, targetPos.Z))
         root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
     end
+    
+    -- Hentikan kendaraan pas sampe tujuan
     root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
 end
+
 
 -- Logika sinkronisasi GO yang baru
 local raceStarted = false
