@@ -228,67 +228,82 @@ local Route = {
     {id = "Checkpoint19", pos = Vector3.new(-218.36, 6.20, -1616.18)},
 }
 
--- [[ 1. ANTI-RAGDOLL & ANCHOR BYPASS ]] --
+-- [[ 1. ANTI-RAGDOLL & ANCHOR BYPASS - FIXED ]] --
 task.spawn(function()
-    while _G.AutoFarm do
-        pcall(function()
-            local char = player.Character
-            if char then
-                if char:FindFirstChild("RagDollDeathScript") then char.RagDollDeathScript:Destroy() end
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-                    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-                    local seat = hum.SeatPart
-                    if seat then
-                        local v = seat:FindFirstAncestorOfClass("Model")
-                        if v then
-                            for _, p in pairs(v:GetDescendants()) do
-                                if p:IsA("BasePart") and p.Anchored then p.Anchored = false end
+    while true do -- Biar script standby nungguin toggle ON
+        if _G.AutoFarm then
+            pcall(function()
+                local char = LP.Character -- Ganti 'player' jadi 'LP'
+                if char then
+                    -- Hapus script ragdoll bawaan game
+                    if char:FindFirstChild("RagDollDeathScript") then 
+                        char.RagDollDeathScript:Destroy() 
+                    end
+                    
+                    local hum = char:FindFirstChildOfClass("Humanoid")
+                    if hum then
+                        -- Matikan status ragdoll biar gak jatoh-jatoh
+                        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                        
+                        -- Bypass Anchor (Biar kendaraan bisa gerak kalo kena freeze server)
+                        local seat = hum.SeatPart
+                        if seat then
+                            local vehicleModel = seat:FindFirstAncestorOfClass("Model")
+                            if vehicleModel then
+                                for _, part in pairs(vehicleModel:GetDescendants()) do
+                                    if part:IsA("BasePart") and part.Anchored then 
+                                        part.Anchored = false 
+                                    end
+                                end
                             end
                         end
                     end
                 end
-            end
-        end)
-        task.wait(0.5)
+            end)
+        end
+        task.wait(0.5) -- Cek setiap setengah detik
     end
 end)
 
--- [[ 2. MAP & WHEELS CLEANER ]] --
-task.spawn(function()
-    while _G.AutoFarm do
-        -- 1. Hapus Map Mandalika (Biar ringan)
-        local m = workspace:FindFirstChild("MANDALIKA")
-        if m then
-            for _, v in pairs(m:GetDescendants()) do
-                if v:IsA("BasePart") or v:IsA("Model") then v:Destroy() end
-            end
-        end
 
-        -- 2. Hapus Wheels Motor Lu (Berdasarkan Karakter Lu)
-        pcall(function()
-            local char = player.Character
-            if char then
-                -- Cari model di workspace yang namanya mengandung nama lu
-                for _, model in pairs(workspace:GetChildren()) do
-                    if model:IsA("Model") and string.find(model.Name, player.Name) then
-                        local wheels = model:FindFirstChild("Wheels")
-                        if wheels then 
-                            wheels:Destroy()
+-- [[ 2. MAP & WHEELS CLEANER - FIXED ]] --
+task.spawn(function()
+    while true do -- Gunakan while true agar script standby cek kondisi
+        if _G.AutoFarm then
+            -- 1. Hapus Map Mandalika (Biar ringan)
+            local m = workspace:FindFirstChild("MANDALIKA")
+            if m then
+                -- Gunakan pcall agar jika objek sudah hilang tidak error
+                pcall(function()
+                    for _, v in pairs(m:GetDescendants()) do
+                        if v:IsA("BasePart") or v:IsA("Model") then v:Destroy() end
+                    end
+                end)
+            end
+
+            -- 2. Hapus Wheels Motor (Berdasarkan LP)
+            pcall(function()
+                local char = LP.Character -- Gunakan LP
+                if char then
+                    for _, model in pairs(workspace:GetChildren()) do
+                        -- Gunakan LP.Name
+                        if model:IsA("Model") and string.find(model.Name, LP.Name) then
+                            local wheels = model:FindFirstChild("Wheels")
+                            if wheels then 
+                                wheels:Destroy()
+                            end
                         end
                     end
                 end
-            end
-        end)
-
-        task.wait(2)
+            end)
+        end
+        task.wait(2) -- Cek setiap 2 detik
     end
 end)
 
 
 -- [[ 3. MAIN FUNCTIONS - FIXED ]] --
-
 local function getVehicle()
     -- Ganti 'player' jadi 'LP' supaya sesuai dengan baris 61 script lu
     local char = LP.Character 
