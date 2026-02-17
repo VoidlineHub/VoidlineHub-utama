@@ -578,13 +578,60 @@ HomeTab:Paragraph({
         end
     })
 
-HomeTab:Section({ Title = "Game Information" })
+
+-- ============ AUTO FARM TAB =========== --
+local AutoFarmTab = Window:Tab({
+    Title = "Auto Farm",
+    Icon = "solar:cpu-bold",
+    Color = primaryColor
+})
+
+AutoFarmTab:Section({ Title = "Mandalika autorace" })
+local AutofarmToggle = AutoFarmTab:Tloggle({
+    Title = "AutoRace Mandalika",
+    Locked = false, -- Buka kuncinya karena sekarang udah di map Mandalika
+    Callback = function(v)
+        _G.AutoFarm = v
+        
+        if v then
+            -- Jalankan Black Screen biar hemat spek HP
+            if SetBlackScreen then SetBlackScreen(true) end
+            
+            -- Jalankan fungsi utama farming
+            task.spawn(function()
+                startFarm()
+            end)
+            
+            WindUI:Notify({
+                Title = "Voidline Hub",
+                Content = "Mandalika AutoFarm Enabled!",
+                Duration = 3
+            })
+        else
+            -- Matikan Black Screen
+            if SetBlackScreen then SetBlackScreen(false) end
+            
+            WindUI:Notify({
+                Title = "Voidline Hub",
+                Content = "Mandalika AutoFarm Disabled!",
+                Duration = 3
+            })
+        end
+    end
+})
+
+local StatsTab = Window:Tab({
+        Title = "Stats",
+        Icon = "trending",
+        Color = primaryColor
+    })
+   StatsTab:Section({ Title = "Game Information" })
 
 -- Bikin objeknya dulu biar variabelnya ADA
-local CurrentMoney = HomeTab:Button({ Title = "Money", Desc = "Rp0", Icon = "banknote" })
-local FpsLabel = HomeTab:Button({ Title = "FPS", Desc = "0 FPS", Icon = "monitor" })
-local PingLabel = HomeTab:Button({ Title = "Ping", Desc = "0 ms", Icon = "signal" })
-local GameTime = HomeTab:Button({ Title = "Uptime", Desc = "00:00:00", Icon = "clock" })
+local CurrentMoney = StatsTab:Button({ Title = "Money", Desc = "Rp0", Icon = "banknote" })
+local FpsLabel = StatsTab:Button({ Title = "FPS", Desc = "0 FPS", Icon = "monitor" })
+local PingLabel = StatsTab:Button({ Title = "Ping", Desc = "0 ms", Icon = "signal" })
+local GameTime = StatsTab:Button({ Title = "Uptime", Desc = "00:00:00", Icon = "clock" })
 
 -- LOGIC UPDATE STATS (FPS, PING, UPTIME)
 local fpsTick = 0
@@ -618,47 +665,6 @@ task.spawn(function()
     end
 end)
 
-
--- ============ AUTO FARM TAB =========== --
-local AutoFarmTab = Window:Tab({
-    Title = "Auto Farm",
-    Icon = "solar:cpu-bold",
-    Color = primaryColor
-})
-
-AutoFarmTab:Section({ Title = "Mandalika autorace" })
-local AutofarmToggle = AutoFarmTab:Toggle({
-    Title = "AutoRace Mandalika",
-    Locked = false, -- Buka kuncinya karena sekarang udah di map Mandalika
-    Callback = function(v)
-        _G.AutoFarm = v
-        
-        if v then
-            -- Jalankan Black Screen biar hemat spek HP
-            if SetBlackScreen then SetBlackScreen(true) end
-            
-            -- Jalankan fungsi utama farming
-            task.spawn(function()
-                startFarm()
-            end)
-            
-            WindUI:Notify({
-                Title = "Voidline Hub",
-                Content = "Mandalika AutoFarm Enabled!",
-                Duration = 3
-            })
-        else
-            -- Matikan Black Screen
-            if SetBlackScreen then SetBlackScreen(false) end
-            
-            WindUI:Notify({
-                Title = "Voidline Hub",
-                Content = "Mandalika AutoFarm Disabled!",
-                Duration = 3
-            })
-        end
-    end
-})
 
 
 
