@@ -446,119 +446,16 @@ local AutoFarmTab = Window:Tab({
     Color = primaryColor
 })
 
--- [[ FIX: DEKLARASI VARIABLE DI AWAL BIAR GAK NIL ]] --
-local BandungToggle
-local Autofarmv2Toggle
-
--- ============ SECTION: BANDUNG FARM =========== --
-AutoFarmTab:Section({ Title = "Bandung Farm" })
-BandungToggle = AutoFarmTab:Toggle({
-    Title = "Auto Farm Bandung",
-    Callback = function(v)
-        _G.AutoFarmBandung = v
-        
-        if v then
-            local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-            local seat = hum and hum.SeatPart
-
-            if not seat then
-                WindUI:Notify({
-                    Title = "Error",
-                    Content = "Sit in the vehicle first!",
-                    Duration = 3
-                })
-                _G.AutoFarmBandung = false
-                task.spawn(function() BandungToggle:SetValue(false) end) -- Sesuaikan method UI lu
-                return
-            end
-
-            SetBlackScreen(true)
-            StartRoute()
-        else
-            -- [[ SAFE EXIT UNTUK BANDUNG ]] --
-            StopRoute()
-            SetBlackScreen(false)
-            task.wait(1)
-            LP:Kick("\n[VoidlineHub Security]\nSafe Exit: Bandung Farm Stopped.")
+AutoFarmTab:Section({ Title = "Mandalika autorace" })
+    local AutofarmToggle = AutoFarmTab:Toggle({
+        Title = "AutoRace mandalika",
+        Locked = true,
+        LockedTitle = "Only mandalika",
+        Callback = function(v)
+            -- This won't execute because it's locked
         end
-    end
-})
+    })
 
--- ============ SECTION: AUTOFARM V2 =========== --
-AutoFarmTab:Section({ Title = "Autofarm V2" })
-Autofarmv2Toggle = AutoFarmTab:Toggle({
-    Title = "Auto Farm v2",
-    Default = _G.AutofarmMobil,
-    Callback = function(v)
-        _G.AutofarmMobil = v 
-        
-        if v then
-            local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-            local seat = hum and hum.SeatPart
-            
-            if not seat then
-                WindUI:Notify({
-                    Title = "Error",
-                    Content = "Sit in the vehicle first!",
-                    Duration = 3
-                })
-                _G.AutofarmMobil = false
-                task.spawn(function() Autofarmv2Toggle:SetValue(false) end)
-                return
-            end
-
-            SetBlackScreen(true)
-            StartShuttle() 
-            
-            WindUI:Notify({
-                Title = "Success",
-                Content = "Autofarm v2 Active!",
-                Duration = 3
-            })
-        else
-            -- [[ SAFE EXIT UNTUK V2 ]] --
-            _G.AutofarmMobil = false 
-            SetBlackScreen(false)
-            
-            WindUI:Notify({
-                Title = "Safe Exit",
-                Content = "Disconnecting for safety...",
-                Duration = 2
-            })
-            
-            task.wait(1) 
-            LP:Kick("\n[VoidlineHub Security]\nSafe Exit Activated.\nYour session ended safely.")
-        end
-    end
-})
-
-
-
-AutoFarmTab:Section({ Title = "mandalika farm" })
-AutofarmToggle = AutoFarmTab:Toggle({
-    Title = "Autorace Mandalika",
-    Default = _G.AutoFarm,
-    Callback = function(v)
-        _G.AutoFarm = v
-        if v then
-            -- Pakai task.spawn biar UI gak nge-lag saat loop jalan
-            task.spawn(function()
-                -- Panggil fungsi utama yang sudah kita buat tadi
-                startFarm()
-            end)
-            
-            -- Kalau lu mau aktifin Black Screen otomatis pas ON
-            if SetBlackScreen then
-                SetBlackScreen(true)
-            end
-        else
-            -- Kalau di-OFF kan, matiin Black Screen
-            if SetBlackScreen then
-                SetBlackScreen(false)
-            end
-        end
-    end
-})
 
 
     -- QUESTS TAB WITH LOCKED FEATURES
