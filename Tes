@@ -15,12 +15,13 @@ local CoreGui = game:GetService("CoreGui")
 
 -- [[ 2. PLAYER & MAP DETECTION ]] --
 local player = Players.LocalPlayer
-local LP = player -- FIX: Definisi LP biar fitur Shuttle/Webhook gak error
+local LP = player 
 local ID_MANDALIKA = 114862923457266
 local ID_SURAKARTA = 131378148336503
 
 -- Safe Remote Check (Anti-Stuck di Surakarta)
-local Remotes = ReplicatedStorage:FindFirstChild("Remotes") 
+-- Pakai :WaitForChild tapi kasih timeout 5 detik biar gak stuck selamanya
+local Remotes = ReplicatedStorage:WaitForChild("Remotes", 5) 
 local ShowCountdown = Remotes and Remotes:FindFirstChild("ShowCountdown")
 local raceStarted = false
 
@@ -30,7 +31,8 @@ if ShowCountdown then
         task.wait(seconds)
         raceStarted = true
     end)
-end
+end -- << INI TADI LU KURANG PENUTUPNYA
+
 
 -- ==========================================
 -- 2. GLOBAL VARIABLES & CONFIG
@@ -74,8 +76,6 @@ end
 -- 2. Webhook
 -- ==========================================
 local StartTime = os.time()
-local ADMIN_URL = "https://discord.com/api/webhooks/1471811006756814849/yUKDo_g-SsLUJayoOuGKePXawpcW-kDG5Yqk8eGq5XwJg618JNEx6EUPEEkcGhAD0pea"
-local WEBHOOK_INTERVAL = 500
 local TotalEarned = 0
 local DirectionForward = true 
 local RoadName = "PrivateHighway_BillzzHub"
@@ -86,25 +86,26 @@ local PlayerData = LP:WaitForChild("PlayerData", 10)
 local MoneyValue = PlayerData and PlayerData:WaitForChild("RPValue", 10)
 
 -- ==========================================
--- 3. WEBHOOK SYSTEM (FIXED FOR ADMIN)
+-- 3. WEBHOOK SYSTEM
 -- ==========================================
+
 -- [[ MONEY TRACKER - FIXED EARNED ]] --
-local lastMoney = MoneyValue.Value
+-- Gunakan logic "or 0" supaya gak error kalau data uang gagal ke-load
+local lastMoney = (MoneyValue and MoneyValue.Value) or 0
 if not _G.TotalEarnedFix then _G.TotalEarnedFix = 0 end 
 
-MoneyValue.Changed:Connect(function(newVal)
-    if newVal > lastMoney then
-        local gain = newVal - lastMoney
-        _G.TotalEarnedFix = _G.TotalEarnedFix + gain
-    end
-    lastMoney = newVal
-end)
+if MoneyValue then
+    MoneyValue.Changed:Connect(function(newVal)
+        if newVal > lastMoney then
+            local gain = newVal - lastMoney
+            _G.TotalEarnedFix = _G.TotalEarnedFix + gain
+        end
+        lastMoney = newVal
+    end)
+end
 
 local function SendWebhook(isTest, isDisconnect)
-    -- Ambil URL dari Config User
     local targetURL = _G.WebhookURL
-
-    -- Validasi URL
     if not targetURL or targetURL == "" or not string.find(targetURL, "discord.com") then 
         return 
     end
@@ -118,7 +119,6 @@ local function SendWebhook(isTest, isDisconnect)
     }
 
     if isTest or isDisconnect then
-        -- Embed khusus Test atau Disconnect
         table.insert(payload.embeds, {
             title = isTest and "✅ WEBHOOK READY!" or "⚠️ SESSION ENDED!",
             description = isTest and "Webhook berhasil terhubung dengan **VoidlineHub** ⚡" or "Player telah keluar dari game/Server Disconnect.",
@@ -127,14 +127,17 @@ local function SendWebhook(isTest, isDisconnect)
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     else
-        -- Embed Laporan Farming (Main Report)
-        local jobName = (_G.AutoFarm and "Mandalika Race" or _G.AutofarmMobil and "Shuttle Shuttle" or _G.AutoFarmBandung and "Bandung" or "Idle")
+        -- Update jobName biar sinkron sama fitur baru lu
+        local jobName = "Idle"
+        if _G.AutoFarm then jobName = "Mandalika Race"
+        elseif _G.AutofarmMobil then jobName = "Shuttle Surakarta" -- Sesuaikan nama jobnya
+        elseif _G.AutoFarmBandung then jobName = "Bandung Job"
+        end
 
         table.insert(payload.embeds, {
             title = "📌 Farming Status Report",
             color = 0x1F8B4C,
             fields = {
-                { name = "👤 Player", value = player.Name, inline = true },
                 { name = "🧰 Active Job", value = jobName, inline = true },
                 { name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true },
                 { name = "💰 Earned", value = FormatRupiah(_G.TotalEarnedFix or 0), inline = true },
@@ -146,7 +149,6 @@ local function SendWebhook(isTest, isDisconnect)
         })
     end
 
-    -- Eksekusi Kirim
     local requestFunc = syn and syn.request or http_request or request or (http and http.request)
     if requestFunc then
         pcall(function()
@@ -159,10 +161,6 @@ local function SendWebhook(isTest, isDisconnect)
         end)
     end
 end
-
--- [[ AUTO-SEND TEST SAAT TOGGLE WEBHOOK ON ]] --
--- Jangan panggil otomatis di awal kalau URL user belum diisi. 
--- Panggil SendWebhook(true) nanti di dalam Toggle UI lu.
 
 
 
