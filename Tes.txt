@@ -316,24 +316,26 @@ Remotes.ShowCountdown.OnClientEvent:Connect(function(seconds)
     task.wait(seconds) -- Nunggu tepat sesuai durasi countdown dari server
     raceStarted = true
 end)
-
 local function startFarm()
     while _G.AutoFarm do
-        if not getVehicle() then 
+        local vehicle = getVehicle()
+        if not vehicle then 
+            _G.Status.Pause = "Need Vehicle"
             warn("DUDUK DULU!") 
             task.wait(2)
         else
-            -- STEP 1: Ke Start
+            -- [ STEP 1: KE START ]
+            _G.Status.Pause = "Preparing (Going to Start)"
             moveTo(StartHitbox, StartSpeed, 2)
             
-            -- CATAT WAKTU START
+            -- [ STEP 2: NUNGGU COUNTDOWN ]
             local startTime = tick()
-            
-            -- STEP 2: Nunggu 30 Detik (Gantiin Sinyal Server)
             raceStarted = false
             
             repeat 
-                -- Logika jaga posisi (Tween Lu yang Mulus)
+                local currentTime = tick() - startTime
+                _G.Status.Pause = string.format("Preparing (Waiting: %.1fs)", 30 - currentTime)
+                
                 local v = getVehicle()
                 if v then
                     local root = v:FindFirstChild("DriveSeat") or v.PrimaryPart
@@ -344,21 +346,32 @@ local function startFarm()
                 task.wait(0.1) 
             until (tick() - startTime) >= 30 or not _G.AutoFarm
 
-            -- STEP 3: Balapan
-            task.wait(0.1) -- Delay super tipis biar aman
-
-            for _, point in ipairs(Route) do
-                if not _G.AutoFarm then break end
-                -- stopDistance diubah ke 7 biar checkpoint gak gampang kelewat
-                moveTo(point.pos + Vector3.new(0, Height, 0), Speed, 7)
+            -- [ STEP 3: RUNNING / BALAPAN ]
+            if _G.AutoFarm then
+                local raceTimer = tick() -- Mulai hitung waktu balap
                 
-                -- Jeda tipis banget biar server sempet registrasi koordinat CP
-                task.wait(0.05) 
+                for i, point in ipairs(Route) do
+                    if not _G.AutoFarm then break end
+                    
+                    -- Update Status Running + Waktu Berjalan
+                    local elapsed = tick() - raceTimer
+                    _G.Status.Pause = string.format("Running (Time: %02d:%02d)", math.floor(elapsed/60), elapsed%60)
+                    
+                    moveTo(point.pos + Vector3.new(0, Height, 0), Speed, 7)
+                    task.wait(0.05) 
+                end
+
+                -- [ STEP 4: SUCCESS ]
+                if _G.AutoFarm then
+                    local finalTime = tick() - raceTimer
+                    _G.Status.Pause = string.format("Success (%02d:%02d)", math.floor(finalTime/60), finalTime%60)
+                    task.wait(3) -- Tahan status success sebentar sebelum balik ke Preparing
+                end
             end
-            task.wait(3) -- Jeda 3 detik sebelum balik lagi ke start
         end
     end
 end
+
 
 
 -- ==========================================
