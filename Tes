@@ -1028,14 +1028,32 @@ Autofarmv2Toggle = AutoFarmTab:Toggle({
 
 
 
-AutoFarmTab:Section({ Title = "barista farm" })
-
-local BaristaToggle = AutoFarmTab:Toggle({
-    Title = "Auto Farm Barista",
-    Locked = true,
-    LockedTitle = "Soon",
-    Callback = function(v) end
+AutoFarmTab:Section({ Title = "mandalika farm" })
+AutofarmToggle = AutoFarmTab:Toggle({
+    Title = "Autorace Mandalika",
+    Default = _G.AutoFarm,
+    Callback = function(v)
+        _G.AutoFarm = v
+        if v then
+            -- Pakai task.spawn biar UI gak nge-lag saat loop jalan
+            task.spawn(function()
+                -- Panggil fungsi utama yang sudah kita buat tadi
+                startFarm()
+            end)
+            
+            -- Kalau lu mau aktifin Black Screen otomatis pas ON
+            if SetBlackScreen then
+                SetBlackScreen(true)
+            end
+        else
+            -- Kalau di-OFF kan, matiin Black Screen
+            if SetBlackScreen then
+                SetBlackScreen(false)
+            end
+        end
+    end
 })
+
 
     -- QUESTS TAB WITH LOCKED FEATURES
     local QuestsTab = Window:Tab({
