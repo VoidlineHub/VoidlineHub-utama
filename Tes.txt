@@ -490,6 +490,7 @@ local AutoFarmTab = Window:Tab({
     Icon = "solar:cpu-bold",
     Color = primaryColor
 })
+AutoFarmTab:Section({ Title = "Autofarm" })
 AutoFarmTab:Toggle({
     Title = "autofarm v1",
     Desc = "autofarm in Mandalika and in Surakarta",
@@ -532,13 +533,12 @@ local JobStatusButton = StatsTab:Button({
     Icon = "activity" -- Icon biar estetik
 })
 
--- Objek UI lainnya tetep sama
 local CurrentMoney = StatsTab:Button({ Title = "Money", Desc = "Rp0", Icon = "banknote" })
+local GameTime = StatsTab:Button({ Title = "Uptime", Desc = "00:00:00", Icon = "clock" })
 
-StatsTab:Section({ Title = "Game Information" })
+StatsTab:Section({ Title = "ping information" })
 local FpsLabel = StatsTab:Button({ Title = "FPS", Desc = "0 FPS", Icon = "monitor" })
 local PingLabel = StatsTab:Button({ Title = "Ping", Desc = "0 ms", Icon = "signal" })
-local GameTime = StatsTab:Button({ Title = "Uptime", Desc = "00:00:00", Icon = "clock" })
 
 -- [[ LOGIC UPDATE STATS ]] --
 local fpsTick = 0
