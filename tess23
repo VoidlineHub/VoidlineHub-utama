@@ -400,14 +400,6 @@ Window:Tag({
     Border = true,
 })
 
--- [[ 3. VERSION TAG ]] --
-Window:Tag({
-    Title = "drag drive",
-    Icon = "rbxassetid://135354802260060",
-    Color = Color3.fromRGB(255, 251, 255),
-    Border = true,
-})
-
 -- ============ HOME TAB=========== --
 local HomeTab = Window:Tab({ Title = "Home", Icon = "solar:home-2-bold" })
 
@@ -430,7 +422,7 @@ HomeTab:Paragraph({
             setclipboard("https://discord.gg/CZvnM7y2sM")
             WindUI:Notify({
                 Title = "Copied!",
-                Content = "Discord invite copied to clipboard.",
+               Content = "Discord invite copied to clipboard.",
                 Duration = 3
             })
         end
@@ -497,7 +489,7 @@ local AutoFarmTab = Window:Tab({
     Color = primaryColor
 })
 
-
+AutoFarmTab:Section({ Title = "autofarm"})
 AutoFarmTab:Toggle({
     Title = "autofarm v1 ",
     Desc = "This autofarm can be found in Mandalika and Surakarta ",
