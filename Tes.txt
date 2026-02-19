@@ -65,29 +65,42 @@ local function FormatTime(s)
     return string.format("%02dh %02dm %02ds", hours, minutes, seconds)
 end
 
--- 4. Map & Wheel Cleaner (Pake GetDescendants biar ban copot)
+-- [[ FUNCTION MAP & WHEEL CLEANER ]] --
 local function SetMapCleaner(state)
     _G.MapCleanerEnabled = state
     if state then
-        -- Lenyapkan Mandalika
+        -- 1. Lenyapkan Mandalika
         local m = workspace:FindFirstChild("MANDALIKA")
         if m then m:ClearAllChildren() end
 
-        -- Loop Hapus Roda (Targeted ke folder Wheels lu)
+        -- 2. Lenyapkan Wheels (Targeted & Aggressive)
         task.spawn(function()
             while _G.MapCleanerEnabled do
                 pcall(function()
-                    local v = getVehicle() -- Memanggil fungsi di atasnya
+                    -- Cara A: Lewat getVehicle()
+                    local v = getVehicle()
                     if v then
-                        -- Cari folder Wheels/wheels sampe ke akar (GetDescendants)
+                        -- Cari folder Wheels atau wheels
+                        local w = v:FindFirstChild("Wheels") or v:FindFirstChild("wheels")
+                        if w then w:Destroy() end
+                        
+                        -- Scan dalemnya kalo folder Wheels ga ketemu langsung
                         for _, obj in pairs(v:GetDescendants()) do
                             if obj.Name == "Wheels" or obj.Name == "wheels" then
                                 obj:Destroy()
                             end
                         end
                     end
+                    
+                    -- Cara B: Cari langsung di Workspace pake nama lu (Buat jaga-jaga)
+                    for _, m in pairs(workspace:GetChildren()) do
+                        if m:IsA("Model") and string.find(m.Name, LP.Name) then
+                            local w = m:FindFirstChild("Wheels") or m:FindFirstChild("wheels")
+                            if w then w:Destroy() end
+                        end
+                    end
                 end)
-                task.wait(1.5)
+                task.wait(1)
             end
         end)
     end
@@ -247,47 +260,6 @@ local function SetBlackScreen(state)
     end
 end
 
--- [[ FUNCTION MAP & WHEEL CLEANER ]] --
-local function SetMapCleaner(state)
-    _G.MapCleanerEnabled = state
-    if state then
-        -- 1. Lenyapkan Mandalika
-        local m = workspace:FindFirstChild("MANDALIKA")
-        if m then m:ClearAllChildren() end
-
-        -- 2. Lenyapkan Wheels (Targeted & Aggressive)
-        task.spawn(function()
-            while _G.MapCleanerEnabled do
-                pcall(function()
-                    -- Cara A: Lewat getVehicle()
-                    local v = getVehicle()
-                    if v then
-                        -- Cari folder Wheels atau wheels
-                        local w = v:FindFirstChild("Wheels") or v:FindFirstChild("wheels")
-                        if w then w:Destroy() end
-                        
-                        -- Scan dalemnya kalo folder Wheels ga ketemu langsung
-                        for _, obj in pairs(v:GetDescendants()) do
-                            if obj.Name == "Wheels" or obj.Name == "wheels" then
-                                obj:Destroy()
-                            end
-                        end
-                    end
-                    
-                    -- Cara B: Cari langsung di Workspace pake nama lu (Buat jaga-jaga)
-                    for _, m in pairs(workspace:GetChildren()) do
-                        if m:IsA("Model") and string.find(m.Name, LP.Name) then
-                            local w = m:FindFirstChild("Wheels") or m:FindFirstChild("wheels")
-                            if w then w:Destroy() end
-                        end
-                    end
-                end)
-                task.wait(1)
-            end
-        end)
-    end
-end
-
 
 
 
@@ -318,13 +290,6 @@ local Route = {
     {id = "Checkpoint19", pos = Vector3.new(-218.36, 6.20, -1616.18)},
 }
 
--- [[ UTILITY: GET VEHICLE ]] --
-local function getVehicle()
-    local char = LP.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    return (hum and hum.SeatPart and (hum.SeatPart:FindFirstAncestorOfClass("Model") or hum.SeatPart.Parent)) or nil
-end
-
 
 -- [[ MOVEMENT ENGINE ]] --
 local function flyTo(targetPos, moveSpeed, stopDistance)
@@ -348,7 +313,6 @@ local Speed = 210
 local Height = 1.5
 local StartSpeed = 25 
 local StartHitbox = Vector3.new(-386.94, 6.5, -1616.52)
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 
 -- [[ DATA COORDINATES ]] --
@@ -373,15 +337,6 @@ local Route = {
     {id = "Checkpoint18", pos = Vector3.new(-1116.99, 14.76, -1933.47)},
     {id = "Checkpoint19", pos = Vector3.new(-218.36, 6.20, -1616.18)},
 }
-
-
--- [[ UTILITY: GET VEHICLE ]] --
-local function getVehicle()
-    local char = LP.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    return (hum and hum.SeatPart and (hum.SeatPart:FindFirstAncestorOfClass("Model") or hum.SeatPart.Parent)) or nil
-end
-
 
 
 local function moveTo(targetPos, moveSpeed, stopDistance)
