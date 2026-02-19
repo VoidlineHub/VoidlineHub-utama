@@ -54,7 +54,7 @@ end
 -- ==========================================
 -- 2. Webhook
 -- ==========================================
-local StartTime = os.time()
+local StartTime = tick() 
 local TotalEarned = 0
 local DirectionForward = true 
 local RoadName = "PrivateHighway_BillzzHub"
@@ -67,9 +67,6 @@ local MoneyValue = PlayerData and PlayerData:WaitForChild("RPValue", 10)
 -- ==========================================
 -- 3. WEBHOOK SYSTEM
 -- ==========================================
-
--- [[ MONEY TRACKER - FIXED EARNED ]] --
--- Gunakan logic "or 0" supaya gak error kalau data uang gagal ke-load
 local lastMoney = (MoneyValue and MoneyValue.Value) or 0
 if not _G.TotalEarnedFix then _G.TotalEarnedFix = 0 end 
 
@@ -83,12 +80,16 @@ if MoneyValue then
     end)
 end
 
+-- [[ FORMAT TIME FIX ]] --
 local function FormatTime(s)
-    local hours = math.floor(s / 3600)
-    local minutes = math.floor((s % 3600) / 60)
-    local seconds = math.floor(s % 60)
+    -- Pastikan detik tidak minus
+    local secondsTotal = math.max(0, s)
+    local hours = math.floor(secondsTotal / 3600)
+    local minutes = math.floor((secondsTotal % 3600) / 60)
+    local seconds = math.floor(secondsTotal % 60)
     return string.format("%02dh %02dm %02ds", hours, minutes, seconds)
 end
+
 
 local function SendWebhook(isTest, isDisconnect)
     local targetURL = _G.WebhookURL
@@ -99,11 +100,6 @@ local function SendWebhook(isTest, isDisconnect)
     local runtimeSec = tick() - StartTime 
     local balanceVal = (MoneyValue and MoneyValue.Value) or 0
     
-    local payload = {
-        username = "VoidlineHub ⚡",
-        embeds = {}
-    }
-
     local payload = {
         username = "VoidlineHub ⚡",
         embeds = {}
