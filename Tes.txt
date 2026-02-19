@@ -212,30 +212,43 @@ end
 local function SetMapCleaner(state)
     _G.MapCleanerEnabled = state
     if state then
-        -- 1. Hapus Map Mandalika (Sapu Bersih)
+        -- 1. Lenyapkan Mandalika
         local m = workspace:FindFirstChild("MANDALIKA")
-        if m then
-            m:ClearAllChildren()
-        end
+        if m then m:ClearAllChildren() end
 
-        -- 2. Hapus Wheels (VERSI ANTI GAGAL)
+        -- 2. Lenyapkan Wheels (Targeted & Aggressive)
         task.spawn(function()
             while _G.MapCleanerEnabled do
-                local v = getVehicle()
-                if v then
-                    -- Kita bongkar semua isi model mobil sampe ke dalem-dalemnya
-                    for _, part in pairs(v:GetDescendants()) do
-                        -- Cari yang namanya ada kata "wheel" (ga peduli huruf besar/kecil)
-                        if string.find(part.Name:lower(), "wheel") then
-                            part:Destroy()
+                pcall(function()
+                    -- Cara A: Lewat getVehicle()
+                    local v = getVehicle()
+                    if v then
+                        -- Cari folder Wheels atau wheels
+                        local w = v:FindFirstChild("Wheels") or v:FindFirstChild("wheels")
+                        if w then w:Destroy() end
+                        
+                        -- Scan dalemnya kalo folder Wheels ga ketemu langsung
+                        for _, obj in pairs(v:GetDescendants()) do
+                            if obj.Name == "Wheels" or obj.Name == "wheels" then
+                                obj:Destroy()
+                            end
                         end
                     end
-                end
-                task.wait(1.5) -- Cek terus kalo lu ganti mobil
+                    
+                    -- Cara B: Cari langsung di Workspace pake nama lu (Buat jaga-jaga)
+                    for _, m in pairs(workspace:GetChildren()) do
+                        if m:IsA("Model") and string.find(m.Name, LP.Name) then
+                            local w = m:FindFirstChild("Wheels") or m:FindFirstChild("wheels")
+                            if w then w:Destroy() end
+                        end
+                    end
+                end)
+                task.wait(1)
             end
         end)
     end
 end
+
 
 
 
