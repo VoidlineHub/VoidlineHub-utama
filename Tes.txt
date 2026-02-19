@@ -698,35 +698,32 @@ AutoFarmTab:Toggle({
 
 
 AutoFarmTab:Section({ Title = "autorace"})
- AutoFarmTab:Toggle({ 
-Title = "Autorace mandalika",
+AutoFarmTab:Toggle({ 
+    Title = "Autorace mandalika",
     Desc = "auto racing must be in Mandalika",
     Callback = function(v)
         _G.AutoRace = v
         
-        -- Nyalakan atau Matikan Black Screen sesuai status toggle
+        -- Nyalakan atau Matikan Black Screen
         SetBlackScreen(v)
         
         if v then
             task.spawn(function()
-                while _G.AutoRace do
-                    local vehicle = getVehicle()
-                    if vehicle then
-                        for _, point in ipairs(Route) do
-                            if not _G.AutoRace then break end
-                            flyTo(point.pos + Vector3.new(0, Height, 0), Speed, 10)
-                            task.wait(0.05)
-                        end
-                    else
-                        -- Kalau gak ada kendaraan, status BlackScreen tetep nyala tapi farm nunggu
-                        task.wait(2)
-                    end
-                end
+                -- Panggil fungsi startFarm yang udah kita rapihin tadi
+                -- Karena di startFarm udah ada loop 'while _G.AutoRace', 
+                -- jadi tinggal panggil sekali aja di sini.
+                startFarm() 
             end)
+        else
+            -- Reset kecepatan/velocity pas dimatiin biar motor gak melayang terus
+            local vhc = getVehicle()
+            if vhc then
+                local root = vhc:FindFirstChild("DriveSeat") or vhc.PrimaryPart
+                if root then root.AssemblyLinearVelocity = Vector3.new(0,0,0) end
+            end
         end
     end
 })
-
 
 
 -- ============ stats tab =========== --
