@@ -83,15 +83,27 @@ if MoneyValue then
     end)
 end
 
+local function FormatTime(s)
+    local hours = math.floor(s / 3600)
+    local minutes = math.floor((s % 3600) / 60)
+    local seconds = math.floor(s % 60)
+    return string.format("%02dh %02dm %02ds", hours, minutes, seconds)
+end
+
 local function SendWebhook(isTest, isDisconnect)
     local targetURL = _G.WebhookURL
     if not targetURL or targetURL == "" or not string.find(targetURL, "discord.com") then 
         return 
     end
 
-    local runtimeSec = os.time() - StartTime
+    local runtimeSec = tick() - StartTime 
     local balanceVal = (MoneyValue and MoneyValue.Value) or 0
     
+    local payload = {
+        username = "VoidlineHub ⚡",
+        embeds = {}
+    }
+
     local payload = {
         username = "VoidlineHub ⚡",
         embeds = {}
