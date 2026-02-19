@@ -39,21 +39,60 @@ local lastBoostTime = 0
 
 
 -- ==========================================
--- 1. HELPER FUNCTIONS (DIATAS BIAR GAK NIL)
+-- 3. HELPER FUNCTIONS (URUTAN TERBAIK)
 -- ==========================================
-local function GetPlayerHWID()
-    return (gethwid and gethwid()) or (device and device.hwid) or "Unknown/Mobile"
+
+-- 1. Ambil Kendaraan (Paling krusial, ditaruh paling atas)
+local function getVehicle()
+    local char = LP.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    return (hum and hum.SeatPart and (hum.SeatPart:FindFirstAncestorOfClass("Model") or hum.SeatPart.Parent)) or nil
 end
 
+-- 2. Format Mata Uang
 local function FormatRupiah(num)
     local s = tostring(math.floor(num or 0))
     local result = s:reverse():gsub("(%d%d%d)", "%1."):reverse()
     return "Rp " .. (result:sub(1,1) == "." and result:sub(2) or result)
 end
 
-local function FormatTime(sec)
-    return string.format("%02d:%02d:%02d", math.floor(sec/3600), math.floor((sec%3600)/60), sec%60)
+-- 3. Format Waktu (Versi yang sudah lu perbaiki tadi)
+local function FormatTime(s)
+    local secondsTotal = math.max(0, s)
+    local hours = math.floor(secondsTotal / 3600)
+    local minutes = math.floor((secondsTotal % 3600) / 60)
+    local seconds = math.floor(secondsTotal % 60)
+    return string.format("%02dh %02dm %02ds", hours, minutes, seconds)
 end
+
+-- 4. Map & Wheel Cleaner (Pake GetDescendants biar ban copot)
+local function SetMapCleaner(state)
+    _G.MapCleanerEnabled = state
+    if state then
+        -- Lenyapkan Mandalika
+        local m = workspace:FindFirstChild("MANDALIKA")
+        if m then m:ClearAllChildren() end
+
+        -- Loop Hapus Roda (Targeted ke folder Wheels lu)
+        task.spawn(function()
+            while _G.MapCleanerEnabled do
+                pcall(function()
+                    local v = getVehicle() -- Memanggil fungsi di atasnya
+                    if v then
+                        -- Cari folder Wheels/wheels sampe ke akar (GetDescendants)
+                        for _, obj in pairs(v:GetDescendants()) do
+                            if obj.Name == "Wheels" or obj.Name == "wheels" then
+                                obj:Destroy()
+                            end
+                        end
+                    end
+                end)
+                task.wait(1.5)
+            end
+        end)
+    end
+end
+
 
 -- ==========================================
 -- 2. Webhook
