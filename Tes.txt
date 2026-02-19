@@ -324,7 +324,7 @@ local Route = {
 task.spawn(function()
     while _G.AutoRace do
         pcall(function()
-            local char = player.Character
+            local local char = LP.Character 
             if char then
                 if char:FindFirstChild("RagDollDeathScript") then char.RagDollDeathScript:Destroy() end
                 local hum = char:FindFirstChildOfClass("Humanoid")
@@ -360,7 +360,7 @@ task.spawn(function()
 
         -- 2. Hapus Wheels Motor Lu (Berdasarkan Karakter Lu)
         pcall(function()
-            local char = player.Character
+            local char = LP.Character 
             if char then
                 -- Cari model di workspace yang namanya mengandung nama lu
                 for _, model in pairs(workspace:GetChildren()) do
@@ -381,7 +381,7 @@ end)
 
 -- [[ 3. MAIN FUNCTIONS ]] --
 local function getVehicle()
-    local char = player.Character
+    local char = LP.Character 
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     return (hum and hum.SeatPart and (hum.SeatPart:FindFirstAncestorOfClass("Model") or hum.SeatPart.Parent)) or nil
 end
