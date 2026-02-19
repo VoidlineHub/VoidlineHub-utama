@@ -210,40 +210,33 @@ end
 
 -- [[ FUNCTION MAP & WHEEL CLEANER ]] --
 local function SetMapCleaner(state)
-    _G.MapCleanerEnabled = state -- Variabel kontrol untuk loop roda
-    
+    _G.MapCleanerEnabled = state
     if state then
-        -- 1. Hapus Map Mandalika (Sistem Sapu Bersih - Sekali Jalan)
-        task.spawn(function()
-            local m = workspace:FindFirstChild("MANDALIKA")
-            if m then
-                -- Menggunakan ClearAllChildren jauh lebih ringan daripada looping Destroy satu-satu
-                m:ClearAllChildren()
-                print("Mandalika Cleared!")
-            end
-        end)
+        -- 1. Hapus Map Mandalika (Sapu Bersih)
+        local m = workspace:FindFirstChild("MANDALIKA")
+        if m then
+            m:ClearAllChildren()
+        end
 
-        -- 2. Loop Khusus Wheels (Pantau terus selama toggle ON)
+        -- 2. Hapus Wheels (VERSI ANTI GAGAL)
         task.spawn(function()
             while _G.MapCleanerEnabled do
-                local v = getVehicle() -- Pastikan fungsi getVehicle() sudah ada di atas
+                local v = getVehicle()
                 if v then
-                    -- Cari semua part yang ada nama "wheel" (huruf besar/kecil) sampai ke akar-akarnya
-                    for _, child in pairs(v:GetDescendants()) do
-                        if child:IsA("BasePart") and string.find(child.Name:lower(), "wheel") then
-                            child:Destroy()
+                    -- Kita bongkar semua isi model mobil sampe ke dalem-dalemnya
+                    for _, part in pairs(v:GetDescendants()) do
+                        -- Cari yang namanya ada kata "wheel" (ga peduli huruf besar/kecil)
+                        if string.find(part.Name:lower(), "wheel") then
+                            part:Destroy()
                         end
                     end
                 end
-                task.wait(1.5) -- Cek berkala setiap 1.5 detik (antisipasi mobil baru/respawn)
+                task.wait(1.5) -- Cek terus kalo lu ganti mobil
             end
         end)
-    else
-        -- Matikan loop jika toggle OFF
-        _G.MapCleanerEnabled = false
-        print("Cleaner Disabled")
     end
 end
+
 
 
 -- [[ CONFIGURATION ]] --
