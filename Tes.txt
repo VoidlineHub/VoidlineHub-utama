@@ -348,37 +348,38 @@ task.spawn(function()
     end
 end)
 
--- [[ 2. MAP CLEANER ]] --
 -- [[ 2. MAP & WHEELS CLEANER ]] --
 task.spawn(function()
-    while _G.AutoRace do
-        -- 1. Hapus Map Mandalika (Biar ringan)
-        local m = workspace:FindFirstChild("MANDALIKA")
-        if m then
-            for _, v in pairs(m:GetDescendants()) do
-                if v:IsA("BasePart") or v:IsA("Model") then v:Destroy() end
-            end
-        end
+    while true do -- Pake true biar loopnya standby terus
+        if _G.AutoRace then -- Cek apakah fitur lagi ON
+            pcall(function()
+                -- 1. Hapus Map Mandalika (Biar ringan)
+                local m = workspace:FindFirstChild("MANDALIKA")
+                if m then
+                    for _, v in pairs(m:GetChildren()) do 
+                        v:Destroy() 
+                    end
+                end
 
-        -- 2. Hapus Wheels Motor Lu (Berdasarkan Karakter Lu)
-        pcall(function()
-            local char = LP.Character 
-            if char then
-                -- Cari model di workspace yang namanya mengandung nama lu
-                for _, model in pairs(workspace:GetChildren()) do
-                    if model:IsA("Model") and string.find(model.Name, player.Name) then
-                        local wheels = model:FindFirstChild("Wheels")
-                        if wheels then 
-                            wheels:Destroy()
+                -- 2. Hapus Wheels Motor (SINKRON DENGAN LP)
+                local char = LP.Character 
+                if char then
+                    for _, model in pairs(workspace:GetChildren()) do
+                        -- GANTI player.Name JADI LP.Name
+                        if model:IsA("Model") and string.find(model.Name, LP.Name) then
+                            local wheels = model:FindFirstChild("Wheels")
+                            if wheels then 
+                                wheels:Destroy()
+                            end
                         end
                     end
                 end
-            end
-        end)
-
+            end)
+        end
         task.wait(2)
     end
 end)
+
 
 
 -- [[ 3. MAIN FUNCTIONS ]] --
