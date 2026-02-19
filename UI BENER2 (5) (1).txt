@@ -281,7 +281,7 @@ end
 Noh
 
 local function StartRoute()
-    local motor = getVehicle()
+    local motor = GetVehicle()
     local char = LP.Character
     if not motor or not char then return end
     local primary = motor.PrimaryPart or motor:FindFirstChildOfClass("BasePart")
