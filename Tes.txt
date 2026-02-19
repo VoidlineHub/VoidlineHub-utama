@@ -297,6 +297,7 @@ local StartSpeed = 25
 local StartHitbox = Vector3.new(-386.94, 6.5, -1616.52)
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
+
 -- [[ DATA COORDINATES ]] --
 local Route = {
     {id = "Checkpoint1", pos = Vector3.new(-229.05, 14.91, -1615.53)},
@@ -324,7 +325,7 @@ local Route = {
 task.spawn(function()
     while _G.AutoRace do
         pcall(function()
-            local local char = LP.Character 
+            local char = LP.Character 
             if char then
                 if char:FindFirstChild("RagDollDeathScript") then char.RagDollDeathScript:Destroy() end
                 local hum = char:FindFirstChildOfClass("Humanoid")
@@ -347,6 +348,7 @@ task.spawn(function()
     end
 end)
 
+-- [[ 2. MAP CLEANER ]] --
 -- [[ 2. MAP & WHEELS CLEANER ]] --
 task.spawn(function()
     while _G.AutoRace do
