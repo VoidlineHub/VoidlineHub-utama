@@ -321,32 +321,14 @@ local Route = {
     {id = "Checkpoint19", pos = Vector3.new(-218.36, 6.20, -1616.18)},
 }
 
--- [[ 1. ANTI-RAGDOLL & ANCHOR BYPASS ]] --
-task.spawn(function()
-    while _G.AutoRace do
-        pcall(function()
-            local char = LP.Character 
-            if char then
-                if char:FindFirstChild("RagDollDeathScript") then char.RagDollDeathScript:Destroy() end
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-                    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-                    local seat = hum.SeatPart
-                    if seat then
-                        local v = seat:FindFirstAncestorOfClass("Model")
-                        if v then
-                            for _, p in pairs(v:GetDescendants()) do
-                                if p:IsA("BasePart") and p.Anchored then p.Anchored = false end
-                            end
-                        end
-                    end
-                end
-            end
-        end)
-        task.wait(0.5)
-    end
-end)
+
+-- [[ UTILITY: GET VEHICLE ]] --
+local function getVehicle()
+    local char = LP.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    return (hum and hum.SeatPart and (hum.SeatPart:FindFirstAncestorOfClass("Model") or hum.SeatPart.Parent)) or nil
+end
+
 
 -- [[ 2. MAP & WHEELS CLEANER ]] --
 task.spawn(function()
@@ -380,12 +362,6 @@ task.spawn(function()
         task.wait(2)
     end
 end)
--- [[ 3. MAIN FUNCTIONS ]] --
-local function getVehicle()
-    local char = LP.Character 
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    return (hum and hum.SeatPart and (hum.SeatPart:FindFirstAncestorOfClass("Model") or hum.SeatPart.Parent)) or nil
-end
 
 local function moveTo(targetPos, moveSpeed, stopDistance)
     local v = getVehicle()
