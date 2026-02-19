@@ -21,7 +21,7 @@ local LP = Players.LocalPlayer
 _G.AutoFarm = false
 _G.AntiAFK = true 
 _G.HideNameEnabled = false
-_G.AutoRace
+_G.AutoRace =false
 _G.HideCharEnabled = false
 _G.WebhookEnabled = false
 _G.WebhookURL = "" 
