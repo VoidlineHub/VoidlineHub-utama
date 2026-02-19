@@ -330,32 +330,37 @@ local function getVehicle()
 end
 
 
--- [[ 2. MAP & WHEELS CLEANER ]] --
+-- [[ 2. MAP & WHEELS CLEANER - VERSI ANTI RESE ]] --
 task.spawn(function()
     while true do
         if _G.AutoRace then
             pcall(function()
-                -- 1. Anti-Ragdoll
-                local char = LP.Character
-                if char then
-                    if char:FindFirstChild("RagDollDeathScript") then char.RagDollDeathScript:Destroy() end
-                    local hum = char:FindFirstChildOfClass("Humanoid")
-                    if hum then
-                        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-                        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-                    end
-                end
-
-                -- 2. Map Mandalika Cleaner (Hanya kalau foldernya ada)
+                -- 1. Hapus Map Mandalika (Sistem Sapu Bersih)
                 local m = workspace:FindFirstChild("MANDALIKA")
                 if m then
-                    for _, v in pairs(m:GetChildren()) do v:Destroy() end
+                    m:ClearAllChildren() -- Jauh lebih kenceng & pasti ilang
                 end
 
-                -- 3. Wheel Cleaner (Biar enteng pas jalan)
+                -- 2. Wheel Cleaner (Cari sampe ketemu)
                 local v = getVehicle()
-                if v and v:FindFirstChild("Wheels") then
-                    v.Wheels:Destroy()
+                if v then
+                    -- Kita cari semua yang namanya mengandung "wheel" di dalem mobil lu
+                    for _, child in pairs(v:GetDescendants()) do
+                        if string.find(child.Name:lower(), "wheel") then
+                            child:Destroy()
+                        end
+                    end
+                end
+                
+                -- 3. Tambahan: Kalo wheels masih ada, cari berdasarkan nama lu
+                for _, model in pairs(workspace:GetChildren()) do
+                    if model:IsA("Model") and string.find(model.Name, LP.Name) then
+                        for _, p in pairs(model:GetDescendants()) do
+                            if string.find(p.Name:lower(), "wheel") then
+                                p:Destroy()
+                            end
+                        end
+                    end
                 end
             end)
         end
