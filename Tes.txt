@@ -295,6 +295,7 @@ local Speed = 210
 local Height = 1.5
 local StartSpeed = 25 
 local StartHitbox = Vector3.new(-386.94, 6.5, -1616.52)
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 -- [[ DATA COORDINATES ]] --
 local Route = {
