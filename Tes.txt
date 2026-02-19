@@ -351,7 +351,7 @@ end)
 -- [[ 2. MAP & WHEELS CLEANER ]] --
 task.spawn(function()
     while true do
-        if _G.AutoFarm then
+        if _G.AutoRace then
             pcall(function()
                 -- 1. Anti-Ragdoll
                 local char = LP.Character
@@ -380,7 +380,6 @@ task.spawn(function()
         task.wait(2)
     end
 end)
-
 -- [[ 3. MAIN FUNCTIONS ]] --
 local function getVehicle()
     local char = LP.Character 
