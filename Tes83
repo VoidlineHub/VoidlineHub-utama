@@ -97,14 +97,19 @@ local function FormatTime(s)
 end
 
 
-alih-alih tick() biar gak beda detiknya
-    local runtimeSec = FarmTime or 0 
-    local balanceVal = (MoneyValue and MoneyValue.Value) or 0
-    
-    local payload = {
-        username = "VoidlineHub ⚡",
-        embeds = {}
-    }
+variabel runtimeSec:
+local function SendWebhook(isTest, isDisconnect, isManualStop, isRoutine)
+    local targetURL = _G.WebhookURL
+    if not targetURL or targetURL == "" or not string.find(targetURL, "discord.com") then return end
+
+
+local runtimeSec = FarmTime or 0 -- SINKRON: Ambil data dari loop automation
+local balanceVal = (MoneyValue and MoneyValue.Value) or 0
+
+local payload = {
+    username = "VoidlineHub ⚡",
+    embeds = {}
+}
 
     if isTest or isDisconnect then
         table.insert(payload.embeds, {
