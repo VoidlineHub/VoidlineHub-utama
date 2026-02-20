@@ -573,6 +573,35 @@ local AutoFarmTab = Window:Tab({
 })
 
 
+AutoFarmTab:Section({ Title = "Bandung Farm" })
+local BandungToggle = AutoFarmTab:Toggle({
+    Title = "Auto Farm Bandung",
+    Callback = function(v)
+        _G.AutoFarmBandung = v -- Simpan status ke variabel Global buat Webhook
+        
+        if v then
+            local motor = LP.Character 
+                and LP.Character:FindFirstChild("Humanoid")
+                and LP.Character.Humanoid.SeatPart
+
+            if not motor then
+                WindUI:Notify({
+                    Title = "Error",
+                    Content = "sit in the vehicle first!",
+                    Duration = 3
+                })
+                _G.AutoFarmBandung = false -- Reset variabel global
+                BandungToggle:Set(false)
+                return
+            end
+
+            SetBlackScreen(true)
+            StartRoute()
+        else
+            StopRoute()
+        end
+    end
+})
 
 -- =========== stats ========== --
 
