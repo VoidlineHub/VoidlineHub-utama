@@ -641,19 +641,17 @@ task.spawn(function()
             LastMoneyValue = currentVal
         end
 
-        -- 3. SMART RUNNING TIME (Hanya pas Autofarm ON)
+-- 3. SMART RUNNING TIME (Hanya pas Autofarm ON)
         if _G.AutoFarmBandung then
-            FarmTime = FarmTime + 1
             local h = math.floor(FarmTime/3600)
             local m = math.floor((FarmTime%3600)/60)
             local s = FarmTime%60
             GameTime:SetDesc(string.format("%02d:%02d:%02d", h, m, s))
         end
         
-        task.wait(1)
+        task.wait(0.5)
     end
 end)
-
 
 
 
