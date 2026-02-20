@@ -31,10 +31,10 @@ _G.Increment = 50
 _G.Interval = 0.5 
 _G.BoostEnabled = false
 _G.StraightBoost = false
+local FarmTime = 0           
 local lastBoostTime = 0
-local FarmTime = 0
 local LastMoneyValue = 0
-local fpsTick = 0
+local lastUserSent = tick()
 
 -- ==========================================
 -- 3. HELPER FUNCTIONS (URUTAN TERBAIK)
@@ -339,51 +339,54 @@ end
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED & MERGED)
 -- ==========================================
 
+-- [[ 1. MAIN AUTOMATION LOOP (FIXED TIMER & ANTI-STACK) ]] --
+_G.LoopID = tick() -- Proteksi: Memberi ID unik pada setiap sesi eksekusi
+local currentLoopID = _G.LoopID
+
 _G.DCSent = false 
 
 local function FinalExit()
-    -- Cek apakah notif disconnect sudah dikirim atau URL kosong
     if _G.DCSent or not _G.WebhookURL or _G.WebhookURL == "" then return end
     _G.DCSent = true
-    -- Kirim status Disconnect (isTest = false, isDisconnect = true)
     pcall(function() SendWebhook(false, true) end) 
 end
 
--- [[ 1. MAIN AUTOMATION LOOP (WEBHOOK) ]] --
 task.spawn(function()
     local lastUserSent = tick()
     
     while true do
-        task.wait(1)
-        if _G.DCSent then break end
+        task.wait(1) -- Jeda 1 detik murni
         
-        -- Cek apakah Webhook ON dan salah satu Farm lagi jalan
+        -- Berhenti jika player DC atau jika script di-execute ulang (ID berubah)
+        if _G.DCSent or _G.LoopID ~= currentLoopID then break end
+        
+        -- Logika pengecekan farming
         local isFarming = _G.AutoFarm or _G.AutofarmMobil or _G.AutoFarmBandung
         
-        if _G.WebhookEnabled and _G.WebhookURL ~= "" and isFarming then
-            
-            -- [[ TAMBAHAN: UPDATE FARM TIME ]] --
-            -- Biar detik di UI dan Webhook nambah terus barengan
+        if isFarming then
+            -- UPDATE FARM TIME (Cuma nambah 1 per detik)
             FarmTime = FarmTime + 1 
             
-            -- Kirim laporan setiap 50 detik
-            if (tick() - lastUserSent) >= 50 then
-                -- Panggil dengan 4 argumen: (isTest, isDC, isManual, isRoutine)
-                SendWebhook(false, false, false, true) 
-                lastUserSent = tick()
+            -- Laporan Webhook Berkala
+            if _G.WebhookEnabled and _G.WebhookURL ~= "" then
+                if (tick() - lastUserSent) >= 50 then
+                    -- Panggil dengan 4 argumen sesuai fungsi SendWebhook lu
+                    SendWebhook(false, false, false, true) 
+                    lastUserSent = tick()
+                end
             end
         else
-            -- Reset timer kalau lagi gak farming biar gak "numpuk" pas diaktifin
+            -- Reset patokan waktu agar saat farming ON, timer laporan mulai dari nol
             lastUserSent = tick() 
         end
     end
 end)
 
--- Detect kalo player keluar atau ganti server (Teleport)
+-- [[ DETEKSI KELUAR SERVER ]] --
 game.Players.PlayerRemoving:Connect(function(p) 
     if p == LP then FinalExit() end 
 end)
--- Support untuk beberapa executor yang punya event OnTeleport
+
 if LP and LP.OnTeleport then
     LP.OnTeleport:Connect(FinalExit)
 end
