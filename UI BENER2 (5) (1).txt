@@ -227,7 +227,11 @@ end
 -- ==========================================
 -- 6. AUTOFARM
 -- ==========================================
+_G.AutoFarmBandung = false
 local MaxSpeed = 300
+local DirectionForward = true 
+local RoadName = "PrivateHighway_BillzzHub"
+
 local targets = {
     [1] = Vector3.new(-2734.138, 82.916, -10328.666),
     [2] = Vector3.new(679.88, 113.83, -10349.24),
@@ -243,10 +247,6 @@ local targets = {
     [12] = Vector3.new(548.91, 107.44, -22433.84),
     [13] = Vector3.new(355.634, 213.801, -25856.560)
 }
-
-local AutoFarm = false
-local DirectionForward = true 
-local RoadName = "PrivateHighway_BillzzHub"
 
 -- [[ JALAN TOL GENERATOR ]] --
 local function CreateHighway()
@@ -278,7 +278,6 @@ local function GetVehicle()
     return nil
 end
 
-Noh
 
 local function StartRoute()
     local motor = GetVehicle()
@@ -291,10 +290,10 @@ local function StartRoute()
         motor.Wheels:Destroy() 
     end
     
-    AutoFarm = true
+    _G.AutoFarmBandung = true
     CreateHighway() -- Pasang jalan pas start
 
-    while AutoFarm do
+    while _G.AutoFarmBandung do
         local currentPath = {}
         if DirectionForward then
             for i = 1, #targets do table.insert(currentPath, targets[i]) end
@@ -303,11 +302,11 @@ local function StartRoute()
         end
 
         for i, targetPos in ipairs(currentPath) do
-            if not AutoFarm then break end
+            if not _G.AutoFarmBandung then break end
             
             local distance = (primary.Position - targetPos).Magnitude
             
-            while distance > 6 and AutoFarm do
+            while distance > 6 and _G.AutoFarmBandung do
                 RunService.Heartbeat:Wait()
                 distance = (primary.Position - targetPos).Magnitude
                 
@@ -353,7 +352,7 @@ local function StartRoute()
         end
 
         -- [[ STOPPER & U-TURN ]] --
-        if AutoFarm then
+        if _G.AutoFarmBandung then
             primary.AssemblyLinearVelocity = Vector3.zero
             task.wait(1.5)
             
@@ -368,11 +367,10 @@ local function StartRoute()
 end
 
 local function StopRoute()
-    AutoFarm = false
+    _G.AutoFarmBandung = false
     RemoveHighway()
     SetBlackScreen(false) -- ← tambahin ini biar sinkron sama toggle
 end
-
 -- ==========================================
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED)
 -- ==========================================
@@ -714,19 +712,19 @@ local BandungToggle = AutoFarmTab:Toggle({
 
 
 
-AutoFarmTab:Section({ Title = "courier farm" })
+AutoFarmTab:Section({ Title = "autorace" })
 
 local CourierToggle = AutoFarmTab:Toggle({
-    Title = "Auto Farm courier",
+    Title = "AutoRace Mandalika",
     Locked = true,
     LockedTitle = "still in development",
     Callback = function(v) end
 })
 
-AutoFarmTab:Section({ Title = "barista farm" })
+AutoFarmTab:Section({ Title = "Autofarm" })
 
 local BaristaToggle = AutoFarmTab:Toggle({
-    Title = "Auto Farm Barista",
+    Title = "Auto Farm v1",
     Locked = true,
     LockedTitle = "Soon",
     Callback = function(v) end
