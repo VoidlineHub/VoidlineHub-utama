@@ -58,8 +58,10 @@ end
 -- ==========================================
 -- 2. Webhook
 -- ==========================================
-local StartTime = tick() 
-local TotalEarned = 0
+local StartTime = tick()      -- Waktu sejak script di-inject (buat backup)
+local FarmTime = 0           -- Variabel UTAMA buat timer di UI & Webhook
+_G.TotalEarnedFix = 0        -- Variabel UTAMA buat duit di UI & Webhook
+
 local DirectionForward = true 
 local RoadName = "PrivateHighway_BillzzHub"
 local BlackScreenGui = nil
@@ -70,7 +72,6 @@ local MoneyValue = PlayerData and PlayerData:WaitForChild("RPValue", 10)
 
 -- ==========================================
 -- 3. WEBHOOK SYSTEM
--- ==========================================
 -- ==========================================
 local lastMoney = (MoneyValue and MoneyValue.Value) or 0
 if not _G.TotalEarnedFix then _G.TotalEarnedFix = 0 end 
@@ -96,13 +97,8 @@ local function FormatTime(s)
 end
 
 
-local function SendWebhook(isTest, isDisconnect)
-    local targetURL = _G.WebhookURL
-    if not targetURL or targetURL == "" or not string.find(targetURL, "discord.com") then 
-        return 
-    end
-
-    local runtimeSec = tick() - StartTime 
+alih-alih tick() biar gak beda detiknya
+    local runtimeSec = FarmTime or 0 
     local balanceVal = (MoneyValue and MoneyValue.Value) or 0
     
     local payload = {
