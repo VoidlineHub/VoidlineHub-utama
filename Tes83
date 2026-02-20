@@ -1,0 +1,1074 @@
+-- [[ WINDUI LOAD ]] --
+local WindUI
+local success, result = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+end)
+if success then WindUI = result else return end
+
+-- [[ 1. SERVICES ]] --
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local CoreGui = game:GetService("CoreGui")
+local VirtualUser = game:GetService("VirtualUser")
+local LP = Players.LocalPlayer
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+-- ==========================================
+-- 2. GLOBAL VARIABLES & CONFIG
+-- ==========================================
+_G.AutoFarmBandung = false
+_G.AntiAFK = true 
+_G.HideNameEnabled = false
+_G.HideCharEnabled = false
+_G.WebhookEnabled = false
+_G.WebhookURL = "" 
+_G.TotalEarnedFix = 0
+_G.Status = _G.Status or { Courier = "Waiting", Office = "Waiting", Pause = "Disabled" }
+_G.Speed = 300    
+_G.Increment = 50       
+_G.Interval = 0.5 
+_G.BoostEnabled = false
+_G.StraightBoost = false
+local lastBoostTime = 0
+local FarmTime = 0
+local LastMoneyValue = 0
+local fpsTick = 0
+
+-- ==========================================
+-- 3. HELPER FUNCTIONS (URUTAN TERBAIK)
+-- ==========================================
+
+-- 1. Ambil Kendaraan (Paling krusial, ditaruh paling atas)
+local function getVehicle()
+    local char = LP.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    return (hum and hum.SeatPart and (hum.SeatPart:FindFirstAncestorOfClass("Model") or hum.SeatPart.Parent)) or nil
+end
+
+-- 2. Format Mata Uang
+local function FormatRupiah(num)
+    local s = tostring(math.floor(num or 0))
+    local result = s:reverse():gsub("(%d%d%d)", "%1."):reverse()
+    return "Rp " .. (result:sub(1,1) == "." and result:sub(2) or result)
+end
+
+-- 3. Format Waktu (Versi yang sudah lu perbaiki tadi)
+local function FormatTime(s)
+    local secondsTotal = math.max(0, s)
+    local hours = math.floor(secondsTotal / 3600)
+    local minutes = math.floor((secondsTotal % 3600) / 60)
+    local seconds = math.floor(secondsTotal % 60)
+    return string.format("%02dh %02dm %02ds", hours, minutes, seconds)
+end
+-- ==========================================
+-- 2. Webhook
+-- ==========================================
+local StartTime = tick() 
+local TotalEarned = 0
+local DirectionForward = true 
+local RoadName = "PrivateHighway_BillzzHub"
+local BlackScreenGui = nil
+
+-- Cari data uang (Sesuaikan path-nya jika perlu)
+local PlayerData = LP:WaitForChild("PlayerData", 10)
+local MoneyValue = PlayerData and PlayerData:WaitForChild("RPValue", 10)
+
+-- ==========================================
+-- 3. WEBHOOK SYSTEM
+-- ==========================================
+local lastMoney = (MoneyValue and MoneyValue.Value) or 0
+if not _G.TotalEarnedFix then _G.TotalEarnedFix = 0 end 
+
+if MoneyValue then
+    MoneyValue.Changed:Connect(function(newVal)
+        if newVal > lastMoney then
+            local gain = newVal - lastMoney
+            _G.TotalEarnedFix = _G.TotalEarnedFix + gain
+        end
+        lastMoney = newVal
+    end)
+end
+
+-- [[ FORMAT TIME FIX ]] --
+local function FormatTime(s)
+    -- Pastikan detik tidak minus
+    local secondsTotal = math.max(0, s)
+    local hours = math.floor(secondsTotal / 3600)
+    local minutes = math.floor((secondsTotal % 3600) / 60)
+    local seconds = math.floor(secondsTotal % 60)
+    return string.format("%02dh %02dm %02ds", hours, minutes, seconds)
+end
+
+
+local function SendWebhook(isTest, isDisconnect)
+    local targetURL = _G.WebhookURL
+    if not targetURL or targetURL == "" or not string.find(targetURL, "discord.com") then 
+        return 
+    end
+
+    local runtimeSec = tick() - StartTime 
+    local balanceVal = (MoneyValue and MoneyValue.Value) or 0
+    
+    local payload = {
+        username = "VoidlineHub ⚡",
+        embeds = {}
+    }
+
+    if isTest or isDisconnect then
+        table.insert(payload.embeds, {
+            title = isTest and "✅ WEBHOOK READY!" or "⚠️ SESSION ENDED!",
+            description = isTest and "Webhook berhasil terhubung dengan **VoidlineHub** ⚡" or "Player telah keluar dari game/Server Disconnect.",
+            color = isTest and 0x00FF88 or 0xFF0044,
+            footer = { text = "Voidline System" },
+            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        })
+    else
+        -- Update jobName biar sinkron sama fitur baru lu
+        local jobName = "Idle"
+        if _G.AutoFarm then jobName = "Mandalika Race"
+        elseif _G.AutofarmMobil then jobName = "Shuttle Surakarta" -- Sesuaikan nama jobnya
+        elseif _G.AutoFarmBandung then jobName = "Bandung Job"
+        end
+
+        table.insert(payload.embeds, {
+            title = "📌 Farming Status Report",
+            color = 0x1F8B4C,
+            fields = {
+                { name = "🧰 Active Job", value = jobName, inline = true },
+                { name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true },
+                { name = "💰 Earned", value = FormatRupiah(_G.TotalEarnedFix or 0), inline = true },
+                { name = "💵 Balance", value = FormatRupiah(balanceVal), inline = true },
+                { name = "📈 Est. Income", value = "Rp 30.000.000/Hr", inline = false }
+            },
+            footer = { text = "VoidlineHub System" },
+            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        })
+    end
+
+    local requestFunc = syn and syn.request or http_request or request or (http and http.request)
+    if requestFunc then
+        pcall(function()
+            requestFunc({
+                Url = targetURL,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HttpService:JSONEncode(payload)
+            })
+        end)
+    end
+end
+
+
+
+-- ==========================================
+-- 4. BLACK SCREEN SYSTEM
+-- ==========================================
+local BlackScreenGui = nil
+local function SetBlackScreen(state)
+    if state then
+        if not BlackScreenGui then
+            BlackScreenGui = Instance.new("ScreenGui", CoreGui)
+            BlackScreenGui.Name = "BilzzBlackScreen"
+            BlackScreenGui.IgnoreGuiInset = true
+            BlackScreenGui.DisplayOrder = -1
+
+            local Frame = Instance.new("Frame", BlackScreenGui)
+            Frame.Size = UDim2.new(1, 0, 1, 0)
+            Frame.BackgroundColor3 = Color3.new(0, 0, 0)
+            Frame.BorderSizePixel = 0
+
+            local Label = Instance.new("TextLabel", Frame)
+            Label.Size = UDim2.new(1, 0, 1, 0)
+            Label.BackgroundTransparency = 1
+            Label.Text = "AUTOFARM ON\nVoidLineHub"
+            Label.TextColor3 = Color3.new(1, 1, 1) -- Tetap Putih
+            Label.Font = Enum.Font.GothamBold
+            Label.TextScaled = false
+            Label.TextSize = 22
+
+            -- Efek Kedap-Kedip (Blink)
+            task.spawn(function()
+                while BlackScreenGui do
+                    -- Teks menghilang perlahan (Fade out)
+                    local tweenOut = TweenService:Create(Label, TweenInfo.new(0.8), {TextTransparency = 1})
+                    tweenOut:Play()
+                    tweenOut.Completed:Wait()
+                    
+                    if not BlackScreenGui then break end
+                    
+                    -- Teks muncul lagi (Fade in)
+                    local tweenIn = TweenService:Create(Label, TweenInfo.new(0.8), {TextTransparency = 0})
+                    tweenIn:Play()
+                    tweenIn.Completed:Wait()
+                    
+                    task.wait(0.2) -- Jeda sebentar sebelum kedip lagi
+                end
+            end)
+        end
+    else
+        if BlackScreenGui then
+            BlackScreenGui:Destroy()
+            BlackScreenGui = nil
+        end
+    end
+end
+
+-- ==========================================
+-- 6. AUTOFARM
+-- ==========================================
+_G.AutoFarmBandung = false
+local MaxSpeed = 300
+local DirectionForward = true 
+local RoadName = "PrivateHighway_BillzzHub"
+
+local targets = {
+    [1] = Vector3.new(-2734.138, 82.916, -10328.666),
+    [2] = Vector3.new(679.88, 113.83, -10349.24),
+    [3] = Vector3.new(1151.91, 139.1, -10501.67),
+    [4] = Vector3.new(1582.02, 163.23, -10781.39),
+    [5] = Vector3.new(1862.21, 180.58, -11171.73),
+    [6] = Vector3.new(2005.09, 192.32, -11741.17),
+    [7] = Vector3.new(1988.58, 82.52, -13713.74),
+    [8] = Vector3.new(1841.28, 113.36, -16158.04),
+    [9] = Vector3.new(1671.27, 112.27, -17283.7),
+    [10] = Vector3.new(1084.64, 86.2, -19560.86),
+    [11] = Vector3.new(619.49, 81.97, -21836.02),
+    [12] = Vector3.new(548.91, 107.44, -22433.84),
+    [13] = Vector3.new(355.634, 213.801, -25856.560)
+}
+
+-- [[ JALAN TOL GENERATOR ]] --
+local function CreateHighway()
+    local startPos = targets[1]
+    local endPos = targets[13]
+    local distance = (startPos - endPos).Magnitude
+    
+    local Road = Instance.new("Part")
+    Road.Name = RoadName
+    Road.Size = Vector3.new(50, 1, distance + 100) -- Lebar 50, panjang ngikutin rute
+    Road.CFrame = CFrame.lookAt(startPos, endPos) * CFrame.new(0, -3.5, -distance/2)
+    Road.Anchored = true
+    Road.Transparency = 0.7 -- Kasih transparan dikit biar kelihatan jalannya
+    Road.Color = Color3.fromRGB(0, 255, 255) -- Warna neon biar keren
+    Road.Material = Enum.Material.Neon
+    Road.Parent = workspace
+end
+
+local function RemoveHighway()
+    local road = workspace:FindFirstChild(RoadName)
+    if road then road:Destroy() end
+end
+
+local function GetVehicle()
+    local char = LP.Character
+    if char and char:FindFirstChild("Humanoid") and char.Humanoid.Sit then
+        return char.Humanoid.SeatPart and char.Humanoid.SeatPart.Parent
+    end
+    return nil
+end
+
+
+local function StartRoute()
+    local motor = GetVehicle()
+    local char = LP.Character
+    if not motor or not char then return end
+    local primary = motor.PrimaryPart or motor:FindFirstChildOfClass("BasePart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+
+    _G.AutoFarmBandung = true
+    CreateHighway() -- Pasang jalan pas start
+
+    while _G.AutoFarmBandung do
+        local currentPath = {}
+        if DirectionForward then
+            for i = 1, #targets do table.insert(currentPath, targets[i]) end
+        else
+            for i = #targets, 1, -1 do table.insert(currentPath, targets[i]) end
+        end
+
+        for i, targetPos in ipairs(currentPath) do
+            if not _G.AutoFarmBandung then break end
+            
+            local distance = (primary.Position - targetPos).Magnitude
+            
+            while distance > 6 and _G.AutoFarmBandung do
+                RunService.Heartbeat:Wait()
+                distance = (primary.Position - targetPos).Magnitude
+                
+                -- [[ ANTI RAGDOLL ]] --
+                hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                
+                local currentSpeed = MaxSpeed
+                
+                -- [[ LOGIC PENGEREMAN ]] --
+                if i == #currentPath then
+                    if distance < 180 then
+                        currentSpeed = math.clamp((distance / 180) * MaxSpeed, 5, MaxSpeed)
+                    end
+                end
+
+                -- Movement
+                if currentSpeed > 0 then
+                    primary.AssemblyLinearVelocity = (targetPos - primary.Position).Unit * currentSpeed
+                    primary.CFrame = CFrame.lookAt(primary.Position, targetPos)
+                else
+                    primary.AssemblyLinearVelocity = Vector3.zero
+                end
+                
+                primary.AssemblyAngularVelocity = Vector3.zero
+
+                -- [[ SMART NOCLIP ]] --
+                -- Tembus semua kecuali Jalan Tol kita
+                for _, v in pairs(char:GetDescendants()) do 
+                    if v:IsA("BasePart") then v.CanCollide = false end 
+                end
+                for _, v in pairs(motor:GetDescendants()) do 
+                    if v:IsA("BasePart") then 
+                        -- Biar PrimaryPart/Ban tetep napak di Jalan Tol
+                        if v.Name == primary.Name then
+                            v.CanCollide = true
+                        else
+                            v.CanCollide = false 
+                        end
+                    end 
+                end
+            end
+        end
+
+        -- [[ STOPPER & U-TURN ]] --
+        if _G.AutoFarmBandung then
+            primary.AssemblyLinearVelocity = Vector3.zero
+            task.wait(1.5)
+            
+            -- U-Turn Smooth
+            local targetRotation = primary.CFrame * CFrame.Angles(0, math.rad(180), 0)
+            TweenService:Create(primary, TweenInfo.new(1.2), {CFrame = targetRotation}):Play()
+            task.wait(1.3)
+            
+            DirectionForward = not DirectionForward
+        end
+    end
+end
+
+local function StopRoute()
+    _G.AutoFarmBandung = false
+    RemoveHighway()
+    SetBlackScreen(false) -- ← tambahin ini biar sinkron sama toggle
+end
+
+
+-- ==========================================
+-- 6. AUTOMATION LOOPS & EVENTS (FIXED & MERGED)
+-- ==========================================
+_G.DCSent = false 
+
+local function FinalExit()
+    -- Cek apakah notif disconnect sudah dikirim atau URL kosong
+    if _G.DCSent or not _G.WebhookURL or _G.WebhookURL == "" then return end
+    _G.DCSent = true
+    -- Kirim status Disconnect (isTest = false, isDisconnect = true)
+    pcall(function() SendWebhook(false, true) end) 
+end
+
+-- [[ 1. MAIN AUTOMATION LOOP (WEBHOOK) ]] --
+task.spawn(function()
+    local lastUserSent = tick()
+    
+    while true do
+        task.wait(1)
+        if _G.DCSent then break end
+        
+        -- Cek apakah Webhook ON dan salah satu Farm lagi jalan
+        local isFarming = _G.AutoFarm or _G.AutofarmMobil or _G.AutoFarmBandung
+        
+        if _G.WebhookEnabled and _G.WebhookURL ~= "" and isFarming then
+            -- Kirim laporan setiap 50 detik
+            if (tick() - lastUserSent) >= 50 then
+                SendWebhook(false, false) -- Laporan rutin
+                lastUserSent = tick()
+            end
+        else
+            -- Reset timer kalau lagi gak farming biar gak "numpuk" pas diaktifin
+            lastUserSent = tick() 
+        end
+    end
+end)
+
+-- Detect kalo player keluar atau ganti server (Teleport)
+game.Players.PlayerRemoving:Connect(function(p) 
+    if p == LP then FinalExit() end 
+end)
+-- Support untuk beberapa executor yang punya event OnTeleport
+if LP and LP.OnTeleport then
+    LP.OnTeleport:Connect(FinalExit)
+end
+
+-- [[ 2. ANTI-AFK SYSTEM ]] --
+task.spawn(function()
+    while task.wait(15) do 
+        if _G.AntiAFK then
+            pcall(function() 
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton2(Vector2.new(0,0)) 
+            end)
+        end
+    end
+end)
+
+-- [[ 3. MULTI-LOGIC (STEALTH & VEHICLE BOOST) ]] --
+   -- --- A. Stealth Mode Logic ---
+    -- 1. TARUH DI LUAR (DI ATAS HEARTBEAT)
+local lastBoostTime = 0 
+
+-- 2. BARU MASUK KE HEARTBEAT
+RunService.Heartbeat:Connect(function()
+    local char = LP.Character
+    if not char then return end
+
+    if _G.HideNameEnabled then
+        local head = char:FindFirstChild("Head")
+        if head then 
+            for _, v in pairs(head:GetChildren()) do 
+                if v:IsA("BillboardGui") then v.Enabled = false end 
+            end 
+        end
+    end
+    
+    if _G.HideCharEnabled then
+        for _, v in pairs(char:GetDescendants()) do 
+            if v:IsA("BasePart") or v:IsA("Decal") then v.Transparency = 1 end 
+        end
+    end
+
+    -- --- B. Vehicle Boost Logic ---
+
+    -- (Logika Stealth kamu tetap di sini)
+
+    -- 3. LOGIKA BOOST YANG SUDAH DI-FIX
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local seat = hum and hum.SeatPart
+    
+    if _G.BoostEnabled and seat then
+        local vehicle = seat:FindFirstAncestorOfClass("Model")
+        local root = (vehicle and vehicle.qPrimaryPart) or seat -- Pakai seat kalau gak ada PrimaryPart
+        
+        if root then
+            -- Cek interval
+            if tick() - lastBoostTime >= (_G.Interval or 0.5) then
+                local currentVel = root.AssemblyLinearVelocity
+                local boostDirection = -root.CFrame.LookVector
+
+                if _G.StraightBoost then
+                    boostDirection = Vector3.new(boostDirection.X, 0, boostDirection.Z).Unit
+                end
+                
+                -- PERBAIKAN: Gunakan 500 sebagai default limit, jangan 200 (karena 200 terlalu pelan)
+                if currentVel.Magnitude < (_G.Speed or 300) then
+                    root.AssemblyLinearVelocity = currentVel + (boostDirection * (_G.Increment or 50))
+                    lastBoostTime = tick() -- Sekarang ini bakal kesimpan karena variabelnya ada di LUAR
+                end
+            end
+        end
+    end
+end)
+
+
+-- ==========================================
+-- 7. UI INITIALIZATION (WINDUI)
+-- ==========================================
+
+-- [[ 2. CREATE WINDOW ]] --
+local Window = WindUI:CreateWindow({
+    Title = "VoidlineHub | premium",
+    SubTitle = "v1.0",
+    Folder = "VoidlineData",
+    Icon = "rbxassetid://135354802260060",
+    NewElements = true,
+    Color = primaryColor,
+    HideSearchBar = false,
+    OpenButton = {
+        Title = "Voidline | premium",
+        Icon = "rbxassetid://135354802260060",
+        CornerRadius = UDim.new(1, 0),
+        StrokeThickness = 3,
+        Enabled = true,
+        Draggable = true,
+        OnlyMobile = false,
+        Color = ColorSequence.new(
+            Color3.fromRGB(48, 255, 106), 
+            Color3.fromRGB(231, 255, 47)
+        ),
+        BackgroundColor = secondaryColor,
+        TextColor = primaryColor,
+    },
+    Topbar = {
+        Height = 44,
+        ButtonsType = "Mac",
+        Color = secondaryColor
+    },
+    Size = UDim2.fromOffset(560, 350),
+    Transparent = true,
+    Resizable = true,
+    SideBarWidth = 200,
+})
+
+-- [[ 3. VERSION TAG ]] --
+Window:Tag({
+    Title = "v0.0.1",
+    Icon = "github",
+    Color = Color3.fromRGB(255, 251, 251),
+    Border = true,
+})
+
+-- ============ HOME TAB=========== --
+local HomeTab = Window:Tab({ Title = "Home", Icon = "solar:home-2-bold" })
+
+HomeTab:Paragraph({
+        Title = "UPDATE LOG",
+        Desc = "[+]New speedboost\n[+] autofarm buff",
+        Image = "rbxassetid://135354802260060",
+        ImageSize = 60,
+       Locked = false,
+        BackgroundColor = secondaryColor,
+        TextTransparency = 0
+    })
+
+    HomeTab:Divider()
+    HomeTab:Section({ Title = "Social Links" })
+    HomeTab:Button({
+        Title = "Copy Discord Invite",
+        Desc = "Click to copy invite link!",
+        Callback = function()
+            setclipboard("https://discord.gg/CZvnM7y2sM")
+            WindUI:Notify({
+                Title = "Copied!",
+                Content = "Discord invite copied to clipboard.",
+                Duration = 3
+            })
+        end
+    })
+
+    HomeTab:Button({
+        Title = "Follow on TikTok",
+        Desc = "Click to copy TikTok link!\nTikTok: @bilzzhub",
+        Callback = function()
+            setclipboard("bilzzhub")
+            WindUI:Notify({
+                Title = "Copied!",
+                Content = "TikTok link copied to clipboard.",
+                Duration = 3
+            })
+        end
+    })
+
+
+-- ============ AUTO FARM TAB =========== --
+local AutoFarmTab = Window:Tab({
+    Title = "Auto Farm",
+    Icon = "solar:cpu-bold",
+    Color = primaryColor
+})
+
+AutoFarmTab:Section({ Title = "autofarm"})
+AutoFarmTab:Toggle({
+    Title = "autofarm v1 ",
+    Desc = "This autofarm can be found in Mandalika and Surakarta ",
+    Callback = function(v)
+        _G.AutoFarm = v
+        
+        -- 1. Tutup layar biar makin enteng
+        SetBlackScreen(v)
+        
+        -- 2. Bersihkan map dan copot roda otomatis
+        SetMapCleaner(v)
+        
+        if v then
+            task.spawn(function()
+                while _G.AutoFarm do
+                    local vehicle = getVehicle()
+                    if vehicle then
+                        for _, point in ipairs(Route) do
+                            -- Cek lagi togglenya, kalo dimatiin langsung stop
+                            if not _G.AutoFarm then break end
+                            
+                            -- Proses terbang ke tiap koordinat
+                            flyTo(point.pos + Vector3.new(0, Height, 0), Speed, 10)
+                            task.wait(0.05)
+                        end
+                    else
+                        -- Nunggu 2 detik kalo player belum naik kendaraan
+                        task.wait(2)
+                    end
+                end
+            end)
+        else
+            -- Kalo dimatiin, hentikan pergerakan kendaraan biar gak meluncur terus
+            local vhc = getVehicle()
+            if vhc then
+                local root = vhc:FindFirstChild("DriveSeat") or vhc.PrimaryPart
+                if root then 
+                    root.AssemblyLinearVelocity = Vector3.new(0,0,0) 
+                    root.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                end
+            end
+        end
+    end
+})
+
+
+
+AutoFarmTab:Section({ Title = "autorace"})
+AutoFarmTab:Toggle({ 
+    Title = "Autorace mandalika",
+    Desc = "auto racing must be in Mandalika",
+    Callback = function(v)
+        _G.AutoRace = v
+        
+        -- 1. Tutup layar dulu (Visual Priority)
+        SetBlackScreen(v)
+        
+        -- 2. Lenyapkan Map Mandalika & Roda (Panggil fungsi sakti)
+        SetMapCleaner(v)
+        
+        if v then
+            task.spawn(function()
+                -- 3. Langsung gaskeun balapan
+                -- Pastikan fungsi startFarm() sudah didefinisikan di atas
+                startFarm() 
+            end)
+        else
+            -- Kalo dimatiin, stop velocity biar motor gak bablas ke angkasa
+            local vhc = getVehicle()
+            if vhc then
+                local root = vhc:FindFirstChild("DriveSeat") or vhc.PrimaryPart
+                if root then 
+                    root.AssemblyLinearVelocity = Vector3.new(0,0,0) 
+                    root.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                end
+            end
+        end
+    end
+})
+
+-- =========== stats ========== --
+
+local StatsTab = Window:Tab({
+
+        Title = "Stats",
+        Icon = "trending-up",
+        Color = primaryColor
+
+    })
+
+StatsTab:Section({ Title = "Autofarm info" })
+
+local CurrentMoney = StatsTab:Button({ Title = "Current Money", Desc = "Rp0", Icon = "banknote" })
+local TotalEarnedUI = StatsTab:Button({ Title = "Total Earned", Desc = "Rp0", Icon = "trending-up" })
+local GameTime = StatsTab:Button({ Title = "Farming Time", Desc = "00:00:00", Icon = "clock" })
+
+StatsTab:Section({ Title = "device info" })
+
+local FpsLabel = StatsTab:Button({ Title = "FPS", Desc = "0 FPS", Icon = "monitor" })
+local PingLabel = StatsTab:Button({ Title = "Ping", Desc = "0 ms", Icon = "signal" })
+local ExecutorUI = StatsTab:Button({ Title = "Executor", Desc = identifyexecutor() or "Unknown", Icon = "code" })
+
+local fpsTick = 0
+RunService.Heartbeat:Connect(function() fpsTick = fpsTick + 1 end)
+
+task.spawn(function()
+    local PlayerData = LP:WaitForChild("PlayerData", 10)
+    local MoneyValue = PlayerData and PlayerData:WaitForChild("RPValue", 10)
+    
+    if MoneyValue then LastMoneyValue = MoneyValue.Value end
+
+    while true do
+        -- 1. FPS & PING
+        local currentFps = fpsTick
+        fpsTick = 0
+        local ping = math.floor(LP:GetNetworkPing() * 1000)
+        
+        FpsLabel:SetDesc(currentFps .. " FPS")
+        PingLabel:SetDesc(ping .. " ms")
+
+        -- 2. MONEY & TOTAL EARNED
+        if MoneyValue then
+            local currentVal = MoneyValue.Value
+            CurrentMoney:SetDesc(FormatRupiah(currentVal))
+            
+            -- Hitung selisih duit (hanya jika bertambah)
+            if currentVal > LastMoneyValue then
+                _G.TotalEarnedFix = _G.TotalEarnedFix + (currentVal - LastMoneyValue)
+                TotalEarnedUI:SetDesc(FormatRupiah(_G.TotalEarnedFix))
+            end
+            LastMoneyValue = currentVal
+        end
+
+        -- 3. SMART RUNNING TIME (Hanya pas Autofarm ON)
+        if _G.AutoFarmBandung then
+            FarmTime = FarmTime + 1
+            local h = math.floor(FarmTime/3600)
+            local m = math.floor((FarmTime%3600)/60)
+            local s = FarmTime%60
+            GameTime:SetDesc(string.format("%02d:%02d:%02d", h, m, s))
+        end
+        
+        task.wait(1)
+    end
+end)
+
+
+
+
+    -- QUESTS TAB WITH LOCKED FEATURES
+    local QuestsTab = Window:Tab({
+        Title = "Quests",
+        Icon = "solar:file-text-bold",
+        Color = primaryColor
+    })
+   
+    QuestsTab:Section({ Title = "Quest Farm" })
+    local questToggle = QuestsTab:Toggle({
+        Title = "Auto Farm Quests",
+        Locked = true,
+        LockedTitle = "still in development",
+        Callback = function(v)
+            -- This won't execute because it's locked
+        end
+    })
+   
+    QuestsTab:Section({ Title = "Winter Quests" })
+    local winterToggle = QuestsTab:Toggle({
+        Title = "Auto Winter Quest",
+        Locked = true,
+        LockedTitle = "still in development",
+        Callback = function(v)
+            -- This won't execute because it's locked
+        end
+    })
+   
+    QuestsTab:Section({ Title = "Gift Collector" })
+    local giftToggle = QuestsTab:Toggle({
+        Title = "Auto Collect Gifts",
+        Locked = true,
+        LockedTitle = "still in development",
+        Callback = function(v)
+            -- This won't execute because it's locked
+        end
+    })
+
+local VehicleTab = Window:Tab({ Title = "Vehicle", Icon = "car-front",  })
+
+VehicleTab:Section({ Title = "Vehicle Config" })
+
+-- 1. VEHICLE SPEED
+VehicleTab:Input({
+    Title = "Vehicle Speed",
+    Placeholder = "Enter speed (e.g. 500)",
+    Callback = function(v)
+        local num = tonumber(v)
+        if num then
+            _G.Speed = num
+        else
+            WindUI:Notify({
+                Title = "Invalid Input",
+                Content = "Please enter a valid number!",
+                Type = "Error",
+                Duration = 3
+            })
+        end
+    end
+})
+
+-- 2. INCREMENT
+VehicleTab:Input({
+    Title = "Increment",
+    Placeholder = "Enter increment (e.g. 50)",
+    Callback = function(v)
+        local num = tonumber(v)
+        if num then
+            _G.Increment = num
+        else
+            WindUI:Notify({
+                Title = "Invalid Input",
+                Content = "Please enter a valid number!",
+                Type = "Error",
+                Duration = 3
+            })
+        end
+    end
+})
+
+-- 3. INTERVAL
+VehicleTab:Input({
+    Title = "Interval",
+    Placeholder = "Enter interval (e.g. 0.1)",
+    Callback = function(v)
+        local num = tonumber(v)
+        if num then
+            _G.Interval = num
+        else
+            WindUI:Notify({
+                Title = "Invalid Input",
+                Content = "Please enter a valid number!",
+                Type = "Error",
+                Duration = 3
+            })
+        end
+    end
+})
+
+
+VehicleTab:Section({ Title = "enable Config" })
+local VehicleToggle = VehicleTab:Toggle({
+    Title = "enable boost",
+    Callback = function(v)
+         _G.BoostEnabled = v 
+       end
+})
+
+local StraightToggle = VehicleTab:Toggle({
+    Title = "Straight Boost",
+    Callback = function(v)
+        _G.StraightBoost = v 
+       end
+})
+
+local WebhookTab = Window:Tab({
+    Title = "Webhook",
+    Icon = "globe",
+    Color = primaryColor
+})
+
+WebhookTab:Section({ Title = "Webhook Log" })
+
+WebhookTab:Input({ 
+    Title = "Webhook URL", 
+    Placeholder = "Paste Discord Webhook URL here",
+    Callback = function(v) 
+        _G.WebhookURL = v 
+    end 
+})
+
+WebhookTab:Toggle({ 
+    Title = "Enable Webhook Log", 
+    Default = _G.WebhookEnabled,
+    Callback = function(v) 
+        _G.WebhookEnabled = v 
+    end 
+})
+
+WebhookTab:Button({ 
+    Title = "Test Send Webhook", 
+    Callback = function() 
+        if _G.WebhookURL and _G.WebhookURL ~= "" then
+            -- Sesuaikan dengan fungsi lu: SendWebhook(isTest, isDisconnect)
+            SendWebhook(true, false) 
+            
+            WindUI:Notify({
+                Title = "Webhook",
+                Content = "Testing webhook... Check your Discord!",
+                Duration = 3
+            })
+        else
+            WindUI:Notify({
+                Title = "Error",
+                Content = "Please paste a Webhook URL first!",
+                Duration = 3
+            })
+        end
+    end 
+})
+
+
+-- SETTINGS TAB with PAUSE BYPASS
+    local SettingsTab = Window:Tab({
+        Title = "Settings",
+        Icon = "solar:settings-bold",
+        Color = primaryColor
+    })
+
+SettingsTab:Section({ Title = "great features" })
+
+SettingsTab:Toggle({
+    Title = "Anti-AFK",
+    Value = _G.AntiAFK, -- Biar posisi awal toggle ngikutin variabel
+    Callback = function(v)
+        _G.AntiAFK = v
+        if v then
+            WindUI:Notify({
+                Title = "Anti-AFK",
+                Content = "Anti-AFK has been Enabled",
+                Duration = 2
+            })
+        else
+            WindUI:Notify({
+                Title = "Anti-AFK",
+                Content = "Anti-AFK has been Disabled",
+                Duration = 2
+            })
+        end
+    end
+})
+
+SettingsTab:Toggle({
+    Title = "Hide Name",
+    Value = _G.HideNameEnabled,
+    Callback = function(v)
+        _G.HideNameEnabled = v
+        
+        -- Logic instant buat balikin nama pas toggle OFF
+        if not v then
+            local char = LP.Character
+            if char then
+                local head = char:FindFirstChild("Head")
+                if head then 
+                    for _, gui in pairs(head:GetChildren()) do 
+                        if gui:IsA("BillboardGui") then gui.Enabled = true end 
+                    end 
+                end
+            end
+        end
+
+        WindUI:Notify({
+            Title = "Stealth Mode",
+            Content = "Hide Name: " .. (v and "Enabled" or "Disabled"),
+            Duration = 2
+        })
+    end
+})
+
+
+SettingsTab:Toggle({
+    Title = "Hide Char",
+    Value = _G.HideCharEnabled,
+    Callback = function(v)
+        _G.HideCharEnabled = v
+        
+        -- Logic instant buat balikin karakter pas toggle OFF
+        if not v then
+            local char = LP.Character
+            if char then
+                for _, part in pairs(char:GetDescendants()) do 
+                    if part:IsA("BasePart") or part:IsA("Decal") then 
+                        -- Jangan buat HumanoidRootPart jadi kelihatan (biasanya emang transparan)
+                        if part.Name ~= "HumanoidRootPart" then
+                            part.Transparency = 0 
+                        end
+                    end 
+                end
+            end
+        end
+
+        WindUI:Notify({
+            Title = "Stealth Mode",
+            Content = "Hide Character: " .. (v and "Enabled" or "Disabled"),
+            Duration = 2
+        })
+    end
+})
+
+
+SettingsTab:Section({ Title = "Change Team" })
+    SettingsTab:Button({
+        Title = "Office Worker",
+        Callback = function()
+            RS.JobEvents.TeamChangeRequest:FireServer("Office Worker", 0, 0, 0, "MainMenu")
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Police",
+        Callback = function()
+            RS.JobEvents.TeamChangeRequest:FireServer("Police", 0, 0, 0, "MainMenu")
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Courier",
+        Callback = function()
+            RS.JobEvents.TeamChangeRequest:FireServer("Courier", 11378976, 0, 0, 0, "Detector")
+        end
+    })
+   
+    -- SERVER SECTION WITH UPDATED CODE
+    SettingsTab:Section({ Title = "Server" })
+    SettingsTab:Input({
+        Title = "Join Job ID",
+        Placeholder = "Enter Job ID",
+        Callback = function(text)
+            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, text, LP)
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Copy Current Job ID",
+        Callback = function()
+            setclipboard(game.JobId)
+            WindUI:Notify({
+                Title = "Success",
+                Content = "Job ID copied to clipboard",
+                Duration = 3
+            })
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Hop to Low Server",
+        Callback = function()
+            local success, servers = pcall(function()
+                return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"))
+            end)
+            if success then
+                for _, server in pairs(servers.data) do
+                    if server.playing < server.maxPlayers * 0.8 then
+                        pcall(function()
+                            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, server.id, LP)
+                        end)
+                        break
+                    end
+                end
+            else
+                WindUI:Notify({Title = "Error", Content = "Failed to fetch server list.", Duration = 5})
+            end
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Hop to Crowded Server",
+        Callback = function()
+            local success, servers = pcall(function()
+                return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"))
+            end)
+            if success then
+                for _, server in pairs(servers.data) do
+                    if server.playing > server.maxPlayers * 0.5 then
+                        pcall(function()
+                            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, server.id, LP)
+                        end)
+                        break
+                    end
+                end
+            else
+                WindUI:Notify({Title = "Error", Content = "Failed to fetch server list.", Duration = 5})
+            end
+        end
+    })
+   
+    SettingsTab:Button({
+        Title = "Rejoin",
+        Callback = function()
+            game:GetService("TeleportService"):Teleport(game.PlaceId, LP)
+        end
+    })
+   
+    -- CREDITS SECTION
+    SettingsTab:Section({ Title = "Credits" })
+    SettingsTab:Paragraph({
+        Title = "Script Information",
+        Desc = "script by VoidlineHub",
+        BackgroundColor = secondaryColor
+    })
