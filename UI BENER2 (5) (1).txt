@@ -286,10 +286,13 @@ local function StartRoute()
     local primary = motor.PrimaryPart or motor:FindFirstChildOfClass("BasePart")
     local hum = char:FindFirstChildOfClass("Humanoid")
 
-    if motor and motor:FindFirstChild("Wheels") then 
-        motor.Wheels:Destroy() 
-    end
-    
+      -- [[ HAPUS WHEEL SECTIONS ]] --
+    -- Pake pcall biar kalau part-nya udah ilang gak bikin script berhenti (error)
+    pcall(function()
+        if motor:FindFirstChild("RearSection") then motor.RearSection:Destroy() end
+        if motor:FindFirstChild("FrontSection") then motor.FrontSection:Destroy() end
+    end)
+
     _G.AutoFarmBandung = true
     CreateHighway() -- Pasang jalan pas start
 
@@ -371,6 +374,7 @@ local function StopRoute()
     RemoveHighway()
     SetBlackScreen(false) -- ← tambahin ini biar sinkron sama toggle
 end
+
 -- ==========================================
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED)
 -- ==========================================
