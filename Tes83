@@ -69,10 +69,7 @@ local BlackScreenGui = nil
 -- Cari data uang (Sesuaikan path-nya jika perlu)
 local PlayerData = LP:WaitForChild("PlayerData", 10)
 local MoneyValue = PlayerData and PlayerData:WaitForChild("RPValue", 10)
-
--- ==========================================
--- 3. WEBHOOK SYSTEM
--- ==========================================
+-- [[ 3. WEBHOOK SYSTEM ]] --
 local lastMoney = (MoneyValue and MoneyValue.Value) or 0
 if not _G.TotalEarnedFix then _G.TotalEarnedFix = 0 end 
 
@@ -86,30 +83,18 @@ if MoneyValue then
     end)
 end
 
--- [[ FORMAT TIME FIX ]] --
-local function FormatTime(s)
-    -- Pastikan detik tidak minus
-    local secondsTotal = math.max(0, s)
-    local hours = math.floor(secondsTotal / 3600)
-    local minutes = math.floor((secondsTotal % 3600) / 60)
-    local seconds = math.floor(secondsTotal % 60)
-    return string.format("%02dh %02dm %02ds", hours, minutes, seconds)
-end
-
-
-variabel runtimeSec:
+-- FUNGSI WEBHOOK UTAMA (SUDAH DI-FIX)
 local function SendWebhook(isTest, isDisconnect, isManualStop, isRoutine)
     local targetURL = _G.WebhookURL
     if not targetURL or targetURL == "" or not string.find(targetURL, "discord.com") then return end
 
-
-local runtimeSec = FarmTime or 0 -- SINKRON: Ambil data dari loop automation
-local balanceVal = (MoneyValue and MoneyValue.Value) or 0
-
-local payload = {
-    username = "VoidlineHub ⚡",
-    embeds = {}
-}
+    local runtimeSec = FarmTime or 0 
+    local balanceVal = (MoneyValue and MoneyValue.Value) or 0
+    
+    local payload = {
+        username = "VoidlineHub ⚡",
+        embeds = {}
+    }
 
     if isTest or isDisconnect then
         table.insert(payload.embeds, {
@@ -120,12 +105,11 @@ local payload = {
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     else
-        -- Update jobName biar sinkron sama fitur baru lu
-    local jobName = "Idle"
+        local jobName = "Idle"
         if _G.AutoFarmBandung then jobName = "Bandung Job" end
 
         table.insert(payload.embeds, {
-            title = "📌 Farming Status Report",
+            title = isRoutine and "📈 PERIODIC REPORT" or "📌 Farming Status Report",
             color = 0x1F8B4C,
             fields = {
                 { name = "🧰 Active Job", value = jobName, inline = true },
@@ -151,6 +135,8 @@ local payload = {
         end)
     end
 end
+
+
 -- ==========================================
 -- 4. BLACK SCREEN SYSTEM
 -- ==========================================
