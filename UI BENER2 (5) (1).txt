@@ -26,6 +26,9 @@ _G.HideCharEnabled = false
 _G.WebhookEnabled = false
 _G.WebhookURL = "" 
 _G.TotalEarnedFix = 0
+local FarmTime = 0
+local LastMoneyValue = 0
+local fpsTick = 0
 
 -- URL CONFIG
 local API_URL = "https://nodejs--habilyusuf86.replit.app/api/check"
@@ -562,7 +565,7 @@ HomeTab:Paragraph({
 
         Title = "UPDATE LOG",
 
-        Desc = "[+]bypass anticheat\n[+] Bandung autofarm\n[+]new gui",
+        Desc = "malas",
 
         Image = "rbxassetid://124846601689213",
 
@@ -633,46 +636,6 @@ HomeTab:Paragraph({
     })
 
 
-HomeTab:Section({ Title = "Game Information" })
-
--- Bikin objeknya dulu biar variabelnya ADA
-local CurrentMoney = HomeTab:Button({ Title = "Money", Desc = "Rp0", Icon = "banknote" })
-local FpsLabel = HomeTab:Button({ Title = "FPS", Desc = "0 FPS", Icon = "monitor" })
-local PingLabel = HomeTab:Button({ Title = "Ping", Desc = "0 ms", Icon = "signal" })
-local GameTime = HomeTab:Button({ Title = "Uptime", Desc = "00:00:00", Icon = "clock" })
-
--- LOGIC UPDATE STATS (FPS, PING, UPTIME)
-local fpsTick = 0
-RunService.Heartbeat:Connect(function() fpsTick = fpsTick + 1 end)
-local StartTime = os.time()
-
-task.spawn(function()
-    local PlayerData = LP:WaitForChild("PlayerData", 10)
-    local MoneyValue = PlayerData and PlayerData:WaitForChild("RPValue", 10)
-
-    while true do
-        local currentFps = fpsTick
-        fpsTick = 0
-        local ping = math.floor(LP:GetNetworkPing() * 1000)
-        local runtime = os.time() - StartTime
-        
-        -- Update UI
-        FpsLabel:SetDesc(currentFps .. " FPS")
-        PingLabel:SetDesc(ping .. " ms")
-        
-        local h = math.floor(runtime/3600)
-        local m = math.floor((runtime%3600)/60)
-        local s = runtime%60
-        GameTime:SetDesc(string.format("%02d:%02d:%02d", h, m, s))
-        
-        if MoneyValue then
-            CurrentMoney:SetDesc(FormatRupiah(MoneyValue.Value))
-        end
-        
-        task.wait(1)
-    end
-end)
-
 -- ============ AUTO FARM TAB ===========
 local AutoFarmTab = Window:Tab({
 
@@ -734,7 +697,75 @@ local BaristaToggle = AutoFarmTab:Toggle({
     Callback = function(v) end
 })
 
-    -- QUESTS TAB WITH LOCKED FEATURES
+-- ============ AUTO FARM TAB ========== --
+
+local StatsTab = Window:Tab({
+
+        Title = "Stats",
+        Icon = "trending-up",
+        Color = primaryColor
+
+    })
+
+StatsTab:Section({ Title = "Job info" })
+
+local CurrentMoney = StatsTab:Button({ Title = "Current Money", Desc = "Rp0", Icon = "banknote" })
+local TotalEarnedUI = StatsTab:Button({ Title = "Total Earned", Desc = "Rp0", Icon = "trending-up" })
+local GameTime = StatsTab:Button({ Title = "Farming Time", Desc = "00:00:00", Icon = "clock" })
+
+StatsTab:Section({ Title = "device info" })
+
+local FpsLabel = StatsTab:Button({ Title = "FPS", Desc = "0 FPS", Icon = "monitor" })
+local PingLabel = StatsTab:Button({ Title = "Ping", Desc = "0 ms", Icon = "signal" })
+local ExecutorUI = StatsTab:Button({ Title = "Executor", Desc = identifyexecutor() or "Unknown", Icon = "code" })
+
+local fpsTick = 0
+RunService.Heartbeat:Connect(function() fpsTick = fpsTick + 1 end)
+
+task.spawn(function()
+    local PlayerData = LP:WaitForChild("PlayerData", 10)
+    local MoneyValue = PlayerData and PlayerData:WaitForChild("RPValue", 10)
+    
+    if MoneyValue then LastMoneyValue = MoneyValue.Value end
+
+    while true do
+        -- 1. FPS & PING
+        local currentFps = fpsTick
+        fpsTick = 0
+        local ping = math.floor(LP:GetNetworkPing() * 1000)
+        
+        FpsLabel:SetDesc(currentFps .. " FPS")
+        PingLabel:SetDesc(ping .. " ms")
+
+        -- 2. MONEY & TOTAL EARNED
+        if MoneyValue then
+            local currentVal = MoneyValue.Value
+            CurrentMoney:SetDesc(FormatRupiah(currentVal))
+            
+            -- Hitung selisih duit (hanya jika bertambah)
+            if currentVal > LastMoneyValue then
+                _G.TotalEarnedFix = _G.TotalEarnedFix + (currentVal - LastMoneyValue)
+                TotalEarnedUI:SetDesc(FormatRupiah(_G.TotalEarnedFix))
+            end
+            LastMoneyValue = currentVal
+        end
+
+        -- 3. SMART RUNNING TIME (Hanya pas Autofarm ON)
+        if _G.AutoFarmBandung then
+            FarmTime = FarmTime + 1
+            local h = math.floor(FarmTime/3600)
+            local m = math.floor((FarmTime%3600)/60)
+            local s = FarmTime%60
+            GameTime:SetDesc(string.format("%02d:%02d:%02d", h, m, s))
+        end
+        
+        task.wait(1)
+    end
+end)
+
+
+
+-- QUESTS TAB WITH LOCKED FEATURES
     local QuestsTab = Window:Tab({
         Title = "Quests",
         Icon = "solar:file-text-bold",
