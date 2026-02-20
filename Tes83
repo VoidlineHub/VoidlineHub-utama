@@ -370,9 +370,15 @@ task.spawn(function()
         local isFarming = _G.AutoFarm or _G.AutofarmMobil or _G.AutoFarmBandung
         
         if _G.WebhookEnabled and _G.WebhookURL ~= "" and isFarming then
+            
+            -- [[ TAMBAHAN: UPDATE FARM TIME ]] --
+            -- Biar detik di UI dan Webhook nambah terus barengan
+            FarmTime = FarmTime + 1 
+            
             -- Kirim laporan setiap 50 detik
             if (tick() - lastUserSent) >= 50 then
-                SendWebhook(false, false) -- Laporan rutin
+                -- Panggil dengan 4 argumen: (isTest, isDC, isManual, isRoutine)
+                SendWebhook(false, false, false, true) 
                 lastUserSent = tick()
             end
         else
