@@ -94,54 +94,55 @@ local function FormatTime(s)
     return string.format("%02dh %02dm %02ds", hours, minutes, seconds)
 end
 
-
-local function SendWebhook(isTest, isDisconnect)
+local function SendWebhook(isTest, isDisconnect, isManualStop, isRoutine)
     local targetURL = _G.WebhookURL
-    if not targetURL or targetURL == "" or not string.find(targetURL, "discord.com") then 
-        return 
-    end
+    if not targetURL or targetURL == "" or not string.find(targetURL, "discord.com") then return end
 
     local runtimeSec = tick() - StartTime 
     local balanceVal = (MoneyValue and MoneyValue.Value) or 0
-    
-    local payload = {
-        username = "VoidlineHub ⚡",
-        embeds = {}
+    local payload = { username = "VoidlineHub ⚡", embeds = {} }
+
+    -- LOGIC PEMILIHAN EMBED
+    local embed = {
+        footer = { text = "Voidline System Status" },
+        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
     }
 
-    if isTest or isDisconnect then
-        table.insert(payload.embeds, {
-            title = isTest and "✅ WEBHOOK READY!" or "⚠️ SESSION ENDED!",
-            description = isTest and "Webhook berhasil terhubung dengan **VoidlineHub** ⚡" or "Player telah keluar dari game/Server Disconnect.",
-            color = isTest and 0x00FF88 or 0xFF0044,
-            footer = { text = "Voidline System" },
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-        })
-    else
-        -- Update jobName biar sinkron sama fitur baru lu
-        local jobName = "Idle"
-        if _G.AutoFarm then jobName = "Mandalika Race"
-        elseif _G.AutofarmMobil then jobName = "Shuttle Surakarta" -- Sesuaikan nama jobnya
-        elseif _G.AutoFarmBandung then jobName = "Bandung Job"
+    if isTest then
+        embed.title = "✅ WEBHOOK READY!"
+        embed.description = "Webhook berhasil terhubung!"
+        embed.color = 0x00FF88
+    elseif isDisconnect or isManualStop or isRoutine then
+        -- Tentukan Judul & Warna
+        if isDisconnect then
+            embed.title = "⚠️ SESSION ENDED!"
+            embed.color = 0xFF0044
+        elseif isManualStop then
+            embed.title = "🛑 AUTOFARM STOPPED!"
+            embed.color = 0xFFA500
+        else
+            embed.title = "📈 PERIODIC REPORT (AUTO)"
+            embed.color = 0x1F8B4C
         end
 
-        table.insert(payload.embeds, {
-            title = "📌 Farming Status Report",
-            color = 0x1F8B4C,
-            fields = {
-                { name = "🧰 Active Job", value = jobName, inline = true },
-                { name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true },
-                { name = "💰 Earned", value = FormatRupiah(_G.TotalEarnedFix or 0), inline = true },
-                { name = "💵 Balance", value = FormatRupiah(balanceVal), inline = true },
-                { name = "📈 Est. Income", value = "Rp 30.000.000/Hr", inline = false }
-            },
-            footer = { text = "VoidlineHub System" },
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-        })
+        local jobName = "Idle"
+        if _G.AutoFarmBandung then jobName = "Bandung Job" end
+
+        embed.fields = {
+            { name = "🧰 Active Job", value = jobName, inline = true },
+            { name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true },
+            { name = "💰 Earned", value = FormatRupiah(_G.TotalEarnedFix or 0), inline = true },
+            { name = "💵 Balance", value = FormatRupiah(balanceVal), inline = true }
+        }
     end
 
+    if embed.title then
+        table.insert(payload.embeds, embed)
+    end
+
+    -- KIRIM
     local requestFunc = syn and syn.request or http_request or request or (http and http.request)
-    if requestFunc then
+    if requestFunc and #payload.embeds > 0 then
         pcall(function()
             requestFunc({
                 Url = targetURL,
@@ -152,6 +153,7 @@ local function SendWebhook(isTest, isDisconnect)
         end)
     end
 end
+
 
 
 
@@ -362,8 +364,8 @@ local function FinalExit()
     -- Cek apakah notif disconnect sudah dikirim atau URL kosong
     if _G.DCSent or not _G.WebhookURL or _G.WebhookURL == "" then return end
     _G.DCSent = true
-    -- Kirim status Disconnect (isTest = false, isDisconnect = true)
-    pcall(function() SendWebhook(false, true) end) 
+    -- Kirim status Disconnect (isTest = false, isDisconnect = true, isManual = false, isRoutine = false)
+    pcall(function() SendWebhook(false, true, false, false) end) 
 end
 
 -- [[ 1. MAIN AUTOMATION LOOP (WEBHOOK) ]] --
@@ -380,7 +382,8 @@ task.spawn(function()
         if _G.WebhookEnabled and _G.WebhookURL ~= "" and isFarming then
             -- Kirim laporan setiap 50 detik
             if (tick() - lastUserSent) >= 50 then
-                SendWebhook(false, false) -- Laporan rutin
+                -- Kirim sebagai laporan rutin (isTest = false, isDC = false, isManual = false, isRoutine = true)
+                SendWebhook(false, false, false, true) 
                 lastUserSent = tick()
             end
         else
@@ -398,6 +401,7 @@ end)
 if LP and LP.OnTeleport then
     LP.OnTeleport:Connect(FinalExit)
 end
+
 
 -- [[ 2. ANTI-AFK SYSTEM ]] --
 task.spawn(function()
