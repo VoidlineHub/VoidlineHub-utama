@@ -155,8 +155,6 @@ local function SendWebhook(isTest, isDisconnect, isManualStop, isRoutine)
 end
 
 
-
-
 -- ==========================================
 -- 4. BLACK SCREEN SYSTEM
 -- ==========================================
@@ -403,6 +401,7 @@ if LP and LP.OnTeleport then
 end
 
 
+
 -- [[ 2. ANTI-AFK SYSTEM ]] --
 task.spawn(function()
     while task.wait(15) do 
@@ -417,7 +416,7 @@ end)
 
 -- [[ 3. MULTI-LOGIC (STEALTH & VEHICLE BOOST) ]] --
    -- --- A. Stealth Mode Logic ---
-    -- 1. TARUH DI LUAR (DI ATAS HEARTBEAT)
+    -- 1. TARUH DI LUAR (DI ATAS HEARTBEAlT)
 local lastBoostTime = 0 
 
 -- 2. BARU MASUK KE HEARTBEAT
