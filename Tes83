@@ -40,13 +40,6 @@ local fpsTick = 0
 -- 3. HELPER FUNCTIONS (URUTAN TERBAIK)
 -- ==========================================
 
--- 1. Ambil Kendaraan (Paling krusial, ditaruh paling atas)
-local function getVehicle()
-    local char = LP.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    return (hum and hum.SeatPart and (hum.SeatPart:FindFirstAncestorOfClass("Model") or hum.SeatPart.Parent)) or nil
-end
-
 -- 2. Format Mata Uang
 local function FormatRupiah(num)
     local s = tostring(math.floor(num or 0))
