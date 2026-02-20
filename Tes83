@@ -14,7 +14,6 @@ local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local VirtualUser = game:GetService("VirtualUser")
 local LP = Players.LocalPlayer
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 -- ==========================================
 -- 2. GLOBAL VARIABLES & CONFIG
@@ -573,86 +572,7 @@ local AutoFarmTab = Window:Tab({
     Color = primaryColor
 })
 
-AutoFarmTab:Section({ Title = "autofarm"})
-AutoFarmTab:Toggle({
-    Title = "autofarm v1 ",
-    Desc = "This autofarm can be found in Mandalika and Surakarta ",
-    Callback = function(v)
-        _G.AutoFarm = v
-        
-        -- 1. Tutup layar biar makin enteng
-        SetBlackScreen(v)
-        
-        -- 2. Bersihkan map dan copot roda otomatis
-        SetMapCleaner(v)
-        
-        if v then
-            task.spawn(function()
-                while _G.AutoFarm do
-                    local vehicle = getVehicle()
-                    if vehicle then
-                        for _, point in ipairs(Route) do
-                            -- Cek lagi togglenya, kalo dimatiin langsung stop
-                            if not _G.AutoFarm then break end
-                            
-                            -- Proses terbang ke tiap koordinat
-                            flyTo(point.pos + Vector3.new(0, Height, 0), Speed, 10)
-                            task.wait(0.05)
-                        end
-                    else
-                        -- Nunggu 2 detik kalo player belum naik kendaraan
-                        task.wait(2)
-                    end
-                end
-            end)
-        else
-            -- Kalo dimatiin, hentikan pergerakan kendaraan biar gak meluncur terus
-            local vhc = getVehicle()
-            if vhc then
-                local root = vhc:FindFirstChild("DriveSeat") or vhc.PrimaryPart
-                if root then 
-                    root.AssemblyLinearVelocity = Vector3.new(0,0,0) 
-                    root.AssemblyAngularVelocity = Vector3.new(0,0,0)
-                end
-            end
-        end
-    end
-})
 
-
-
-AutoFarmTab:Section({ Title = "autorace"})
-AutoFarmTab:Toggle({ 
-    Title = "Autorace mandalika",
-    Desc = "auto racing must be in Mandalika",
-    Callback = function(v)
-        _G.AutoRace = v
-        
-        -- 1. Tutup layar dulu (Visual Priority)
-        SetBlackScreen(v)
-        
-        -- 2. Lenyapkan Map Mandalika & Roda (Panggil fungsi sakti)
-        SetMapCleaner(v)
-        
-        if v then
-            task.spawn(function()
-                -- 3. Langsung gaskeun balapan
-                -- Pastikan fungsi startFarm() sudah didefinisikan di atas
-                startFarm() 
-            end)
-        else
-            -- Kalo dimatiin, stop velocity biar motor gak bablas ke angkasa
-            local vhc = getVehicle()
-            if vhc then
-                local root = vhc:FindFirstChild("DriveSeat") or vhc.PrimaryPart
-                if root then 
-                    root.AssemblyLinearVelocity = Vector3.new(0,0,0) 
-                    root.AssemblyAngularVelocity = Vector3.new(0,0,0)
-                end
-            end
-        end
-    end
-})
 
 -- =========== stats ========== --
 
