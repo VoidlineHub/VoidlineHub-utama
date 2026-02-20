@@ -446,7 +446,7 @@ RunService.Heartbeat:Connect(function()
     
     if _G.BoostEnabled and seat then
         local vehicle = seat:FindFirstAncestorOfClass("Model")
-        local root = (vehicle and vehicle.qPrimaryPart) or seat -- Pakai seat kalau gak ada PrimaryPart
+        local root = (vehicle and vehicle.PrimaryPart) or seat -- Pakai seat kalau gak ada PrimaryPart
         
         if root then
             -- Cek interval
