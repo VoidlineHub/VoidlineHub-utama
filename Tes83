@@ -619,11 +619,14 @@ task.spawn(function()
     local PlayerData = LP:WaitForChild("PlayerData", 10)
     local MoneyValue = PlayerData and PlayerData:WaitForChild("RPValue", 10)
     
-    if MoneyValue then LastMoneyValue = MoneyValue.Value end
+    if MoneyValue then 
+        LastMoneyValue = MoneyValue.Value 
+        smoothBalance = MoneyValue.Value -- Set awal biar ga mulai dari 0 banget
+    end
 
     while true do
-        -- 1. FPS & PING (Tetap 0.5 detik sekali biar akurat)
-        local currentFps = fpsTick * 2 -- dikali 2 karena wait(0.5)
+        -- 1. FPS & PING
+        local currentFps = fpsTick * 2 
         fpsTick = 0
         local ping = math.floor(LP:GetNetworkPing() * 1000)
         
@@ -634,23 +637,31 @@ task.spawn(function()
         if MoneyValue then
             local currentVal = MoneyValue.Value
             
-            -- Logic Hitung Earned (Punya Lu)
+            -- Hitung Earned (Logic asli lu)
             if currentVal > LastMoneyValue then
                 _G.TotalEarnedFix = _G.TotalEarnedFix + (currentVal - LastMoneyValue)
             end
             LastMoneyValue = currentVal
 
             -- EFEK NGALIR (Smooth Animation)
-            -- Kita pake loop kecil di dalem buat nembak angka biar smooth banget
             for i = 1, 15 do 
-                smoothEarned = smoothEarned + (_G.TotalEarnedFix - smoothEarned) * 0.2
-                smoothBalance = smoothBalance + (currentVal - smoothBalance) * 0.2
+                smoothEarned = smoothEarned + (_G.TotalEarnedFix - smoothEarned) * 0.3
+                smoothBalance = smoothBalance + (currentVal - smoothBalance) * 0.3
                 
                 TotalEarnedUI:SetDesc(FormatRupiah(math.floor(smoothEarned)))
                 CurrentMoney:SetDesc(FormatRupiah(math.floor(smoothBalance)))
                 
-                task.wait(0.03) -- Frame rate animasi ngucurnya
+                task.wait(0.03) 
             end
+
+            -- [[ FORCE SNAP TO TARGET ]] --
+            smoothEarned = _G.TotalEarnedFix
+            smoothBalance = currentVal
+            
+            TotalEarnedUI:SetDesc(FormatRupiah(math.floor(smoothEarned)))
+            CurrentMoney:SetDesc(FormatRupiah(math.floor(smoothBalance)))
+        else
+            task.wait(0.5) 
         end
 
         -- 3. SMART RUNNING TIME
@@ -661,7 +672,7 @@ task.spawn(function()
             GameTime:SetDesc(string.format("%02d:%02d:%02d", h, m, s))
         end
         
-        -- Kita hapus task.wait(0.5) di sini karena udah dihandle sama loop animasi di atas
+        -- Tidak perlu task.wait(0.5) lagi karena loop animasi sudah makan waktu ~0.45s
     end
 end)
 
