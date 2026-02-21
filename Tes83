@@ -111,14 +111,14 @@ local function SendWebhook(isTest, isDisconnect, isManualStop, isRoutine)
         if _G.AutoFarmBandung then jobName = "Bandung Job" end
 
         table.insert(payload.embeds, {
-            title = isRoutine and "📈 PERIODIC REPORT" or "📌 Farming Status Report",
+            title = isRoutine and "📌 Farming Status" or "📌 Farming Status",
             color = 0x1F8B4C,
             fields = {
                 { name = "🧰 Active Job", value = jobName, inline = true },
                 { name = "⏱ Runtime", value = FormatTime(runtimeSec), inline = true },
                 { name = "💰 Earned", value = FormatRupiah(_G.TotalEarnedFix or 0), inline = true },
                 { name = "💵 Balance", value = FormatRupiah(balanceVal), inline = true },
-                { name = "📈 Est. Income", value = "Rp 60.000.000/Hr", inline = false }
+                { name = "📈 Est. Income", value = "Rp 30.000.000/Hr", inline = false }
             },
             footer = { text = "VoidlineHub System" },
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
