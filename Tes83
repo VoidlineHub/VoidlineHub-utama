@@ -618,61 +618,34 @@ RunService.Heartbeat:Connect(function() fpsTick = fpsTick + 1 end)
 task.spawn(function()
     local PlayerData = LP:WaitForChild("PlayerData", 10)
     local MoneyValue = PlayerData and PlayerData:WaitForChild("RPValue", 10)
-    
-    if MoneyValue then 
-        LastMoneyValue = MoneyValue.Value 
-        smoothBalance = MoneyValue.Value -- Set awal biar ga mulai dari 0 banget
-    end
+    local StartMoney = MoneyValue and MoneyValue.Value or 0 -- Ambil duit pas awal script jalan
 
-    while true do
-        -- 1. FPS & PING
-        local currentFps = fpsTick * 2 
-        fpsTick = 0
-        local ping = math.floor(LP:GetNetworkPing() * 1000)
-        
-        FpsLabel:SetDesc(currentFps .. " FPS")
-        PingLabel:SetDesc(ping .. " ms")
-
-        -- 2. LOGIC EARNED & SMOOTH UI
-        if MoneyValue then
-            local currentVal = MoneyValue.Value
-            
-            -- Hitung Earned (Logic asli lu)
-            if currentVal > LastMoneyValue then
-                _G.TotalEarnedFix = _G.TotalEarnedFix + (currentVal - LastMoneyValue)
-            end
-            LastMoneyValue = currentVal
-
-            -- EFEK NGALIR (Smooth Animation)
-            for i = 1, 15 do 
-                smoothEarned = smoothEarned + (_G.TotalEarnedFix - smoothEarned) * 0.3
-                smoothBalance = smoothBalance + (currentVal - smoothBalance) * 0.3
+    while task.wait(1) do
+        pcall(function()
+            if MoneyValue then
+                local currentRP = MoneyValue.Value
                 
-                TotalEarnedUI:SetDesc(FormatRupiah(math.floor(smoothEarned)))
-                CurrentMoney:SetDesc(FormatRupiah(math.floor(smoothBalance)))
-                
-                task.wait(0.03) 
+                -- Update Info Uang (Logic asli lu: Selisih dari awal)
+                CurrentMoney:SetDesc(FormatRupiah(currentRP))
+                TotalEarnedUI:SetDesc(FormatRupiah(currentRP - StartMoney))
             end
-
-            -- [[ FORCE SNAP TO TARGET ]] --
-            smoothEarned = _G.TotalEarnedFix
-            smoothBalance = currentVal
             
-            TotalEarnedUI:SetDesc(FormatRupiah(math.floor(smoothEarned)))
-            CurrentMoney:SetDesc(FormatRupiah(math.floor(smoothBalance)))
-        else
-            task.wait(0.5) 
-        end
+            -- Update Device Info
+            local ping = math.floor(LP:GetNetworkPing() * 1000)
+            local currentFps = fpsTick -- itungan dari Heartbeat lu
+            fpsTick = 0
+            
+            FpsLabel:SetDesc(currentFps .. " FPS")
+            PingLabel:SetDesc(ping .. " ms")
 
-        -- 3. SMART RUNNING TIME
-        if _G.AutoFarmBandung then
-            local h = math.floor(FarmTime/3600)
-            local m = math.floor((FarmTime%3600)/60)
-            local s = FarmTime%60
-            GameTime:SetDesc(string.format("%02d:%02d:%02d", h, m, s))
-        end
-        
-        -- Tidak perlu task.wait(0.5) lagi karena loop animasi sudah makan waktu ~0.45s
+            -- Update Timer
+            if _G.AutoFarmBandung then
+                local h = math.floor(FarmTime/3600)
+                local m = math.floor((FarmTime%3600)/60)
+                local s = FarmTime%60
+                GameTime:SetDesc(string.format("%02d:%02d:%02d", h, m, s))
+            end
+        end)
     end
 end)
 
