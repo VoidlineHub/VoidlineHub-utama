@@ -35,6 +35,8 @@ local FarmTime = 0
 local lastBoostTime = 0
 local LastMoneyValue = 0
 local lastUserSent = tick()
+local smoothEarned = 0
+local smoothBalance = 0
 
 -- ==========================================
 -- 3. HELPER FUNCTIONS (URUTAN TERBAIK)
@@ -620,28 +622,38 @@ task.spawn(function()
     if MoneyValue then LastMoneyValue = MoneyValue.Value end
 
     while true do
-        -- 1. FPS & PING
-        local currentFps = fpsTick
+        -- 1. FPS & PING (Tetap 0.5 detik sekali biar akurat)
+        local currentFps = fpsTick * 2 -- dikali 2 karena wait(0.5)
         fpsTick = 0
         local ping = math.floor(LP:GetNetworkPing() * 1000)
         
         FpsLabel:SetDesc(currentFps .. " FPS")
         PingLabel:SetDesc(ping .. " ms")
 
-        -- 2. MONEY & TOTAL EARNED
+        -- 2. LOGIC EARNED & SMOOTH UI
         if MoneyValue then
             local currentVal = MoneyValue.Value
-            CurrentMoney:SetDesc(FormatRupiah(currentVal))
             
-            -- Hitung selisih duit (hanya jika bertambah)
+            -- Logic Hitung Earned (Punya Lu)
             if currentVal > LastMoneyValue then
                 _G.TotalEarnedFix = _G.TotalEarnedFix + (currentVal - LastMoneyValue)
-                TotalEarnedUI:SetDesc(FormatRupiah(_G.TotalEarnedFix))
             end
             LastMoneyValue = currentVal
+
+            -- EFEK NGALIR (Smooth Animation)
+            -- Kita pake loop kecil di dalem buat nembak angka biar smooth banget
+            for i = 1, 15 do 
+                smoothEarned = smoothEarned + (_G.TotalEarnedFix - smoothEarned) * 0.2
+                smoothBalance = smoothBalance + (currentVal - smoothBalance) * 0.2
+                
+                TotalEarnedUI:SetDesc(FormatRupiah(math.floor(smoothEarned)))
+                CurrentMoney:SetDesc(FormatRupiah(math.floor(smoothBalance)))
+                
+                task.wait(0.03) -- Frame rate animasi ngucurnya
+            end
         end
 
--- 3. SMART RUNNING TIME (Hanya pas Autofarm ON)
+        -- 3. SMART RUNNING TIME
         if _G.AutoFarmBandung then
             local h = math.floor(FarmTime/3600)
             local m = math.floor((FarmTime%3600)/60)
@@ -649,7 +661,7 @@ task.spawn(function()
             GameTime:SetDesc(string.format("%02d:%02d:%02d", h, m, s))
         end
         
-        task.wait(0.5)
+        -- Kita hapus task.wait(0.5) di sini karena udah dihandle sama loop animasi di atas
     end
 end)
 
