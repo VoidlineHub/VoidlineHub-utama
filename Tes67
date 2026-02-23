@@ -29,8 +29,6 @@ local FarmTime = 0
 local lastBoostTime = 0
 local LastMoneyValue = 0
 local lastUserSent = tick()
-local smoothEarned = 0
-local smoothBalance = 0
 
 -- [[ 1. KONSTRUKSI UI ]] --
 local function StartLoading()
