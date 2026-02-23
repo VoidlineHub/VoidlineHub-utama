@@ -995,11 +995,25 @@ SettingsTab:Section({ Title = "Change Team" })
         Callback = function()
             RS.JobEvents.TeamChangeRequest:FireServer("Courier", 11378976, 0, 0, 0, "Detector")
         end
+})
+    -- CREDITS SECTION
+    SettingsTab:Section({ Title = "Credits" })
+    SettingsTab:Paragraph({
+        Title = "Script Information",
+        Desc = "script by VoidlineHub",
+        BackgroundColor = secondaryColor
     })
-   
+
+
+local ServerTab = Window:Tab({
+        Title = "Settings",
+        Icon = "solar:settings-bold",
+        Color = primaryColor
+    })
+
     -- SERVER SECTION WITH UPDATED CODE
-    SettingsTab:Section({ Title = "Server" })
-    SettingsTab:Input({
+    ServerTab:Section({ Title = "Server" })
+    ServerTab:Input({
         Title = "Join Job ID",
         Placeholder = "Enter Job ID",
         Callback = function(text)
@@ -1007,7 +1021,7 @@ SettingsTab:Section({ Title = "Change Team" })
         end
     })
    
-    SettingsTab:Button({
+    ServerTab:Button({
         Title = "Copy Current Job ID",
         Callback = function()
             setclipboard(game.JobId)
@@ -1019,7 +1033,7 @@ SettingsTab:Section({ Title = "Change Team" })
         end
     })
    
-    SettingsTab:Button({
+    ServerTab:Button({
         Title = "Hop to Low Server",
         Callback = function()
             local success, servers = pcall(function()
@@ -1040,7 +1054,7 @@ SettingsTab:Section({ Title = "Change Team" })
         end
     })
    
-    SettingsTab:Button({
+    ServerTab:Button({
         Title = "Hop to Crowded Server",
         Callback = function()
             local success, servers = pcall(function()
@@ -1061,18 +1075,11 @@ SettingsTab:Section({ Title = "Change Team" })
         end
     })
    
-    SettingsTab:Button({
+    ServerTab:Button({
         Title = "Rejoin",
         Callback = function()
             game:GetService("TeleportService"):Teleport(game.PlaceId, LP)
         end
-    })
-    -- CREDITS SECTION
-    SettingsTab:Section({ Title = "Credits" })
-    SettingsTab:Paragraph({
-        Title = "Script Information",
-        Desc = "script by VoidlineHub",
-        BackgroundColor = secondaryColor
     })
 
 end -- << TAMBAHKAN 'end' INI UNTUK MENUTUP FUNCTION InitUI()
