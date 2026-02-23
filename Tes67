@@ -770,7 +770,7 @@ VehicleTab:Section({ Title = "Vehicle Config" })
 -- 1. VEHICLE SPEED
 VehicleTab:Input({
     Title = "Vehicle Speed",
-    Placeholder = "Enter speed (e.g. 500)",
+    Placeholder = "300",
     Callback = function(v)
         local num = tonumber(v)
         if num then
@@ -789,7 +789,7 @@ VehicleTab:Input({
 -- 2. INCREMENT
 VehicleTab:Input({
     Title = "Increment",
-    Placeholder = "Enter increment (e.g. 50)",
+    Placeholder = "50",
     Callback = function(v)
         local num = tonumber(v)
         if num then
@@ -808,7 +808,7 @@ VehicleTab:Input({
 -- 3. INTERVAL
 VehicleTab:Input({
     Title = "Interval",
-    Placeholder = "Enter interval (e.g. 0.1)",
+    Placeholder = "0.5",
     Callback = function(v)
         local num = tonumber(v)
         if num then
@@ -887,7 +887,10 @@ WebhookTab:Button({
 })
 
 
--- SETTINGS TAB with PAUSE BYPASS
+
+-- ==========================================
+-- Setting tab 
+-- ==========================================
     local SettingsTab = Window:Tab({
         Title = "Settings",
         Icon = "solar:settings-bold",
@@ -1005,9 +1008,12 @@ SettingsTab:Section({ Title = "Change Team" })
     })
 
 
+-- ==========================================
+-- Server tab
+-- ==========================================
 local ServerTab = Window:Tab({
-        Title = "Settings",
-        Icon = "solar:settings-bold",
+        Title = "Server",
+        Icon = "server",
         Color = primaryColor
     })
 
