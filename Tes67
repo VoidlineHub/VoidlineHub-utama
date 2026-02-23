@@ -1067,7 +1067,6 @@ SettingsTab:Section({ Title = "Change Team" })
             game:GetService("TeleportService"):Teleport(game.PlaceId, LP)
         end
     })
-
     -- CREDITS SECTION
     SettingsTab:Section({ Title = "Credits" })
     SettingsTab:Paragraph({
@@ -1076,4 +1075,7 @@ SettingsTab:Section({ Title = "Change Team" })
         BackgroundColor = secondaryColor
     })
 
+end -- << TAMBAHKAN 'end' INI UNTUK MENUTUP FUNCTION InitUI()
+
+-- JALANKAN LOADING SCREEN
 task.spawn(StartLoading)
