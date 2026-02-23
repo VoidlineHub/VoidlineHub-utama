@@ -531,6 +531,62 @@ task.spawn(function()
     end
 end)
 
+-- [[ 3. MULTI-LOGIC (STEALTH & VEHICLE BOOST) ]] --
+   -- --- A. Stealth Mode Logic ---
+    -- 1. TARUH DI LUAR (DI ATAS HEARTBEAT)
+local lastBoostTime = 0 
+
+-- 2. BARU MASUK KE HEARTBEAT
+RunService.Heartbeat:Connect(function()
+    local char = LP.Character
+    if not char then return end
+
+    if _G.HideNameEnabled then
+        local head = char:FindFirstChild("Head")
+        if head then 
+            for _, v in pairs(head:GetChildren()) do 
+                if v:IsA("BillboardGui") then v.Enabled = false end 
+            end 
+        end
+    end
+    
+    if _G.HideCharEnabled then
+        for _, v in pairs(char:GetDescendants()) do 
+            if v:IsA("BasePart") or v:IsA("Decal") then v.Transparency = 1 end 
+        end
+    end
+
+    -- --- B. Vehicle Boost Logic ---
+
+    -- (Logika Stealth kamu tetap di sini)
+
+    -- 3. LOGIKA BOOST YANG SUDAH DI-FIX
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local seat = hum and hum.SeatPart
+    
+    if _G.BoostEnabled and seat then
+        local vehicle = seat:FindFirstAncestorOfClass("Model")
+        local root = (vehicle and vehicle.PrimaryPart) or seat -- Pakai seat kalau gak ada PrimaryPart
+        
+        if root then
+            -- Cek interval
+            if tick() - lastBoostTime >= (_G.Interval or 0.5) then
+                local currentVel = root.AssemblyLinearVelocity
+                local boostDirection = -root.CFrame.LookVector
+
+                if _G.StraightBoost then
+                    boostDirection = Vector3.new(boostDirection.X, 0, boostDirection.Z).Unit
+                end
+                
+                -- PERBAIKAN: Gunakan 500 sebagai default limit, jangan 200 (karena 200 terlalu pelan)
+                if currentVel.Magnitude < (_G.Speed or 300) then
+                    root.AssemblyLinearVelocity = currentVel + (boostDirection * (_G.Increment or 50))
+                    lastBoostTime = tick() -- Sekarang ini bakal kesimpan karena variabelnya ada di LUAR
+                end
+            end
+        end
+    end
+end)
 
 
 
