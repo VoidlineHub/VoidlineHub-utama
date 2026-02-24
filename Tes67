@@ -13,6 +13,7 @@ local LP = Players.LocalPlayer
 -- 2. GLOBAL VARIABLES & CONFIG
 -- ==========================================
 _G.AutoFarmBandung = false
+_G.AutoFarmBarista = false
 _G.AntiStaff = true
 _G.AntiAFK = true 
 _G.HideNameEnabled = false
@@ -464,6 +465,170 @@ local function StopRoute()
 end
 
 
+-- =========================
+-- STATE
+-- =========================
+_G.AutoFarmBarista = _G.AutoFarmBarista or false
+local BaristaRunning = false
+local isWorking = false
+
+-- =========================
+-- PATHS & REMOTES
+-- =========================
+local BaristaJob = workspace:WaitForChild("BaristaJob")
+local Interactions = BaristaJob:WaitForChild("Interactions")
+local JobEvents = ReplicatedStorage:WaitForChild("JobEvents")
+local TeamChangeRequest = JobEvents:WaitForChild("TeamChangeRequest")
+
+local startPart = Interactions.StartPart.StartPart
+local machinePart = Interactions.MachinePart.MachinePart
+local registerPart = Interactions.RegisterPart.RegisterPart
+
+-- =========================
+-- VOID TWEEN ENGINE
+-- =========================
+local function voidTween(targetCF)
+    local hrp = getHRP()
+    local voidHeight = -30
+
+    local downCF = hrp.CFrame * CFrame.new(0, voidHeight, 0)
+    TweenService:Create(hrp, TweenInfo.new(0.5), {CFrame = downCF}):Play()
+    task.wait(0.6)
+
+    local targetVoidCF = CFrame.new(targetCF.X, targetCF.Y + voidHeight, targetCF.Z)
+    local dist = (hrp.Position - targetVoidCF.Position).Magnitude
+    local moveTween = TweenService:Create(
+        hrp,
+        TweenInfo.new(dist / 180, Enum.EasingStyle.Linear),
+        {CFrame = targetVoidCF}
+    )
+    moveTween:Play()
+    moveTween.Completed:Wait()
+
+    TweenService:Create(
+        hrp,
+        TweenInfo.new(0.5),
+        {CFrame = targetCF + Vector3.new(0, 2, 0)}
+    ):Play()
+    task.wait(0.6)
+end
+
+local function smartWaitAndClick(prompt)
+    if not prompt then return end
+    local t = 0
+    while (not prompt.Enabled or not prompt.Parent) and t < 50 do
+        task.wait(0.1)
+        t += 1
+    end
+    task.wait(0.8)
+    fireproximityprompt(prompt)
+end
+
+-- =========================
+-- STEALTH MINIGAME LOGIC
+-- =========================
+local function applyStealthBypass()
+    local gui = PlayerGui:FindFirstChild("BaristaGUI")
+    local mini = gui and gui:FindFirstChild("MinigameFrame")
+    if not mini or not mini.Visible or isWorking then return end
+
+    isWorking = true
+
+    pcall(function()
+        local bg = mini:WaitForChild("BackgroundBar")
+        local target = bg:WaitForChild("TargetZone")
+        target.Size = UDim2.new(1.8, 0, 1.8, 0)
+        target.Position = UDim2.new(-0.4, 0, -0.4, 0)
+        target.BackgroundTransparency = 1
+    end)
+
+    while mini.Visible and _G.AutoFarmBarista do
+        task.wait(0.5)
+    end
+
+    if not _G.AutoFarmBarista then
+        isWorking = false
+        return
+    end
+
+    local hrp = getHRP()
+
+    TweenService:Create(hrp, TweenInfo.new(0.8), {
+        CFrame = registerPart.CFrame + Vector3.new(0, 2, 0)
+    }):Play()
+    task.wait(0.9)
+    smartWaitAndClick(registerPart:WaitForChild("RegisterPrompt"))
+
+    task.wait(1)
+
+    TweenService:Create(hrp, TweenInfo.new(0.8), {
+        CFrame = machinePart.CFrame + Vector3.new(0, 2, 0)
+    }):Play()
+
+    task.wait(0.9)
+    isWorking = false
+end
+
+-- =========================
+-- MAIN BARISTA CONTROLLER
+-- =========================
+local function StartBaristaGhost()
+    if BaristaRunning then return end
+    BaristaRunning = true
+
+    task.spawn(function()
+        -- Ambil Job (1x)
+        TeamChangeRequest:FireServer("Barista", 11378976, 1, 0, "Detector")
+        task.wait(2)
+
+        if not _G.AutoFarmBarista then
+            BaristaRunning = false
+            return
+        end
+
+        voidTween(startPart.CFrame)
+        smartWaitAndClick(startPart:WaitForChild("JobPrompt"))
+        task.wait(2)
+
+        voidTween(machinePart.CFrame)
+
+        while _G.AutoFarmBarista do
+            local gui = PlayerGui:FindFirstChild("BaristaGUI")
+            local mini = gui and gui:FindFirstChild("MinigameFrame")
+
+            if mini and mini.Visible and not isWorking then
+                applyStealthBypass()
+            elseif not isWorking then
+                local hrp = getHRP()
+                if (hrp.Position - machinePart.Position).Magnitude < 10 then
+                    local prompt = machinePart:FindFirstChild("MachinePrompt")
+                    if prompt and prompt.Enabled then
+                        smartWaitAndClick(prompt)
+                    end
+                end
+            end
+
+            task.wait(1.5)
+        end
+
+        BaristaRunning = false
+    end)
+end
+
+-- =========================
+-- TOGGLE WATCHER
+-- =========================
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if _G.AutoFarmBarista then
+            StartBaristaGhost()
+        end
+    end
+end)
+
+
+
 -- ==========================================
 -- 6. AUTOMATION LOOPS & EVENTS (FIXED & MERGED)
 -- ==========================================
@@ -719,6 +884,9 @@ local BandungToggle = AutoFarmTab:Toggle({
         end
     end
 })
+
+AutoFarmTab:Section({ Title = "Barista" })
+AutoFarmTab:Toggle({ Title = "Auto Farm Barista", Value = false, Callback = function(v) _G.AutoFarmBarista = v end })
 
 -- =========== stats ========== --
 
@@ -1032,27 +1200,22 @@ SettingsTab:Toggle({
     end
 })
 
+SettingsTab:Section({ Title = "Security System" })
+
 SettingsTab:Toggle({
     Title = "Anti-Staff",
-    Desc = "Auto-kick",
-    Value = _G.AntiStaff or false, -- Pakai false kalau config belum ada
+    Desc = "Anti-Staff",
+    Value = _G.AntiStaff,
     Callback = function(v)
         _G.AntiStaff = v
         
-        -- Cek instan: Kalau di-ON kan dan server rame, langsung kick
+        -- Jika ON dan server ada lebih dari 2 orang, langsung kick
         if v and #game.Players:GetPlayers() > 2 then
             game.Players.LocalPlayer:Kick("\n[Voidline Security]\nAction: Connection Terminated\nReason: Current server population exceeds safety limits.")
         end
-
-        -- Logic simpan otomatis (biar ga perlu buat file manual)
-        local success, config = pcall(function()
-            return game:GetService("HttpService"):JSONEncode({AntiStaff = _G.AntiStaff})
-        end)
-        if success then
-            writefile("Voidline_Config.json", config)
-        end
     end
 })
+
 
 
 SettingsTab:Section({ Title = "Change Team" })
@@ -1169,26 +1332,13 @@ end -- << TAMBAHKAN 'end' INI UNTUK MENUTUP FUNCTION InitUI()
 
 -- JALANKAN LOADING SCREEN
 task.spawn(StartLoading) 
--- [[ VOIDLINE ANTI-STAFF CORE - FIXED ]] --
-_G.AntiStaff = true 
+-- [[ ANTI-STAFF / SOLO MODE ]] --
+_G.AntiStaff = false 
 
 task.spawn(function()
-    local Players = game:GetService("Players")
-    local LP = Players.LocalPlayer
-
-    -- 1. Instant Check: Kick kalau pas inject udah ada 3 orang atau lebih (Lu + 2 orang)
-    if _G.AntiStaff and #Players:GetPlayers() > 2 then
-        LP:Kick("\n[Voidline Security]\nAction: Connection Terminated\nReason: Current server population exceeds safety limits.")
-    end
-
-    -- 2. Monitoring: Cek jumlah player SETIAP ada yang baru join
-    Players.PlayerAdded:Connect(function(player)
+    game.Players.PlayerAdded:Connect(function(player)
         if _G.AntiStaff then
-            -- Harus cek jumlah lagi di sini, jangan asal kick
-            if #Players:GetPlayers() > 2 then
-                LP:Kick("\n[Voidline Security]\nAction: Connection Terminated\nReason: Unauthorized players detected (Server Limit Exceeded).")
-            end
+            game.Players.LocalPlayer:Kick("\n[Voidline Security]\nAction: Connection Terminated\nReason: Unauthorized player detected in your session.")
         end
     end)
 end)
-
