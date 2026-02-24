@@ -1168,22 +1168,28 @@ local ServerTab = Window:Tab({
 end -- << TAMBAHKAN 'end' INI UNTUK MENUTUP FUNCTION InitUI()
 
 -- JALANKAN LOADING SCREEN
-task.spawn(StartLoading)
+task.spawn(StartLoading) 
 
--- [[ VOIDLINE ANTI-STAFF CORE ]] --
--- Set ke true biar langsung aktif tanpa toggle UI
+-- [[ VOIDLINE ANTI-STAFF CORE - FIXED ]] --
 _G.AntiStaff = true 
 
 task.spawn(function()
-    -- 1. Instant Check: Kalau saat inject sudah ada lebih dari 2 orang
+    local Players = game:GetService("Players")
+    local LP = Players.LocalPlayer
+
+    -- 1. Instant Check: Kick kalau pas inject udah ada 3 orang atau lebih (Lu + 2 orang)
     if _G.AntiStaff and #Players:GetPlayers() > 2 then
         LP:Kick("\n[Voidline Security]\nAction: Connection Terminated\nReason: Current server population exceeds safety limits.")
     end
 
-    -- 2. Monitoring: Kalau ada player baru yang masuk saat lu lagi main
+    -- 2. Monitoring: Cek jumlah player SETIAP ada yang baru join
     Players.PlayerAdded:Connect(function(player)
         if _G.AntiStaff then
-            LP:Kick("\n[Voidline Security]\nAction: Connection Terminated\nReason: Unauthorized player detected in your session.")
+            -- Harus cek jumlah lagi di sini, jangan asal kick
+            if #Players:GetPlayers() > 2 then
+                LP:Kick("\n[Voidline Security]\nAction: Connection Terminated\nReason: Unauthorized players detected (Server Limit Exceeded).")
+            end
         end
     end)
 end)
+
