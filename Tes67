@@ -8,6 +8,8 @@ local CoreGui = game:GetService("CoreGui")
 local Lighting = game:GetService("Lighting")
 local VirtualUser = game:GetService("VirtualUser") -- Tambahin ini buat Anti-AFK
 local LP = Players.LocalPlayer
+local PlayerGui = LP:WaitForChild("PlayerGui")
+
 
 -- ==========================================
 -- 2. GLOBAL VARIABLES & CONFIG
