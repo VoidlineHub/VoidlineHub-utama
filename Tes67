@@ -1200,8 +1200,6 @@ SettingsTab:Toggle({
     end
 })
 
-SettingsTab:Section({ Title = "Security System" })
-
 SettingsTab:Toggle({
     Title = "Anti-Staff",
     Desc = "Anti-Staff",
