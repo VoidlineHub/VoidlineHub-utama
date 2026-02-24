@@ -13,6 +13,7 @@ local LP = Players.LocalPlayer
 -- 2. GLOBAL VARIABLES & CONFIG
 -- ==========================================
 _G.AutoFarmBandung = false
+_G.AntiStaff = true
 _G.AntiAFK = true 
 _G.HideNameEnabled = false
 _G.HideCharEnabled = false
@@ -1031,6 +1032,28 @@ SettingsTab:Toggle({
     end
 })
 
+SettingsTab:Toggle({
+    Title = "Anti-Staff",
+    Desc = "Auto-kick",
+    Value = _G.AntiStaff or false, -- Pakai false kalau config belum ada
+    Callback = function(v)
+        _G.AntiStaff = v
+        
+        -- Cek instan: Kalau di-ON kan dan server rame, langsung kick
+        if v and #game.Players:GetPlayers() > 2 then
+            game.Players.LocalPlayer:Kick("\n[Voidline Security]\nAction: Connection Terminated\nReason: Current server population exceeds safety limits.")
+        end
+
+        -- Logic simpan otomatis (biar ga perlu buat file manual)
+        local success, config = pcall(function()
+            return game:GetService("HttpService"):JSONEncode({AntiStaff = _G.AntiStaff})
+        end)
+        if success then
+            writefile("Voidline_Config.json", config)
+        end
+    end
+})
+
 
 SettingsTab:Section({ Title = "Change Team" })
     SettingsTab:Button({
@@ -1146,3 +1169,21 @@ end -- << TAMBAHKAN 'end' INI UNTUK MENUTUP FUNCTION InitUI()
 
 -- JALANKAN LOADING SCREEN
 task.spawn(StartLoading)
+
+-- [[ VOIDLINE ANTI-STAFF CORE ]] --
+-- Set ke true biar langsung aktif tanpa toggle UI
+_G.AntiStaff = true 
+
+task.spawn(function()
+    -- 1. Instant Check: Kalau saat inject sudah ada lebih dari 2 orang
+    if _G.AntiStaff and #Players:GetPlayers() > 2 then
+        LP:Kick("\n[Voidline Security]\nAction: Connection Terminated\nReason: Current server population exceeds safety limits.")
+    end
+
+    -- 2. Monitoring: Kalau ada player baru yang masuk saat lu lagi main
+    Players.PlayerAdded:Connect(function(player)
+        if _G.AntiStaff then
+            LP:Kick("\n[Voidline Security]\nAction: Connection Terminated\nReason: Unauthorized player detected in your session.")
+        end
+    end)
+end)
