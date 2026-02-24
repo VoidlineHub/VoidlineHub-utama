@@ -323,7 +323,7 @@ end
 -- 6. AUTOFARM
 -- ==========================================
 _G.AutoFarmBandung = false
-local MaxSpeed = 320
+local MaxSpeed = 280
 local DirectionForward = true 
 local RoadName = "PrivateHighway_BillzzHub"
 
