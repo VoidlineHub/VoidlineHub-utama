@@ -1169,7 +1169,6 @@ end -- << TAMBAHKAN 'end' INI UNTUK MENUTUP FUNCTION InitUI()
 
 -- JALANKAN LOADING SCREEN
 task.spawn(StartLoading) 
-
 -- [[ VOIDLINE ANTI-STAFF CORE - FIXED ]] --
 _G.AntiStaff = true 
 
