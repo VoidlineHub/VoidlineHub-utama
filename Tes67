@@ -161,6 +161,12 @@ end
 -- 3. HELPER FUNCTIONS (URUTAN TERBAIK)
 -- ==========================================
 
+-- 1. Fungsi Ambil Badan (WAJIB ADA BUAT VOIDTWEEN)
+local function getHRP()
+    local char = LP.Character or LP.CharacterAdded:Wait()
+    return char:WaitForChild("HumanoidRootPart", 10)
+end
+
 -- 2. Format Mata Uang
 local function FormatRupiah(num)
     local s = tostring(math.floor(num or 0))
@@ -168,7 +174,7 @@ local function FormatRupiah(num)
     return "Rp " .. (result:sub(1,1) == "." and result:sub(2) or result)
 end
 
--- 3. Format Waktu (Versi yang sudah lu perbaiki tadi)
+-- 3. Format Waktu
 local function FormatTime(s)
     local secondsTotal = math.max(0, s)
     local hours = math.floor(secondsTotal / 3600)
@@ -176,13 +182,6 @@ local function FormatTime(s)
     local seconds = math.floor(secondsTotal % 60)
     return string.format("%02dh %02dm %02ds", hours, minutes, seconds)
 end
-
--- [[ WINDUI LOAD ]] --
-local WindUI
-local success, result = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
-end)
-if success then WindUI = result else return end
 
 
 
