@@ -122,4 +122,60 @@ local function handleMinigame()
     
     -- Auto Register
     print("[Ghost] Serving Order...")
-    safeTween(registerPart.C
+    safeTween(registerPart.CFrame)
+    safeClick(registerPart:FindFirstChild("RegisterPrompt"))
+    
+    isWorking = false
+end
+
+-- // 5. MAIN CONTROLLER
+local function StartBaristaGhost()
+    if BaristaRunning then return end
+    BaristaRunning = true
+
+    task.spawn(function()
+        print("[Ghost] Script Started. Joining Barista Team...")
+        TeamChangeRequest:FireServer("Barista", 11378976, 1, 0, "Detector")
+        task.wait(2)
+        
+        while _G.AutoFarmBarista do
+            local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
+            
+            -- Jika Belum Mulai Kerja
+            if not missionUI and not isWorking then
+                safeTween(startPart.CFrame)
+                safeClick(startPart:FindFirstChild("JobPrompt"))
+            
+            -- Jika Sedang Kerja, Cek Status Mesin
+            elseif missionUI and not isWorking then
+                handleMachineStatus()
+            end
+
+            -- Flow Kerja Normal
+            if missionUI and not isWorking then
+                local gui = PlayerGui:FindFirstChild("BaristaGUI")
+                local mini = gui and gui:FindFirstChild("MinigameFrame")
+
+                if mini and mini.Visible then
+                    handleMinigame()
+                else
+                    -- Cek Jarak ke Mesin, kalau jauh samperin
+                    local hrp = getHRP()
+                    if (hrp.Position - machinePart.Position).Magnitude > 6 then
+                        safeTween(machinePart.CFrame)
+                    else
+                        local prompt = machinePart:FindFirstChild("MachinePrompt")
+                        if prompt and prompt.Enabled then
+                            safeClick(prompt)
+                        end
+                    end
+                end
+            end
+            task.wait(0.8)
+        end
+        BaristaRunning = false
+    end)
+end
+
+-- // RUN
+StartBaristaGhost()
