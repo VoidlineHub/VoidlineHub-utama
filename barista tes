@@ -1,428 +1,26 @@
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local HttpService = game:GetService("HttpService")
+-- // BARISTA GHOST MODE - ULTIMATE ALL-IN-ONE
+-- // Logic: Auto-Win Minigame, Smart Repair (Anti-Anomaly), Ghost Tween
+-- ========================================================================
+
 local Players = game:GetService("Players")
-local VU = game:GetService("VirtualUser") -- Ganti VIM jadi VU (Anti-Detect)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local VU = game:GetService("VirtualUser")
 
 local LP = Players.LocalPlayer
 local PlayerGui = LP:WaitForChild("PlayerGui")
-local PlayerData = LP:WaitForChild("PlayerData")
-local MoneyValue = PlayerData:WaitForChild("RPValue")
 
--- // WindUI Initialization
-local WindUI
-do
-local ok, result = pcall(function()
-return require("./src/Init")
-end)
-if ok then WindUI = result else
-WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
-end
-end
-
--- // Global Variables
-_G.AutoFarmBarista = false
-_G.AutoFarmCourier = false
-_G.WebhookURL = ""
-_G.WebhookEnabled = true
-_G.AntiAFK = false
-_G.HideNameEnabled = false
-_G.HideCharEnabled = false
-_G.AutoRejoin = false
-
-
---// STATE
-local StartTime = nil
-local TotalEarned = 0
-local LastMoney = 0
-local SelectedJob = "Civilian"
-
-local WEBHOOK_INTERVAL = 50
-
-local function FormatRupiah(num)
-local s = tostring(num)
-local result = s:reverse():gsub("(%d%d%d)", "%1."):reverse()
-if result:sub(1,1) == "." then
-result = result:sub(2)
-end
-return "Rp" .. result
-end
-
---// CONFIG
-_G.WebhookURL = _G.WebhookURL or ""
-
---// PLAYER DATA (NON LEADERSTATS)
-local PlayerData = LP:WaitForChild("PlayerData")
-local MoneyValue = PlayerData:WaitForChild("RPValue")
-
-LastMoney = MoneyValue.Value
-MoneyValue:GetPropertyChangedSignal("Value"):Connect(function()
-local diff = MoneyValue.Value - LastMoney
-if diff > 0 then
-TotalEarned += diff
-end
-LastMoney = MoneyValue.Value
-end)
-
---// FORMAT TIME
-local function EnsureStartTime()
-if not StartTime then
-StartTime = os.time()
-end
-end
-
-local function FormatTime(sec)
-return string.format(
-"%02d:%02d:%02d",
-math.floor(sec / 3600),
-math.floor((sec % 3600) / 60),
-sec % 60
-)
-end
-
---// WEBHOOK FUNCTION
-local function SendWebhook(isTest)
-if _G.WebhookURL == "" or not _G.WebhookURL:find("https://discord.com/api/webhooks/") then
-return
-end
-
-if not isTest and not _G.WebhookEnabled then
-return
-end
-
-local payload
-
-if isTest then
-payload = {
-username = "VoidlineHub",
-avatar_url = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg",
-embeds = {{
-title = "✅ Webhook Test Successful",
-description = "webhook successfully ready to use.",
-color = 5763719,
-thumbnail = {
-url = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg"
-}
-}}
-}
-else
-EnsureStartTime()
-
-local runtimeSec = os.time() - StartTime
-local estPerHour = runtimeSec > 0 and math.floor((TotalEarned / runtimeSec) * 3600) or 0
-
-payload = {
-username = "VoidlineHub",
-avatar_url = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg",
-embeds = {{
-title = "📌 Jobs Data Report",
-color = 2067276,
-thumbnail = {
-url = "https://cdn.discordapp.com/attachments/1464981605486694695/1466048679239487705/IMG_20260125_124614.jpg"
-},
-fields = {
-{
-name = "🧰 Job Select",
-value = "" .. (       _G.AutoFarmBarista and "Barista"       or _G.AutoFarmCourier and "Courier"       or "Idle"       ) .. "",
-inline = false
-},
-{
-name = "⏱ Running Time",
-value = "" .. FormatTime(runtimeSec) .. "",
-inline = true
-},
-{
-name = "💰 Total Earning",
-value = "" .. FormatRupiah(TotalEarned) .. "",
-inline = true
-},
-{
-name = "📈 Est. Income / Hour",
-value = "" .. FormatRupiah(estPerHour) .. "",
-inline = true
-},
-{
-name = "💵 Current Money",
-value = "" .. FormatRupiah(MoneyValue.Value) .. "",
-inline = false
-}
-},
-footer = { text = "VoidlineHub System" },
-timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-}}
-}
-
-end
-
-local req = syn and syn.request or http_request or request
-if req then
-req({
-Url = _G.WebhookURL,
-Method = "POST",
-Headers = { ["Content-Type"] = "application/json" },
-Body = HttpService:JSONEncode(payload)
-})
-end
-
-end
-
---// REALTIME LOOP (ANTI SPAM)
-task.spawn(function()
-while task.wait(WEBHOOK_INTERVAL) do
-SendWebhook(false)
-end
-end)
-
--- // Window
-  
-local Window = WindUI:CreateWindow({
-    Title = "VoidlineHub | premium",
-    SubTitle = "v1.0",
-    Folder = "VoidlineData",
-    Icon = "rbxassetid://135354802260060",
-    NewElements = true,
-    Color = primaryColor,
-    HideSearchBar = false,
-    OpenButton = {
-        Title = "Voidline | premium",
-        Icon = "rbxassetid://135354802260060",
-        CornerRadius = UDim.new(1, 0),
-        StrokeThickness = 3,
-        Enabled = true,
-        Draggable = true,
-        OnlyMobile = false,
-        Color = ColorSequence.new(
-            Color3.fromRGB(48, 255, 106), 
-            Color3.fromRGB(231, 255, 47)
-        ),
-        BackgroundColor = secondaryColor,
-        TextColor = primaryColor,
-    },
-    Topbar = {
-        Height = 44,
-        ButtonsType = "Mac",
-        Color = secondaryColor
-    },
-    Size = UDim2.fromOffset(560, 350),
-    Transparent = true,
-    Resizable = true,
-    SideBarWidth = 200,
-})
-
--- [[ 3. VERSION TAG ]] --
-Window:Tag({
-    Title = "v0.0.1",
-    Icon = "github",
-    Color = Color3.fromRGB(255, 251, 251),
-    Border = true,
-})
-
--- // TAB: HOME
-local HomeTab = Window:Tab({ Title = "Home", Icon = "solar:home-2-bold" })
-
-HomeTab:Paragraph({
-        Title = "idk",
-        Desc = "semua akan berakhir",
-        Image = "",
-        ImageSize = 60,
-       Locked = false,
-        BackgroundColor = secondaryColor,
-        TextTransparency = 0
-    })
-
-    HomeTab:Divider()
-    HomeTab:Section({ Title = "Social Links" })
-    HomeTab:Button({
-        Title = "Copy Discord Invite",
-        Desc = "Click to copy invite link!",
-        Callback = function()
-            setclipboard("https://discord.gg/CZvnM7y2sM")
-            WindUI:Notify({
-                Title = "Copied!",
-                Content = "Discord invite copied to clipboard.",
-                Duration = 3
-            })
-        end
-    })
-
-    HomeTab:Button({
-        Title = "Follow on TikTok",
-        Desc = "Click to copy TikTok link!\nTikTok: @bilzzhub",
-        Callback = function()
-            setclipboard("bilzzhub")
-            WindUI:Notify({
-                Title = "Copied!",
-                Content = "TikTok link copied to clipboard.",
-                Duration = 3
-            })
-        end
-    })
-
-
-local AutoFarmTab = Window:Tab({ Title = "Auto Farm", Icon = "car" })
-AutoFarmTab:Section({ Title = "Barista" })
-AutoFarmTab:Toggle({
-Title = "Auto Farm Barista",
-Value = false,
-Callback = function(v)
-_G.AutoFarmBarista = v
-end
-})
-AutoFarmTab:Section({ Title = "Courier" })
-AutoFarmTab:Toggle({ Title = "Autofarm courier", Locked = true, LockedTitle = "Soon" })
-AutoFarmTab:Section({ Title = "Police" })
-AutoFarmTab:Toggle({ Title = "Autofarm Police", Locked = true, LockedTitle = "Only Premium" })
-
-local TeleportTab = Window:Tab({ Title = "Teleport", Icon = "map" })
-TeleportTab:Section({ Title = "Teleport Dealer" })
-
--- =========================
--- VOID TWEEN TELEPORT (DEALER)
--- =========================
-local function getHRP()
-local char = LP.Character or LP.CharacterAdded:Wait()
-return char:WaitForChild("HumanoidRootPart")
-end
-
-local function VoidTweenTo(targetCF)
-local hrp = getHRP()
-local VOID_Y = -30
-local SPEED = 180
-
--- turun ke void
-local downTween = TweenService:Create(
-hrp,
-TweenInfo.new(0.5, Enum.EasingStyle.Sine),
-{ CFrame = hrp.CFrame * CFrame.new(0, VOID_Y, 0) }
-)
-downTween:Play()
-downTween.Completed:Wait()
-
--- jalan horizontal di void
-local targetVoid = CFrame.new(targetCF.X, VOID_Y, targetCF.Z)
-local dist = (hrp.Position - targetVoid.Position).Magnitude
-
-local moveTween = TweenService:Create(
-hrp,
-TweenInfo.new(dist / SPEED, Enum.EasingStyle.Linear),
-{ CFrame = targetVoid }
-)
-moveTween:Play()
-moveTween.Completed:Wait()
-
--- naik ke permukaan
-TweenService:Create(
-hrp,
-TweenInfo.new(0.5, Enum.EasingStyle.Sine),
-{ CFrame = targetCF + Vector3.new(0, 2, 0) }
-):Play()
-
-end
-
-local Locations = {
-["Luxury"] = CFrame.new(-4810, 6, -771),
-["Sizuki"] = CFrame.new(-4819, 6, -771),
-["Yahamax"] = CFrame.new(709, 4, -736),
-["Police"] = CFrame.new(2823, 5, -829),
-["Trucks"] = CFrame.new(-10248, 7, 1304),
-["Cars"] = CFrame.new(-6605, 5, -4211),
-["DragSpec"] = CFrame.new(-5005, 4, -5351),
-["Vespero"] = CFrame.new(-5753, 6, -3896),
-["Hando"] = CFrame.new(-5956, 6, -3898)
-}
-
-TeleportTab:Dropdown({
-Title = "Select Dealer",
-Values = {"Luxury","Sizuki","Yahamax","Police","Trucks","Cars","DragSpec","Vespero","Hando"},
-Callback = function(v)
-_G.SelectTp = v
-end
-})
-
-TeleportTab:Button({
-Title = "Teleport",
-Callback = function()
-if _G.SelectTp and Locations[_G.SelectTp] then
-VoidTweenTo(Locations[_G.SelectTp])
-end
-end
-})
-
-local VehicleTab = Window:Tab({ Title = "Vehicle", Icon = "car-front",  })
-VehicleTab:Section({ Title = "Vehicle Config" })
-VehicleTab:Input({ Title = "Max Force", Locked = true, LockedTitle = "Premium Only" })
-VehicleTab:Input({ Title = "Increment", Locked = true, LockedTitle = "Premium Only" })
-VehicleTab:Input({ Title = "Interval", Locked = true, LockedTitle = "Premium Only" })
-VehicleTab:Section({ Title = "enable Config" })
-VehicleTab:Toggle({ Title = "Enable Boost", Locked = true, LockedTitle = "Premium Only" })
-
-VehicleTab:Toggle({ Title = "straight boost", Locked = true, LockedTitle = "Only Premium" })
-
-local SettingTab = Window:Tab({ Title = "Settings", Icon = "settings" })
-
-SettingTab:Section({ Title = "Character & UI" })
-
-SettingTab:Toggle({
-Title = "Hide Name",
-Callback = function(v)
-_G.HideNameEnabled = v
-end
-})
-
-SettingTab:Toggle({
-Title = "Hide Character",
-Callback = function(v)
-_G.HideCharEnabled = v
-end
-})
-
-SettingTab:Button({
-Title = "Reset Character",
-Callback = function()
-if LP.Character then
-LP.Character:BreakJoints()
-endend
-})
-
-SettingTab:Section({ Title = "Automation" })
-
-SettingTab:Toggle({
-Title = "Auto Rejoin",
-Value = true,
-Callback = function(v)
-_G.AutoRejoin = v
-end
-})
-
-SettingTab:Toggle({
-Title = "Anti AFK",
-Value = true,
-Callback = function(v)
-_G.AntiAFK = v
-end
-})
-
-SettingTab:Section({ Title = "Webhook Log" })
-SettingTab:Input({ Title = "Webhook URL", Callback = function(v) _G.WebhookURL = v end })
-SettingTab:Toggle({ Title = "Enable Webhook Log", Callback = function(v) _G.WebhookEnabled = v end })
-SettingTab:Button({ Title = "Test Send Webhook", Callback = function() SendWebhook(true) end })
-
-
--- =========================================================
--- BARISTA GHOST MODE (CLEAN LOGIC ONLY)
--- =========================================================
-
--- STATE
+-- // 1. CONFIGURATION & STATE
+_G.AutoFarmBarista = true 
 local BaristaRunning = false
 local isWorking = false
 
--- POSITIONS
+-- Positions (Ghost Mode)
 local POS_EXIT_BARISTA = Vector3.new(-5004.42, 2.89, -678.09)
 local POS_SUPPLY = Vector3.new(-5114.04, 2.89, -669.93)
 
--- PATHS
-local BaristaJob = workspace:WaitForChild("BaristaJob")
+-- // 2. PATHS (PROTECTED)
+local BaristaJob = workspace:WaitForChild("BaristaJob", 15)
 local Interactions = BaristaJob:WaitForChild("Interactions")
 local JobEvents = ReplicatedStorage:WaitForChild("JobEvents")
 local TeamChangeRequest = JobEvents:WaitForChild("TeamChangeRequest")
@@ -432,244 +30,96 @@ local BaristaEvent = BaristaAssets:WaitForChild("Events"):WaitForChild("BaristaE
 local startPart = Interactions.StartPart.StartPart
 local machinePart = Interactions.MachinePart.MachinePart
 local registerPart = Interactions.RegisterPart.RegisterPart
-local supplyPart = Interactions.SupplyPart.SupplyPart
 
--- UTILS
+-- // 3. UTILS
 local function getHRP()
     local char = LP.Character or LP.CharacterAdded:Wait()
     return char:WaitForChild("HumanoidRootPart")
 end
 
--- TWEENING
 local function safeTween(targetCF)
     local hrp = getHRP()
     local VOID_Y = -27
     local SPEED = 180 
-
+    
     local downCF = CFrame.new(hrp.Position.X, VOID_Y, hrp.Position.Z)
     TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {CFrame = downCF}):Play()
     task.wait(0.55)
-
+    
     local targetVoid = CFrame.new(targetCF.X, VOID_Y, targetCF.Z)
-    local dist = (hrp.Position - targetVoid.Position).Magnitude
-    local moveTween = TweenService:Create(hrp, TweenInfo.new(dist / SPEED, Enum.EasingStyle.Linear), {CFrame = targetVoid})
+    local moveTween = TweenService:Create(hrp, TweenInfo.new((hrp.Position - targetVoid.Position).Magnitude / SPEED, Enum.EasingStyle.Linear), {CFrame = targetVoid})
     moveTween:Play()
     moveTween.Completed:Wait()
-
+    
     TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {CFrame = targetCF + Vector3.new(0, 2, 0)}):Play()
     task.wait(0.55)
 end
 
--- MOVEMENT
-local function autoWalk(targetPos)
-    local char = LP.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hum or not hrp then return end
-    
-    hum.WalkSpeed = 19
-    
-    repeat
-        if not _G.AutoFarmBarista then break end
-        hum:MoveTo(targetPos)
-        task.wait(0.1)
-    until (hrp.Position - targetPos).Magnitude < 3.8
-end
-
--- INTERACTION
 local function safeClick(prompt)
-    if not prompt or not prompt.Enabled then return end
-    task.wait(0.5)
-    fireproximityprompt(prompt)
+    if not prompt then return end
+    local retry = 0
+    while not prompt.Enabled and retry < 10 do task.wait(0.5) retry = retry + 1 end
+    if prompt.Enabled then task.wait(0.2) fireproximityprompt(prompt) end
 end
 
--- REPAIR FLOW (ADONIS SAFE - NO VIM)
-local function runRepairFlow()
+-- // 4. CORE LOGIC (INTELLIGENT REPAIR & MINIGAME)
+local function handleMachineStatus()
     local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
-    local label = missionUI and missionUI:FindFirstChild("ObjectiveLabel", true)
+    if not missionUI then return end
     
+    local label = missionUI:FindFirstChild("ObjectiveLabel", true)
     if label and label.TextColor3 == Color3.fromRGB(255, 50, 50) then
         local text = label.Text:lower()
+        
+        -- Validasi: Hanya lari ke gudang jika teks beneran "Broken" atau "Restock"
         if text:find("broke") or text:find("down") or text:find("fix") or text:find("restock") then
             isWorking = true
+            print("[Ghost] Machine Broken! Heading to Supply...")
+            
             safeTween(CFrame.new(POS_EXIT_BARISTA))
             safeTween(CFrame.new(POS_SUPPLY))
             
             BaristaEvent:FireServer("RestockSupplies")
             task.wait(0.5)
 
-            -- Ganti VIM pake simulasi VirtualUser agar tidak kena IndexInstance Detector
-            local VU = game:GetService("VirtualUser")
+            -- Simulasi Hold E Anti-Kick
             local startHold = os.clock()
-            while os.clock() - startHold < 7.2 do
+            while os.clock() - startHold < 7.5 do
                 VU:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
                 task.wait(0.1)
             end
+            VU:Button1Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
             
             task.wait(1.0)
             safeTween(CFrame.new(POS_EXIT_BARISTA))
             isWorking = false
+        else
+            -- Jika merah tapi teksnya nama menu, berarti itu cuma pesanan Anomaly
+            print("[Ghost] Anomaly Order detected. Staying at station.")
         end
     end
 end
 
--- MINIGAME
 local function handleMinigame()
     local gui = PlayerGui:FindFirstChild("BaristaGUI")
     local mini = gui and gui:FindFirstChild("MinigameFrame")
     if not mini or not mini.Visible then return end
 
     isWorking = true
+    print("[Ghost] Minigame Started! Injecting Auto-Win...")
+    
+    -- GUI Injection: Perlebar TargetZone biar cursor game selalu "Hit"
     pcall(function()
         local target = mini:WaitForChild("BackgroundBar"):WaitForChild("TargetZone")
-        target.Size = UDim2.new(1.8, 0, 1.8, 0)
-        target.Position = UDim2.new(-0.4, 0, -0.4, 0)
+        target.Size = UDim2.new(2, 0, 2, 0) -- Nutupin satu bar penuh
+        target.Position = UDim2.new(-0.5, 0, -0.5, 0)
+        target.BackgroundTransparency = 1.5 -- Biar keliatan scriptnya kerja
+        target.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
     end)
 
+    -- Tunggu sampe minigame kelar (sistem game yang bakal nyelesain karena target kita kegedean)
     while mini.Visible and _G.AutoFarmBarista do task.wait(0.5) end
     
-    autoWalk(registerPart.Position)
-    safeClick(registerPart:FindFirstChild("RegisterPrompt"))
-    
-    autoWalk(machinePart.Position)
-    isWorking = false
-end
-
--- MAIN START
-local function StartBaristaGhost()
-    if BaristaRunning then return end
-    BaristaRunning = true
-
-    task.spawn(function()
-        TeamChangeRequest:FireServer("Barista", 11378976, 1, 0, "Detector")
-        task.wait(2)
-        
-        while _G.AutoFarmBarista do
-            local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
-            
-            if not missionUI and not isWorking then
-                safeTween(startPart.CFrame)
-                safeClick(startPart:FindFirstChild("JobPrompt"))
-                task.wait(2)
-            elseif missionUI and not isWorking then
-                local label = missionUI:FindFirstChild("ObjectiveLabel", true)
-                if label and label.TextColor3 == Color3.fromRGB(255, 50, 50) then
-                    runRepairFlow()
-                end
-            end
-
-            if missionUI and not isWorking then
-                local gui = PlayerGui:FindFirstChild("BaristaGUI")
-                local mini = gui and gui:FindFirstChild("MinigameFrame")
-
-                if mini and mini.Visible then
-                    handleMinigame()
-                else
-                    local hrp = getHRP()
-                    if (hrp.Position - machinePart.Position).Magnitude > 4 then
-                        autoWalk(machinePart.Position)
-                    else
-                        local prompt = machinePart:FindFirstChild("MachinePrompt")
-                        if prompt and prompt.Enabled then
-                            safeClick(prompt)
-                        end
-                    end
-                end
-            end
-            task.wait(0.5)
-        end
-        BaristaRunning = false
-    end)
-end
-
--- LOOP CONTROLLER
-task.spawn(function()
-    while true do
-        task.wait(1)
-        if _G.AutoFarmBarista then StartBaristaGhost() end
-    end
-end)
-
--- =========================
--- SYSTEM LOOPS (FPS Counter)
--- =========================
-local lastClock = os.clock()
-local fpsCounter = 0
-local fps = 0
-
-RunService.Heartbeat:Connect(function()
-fpsCounter += 1
-if os.clock() - lastClock >= 1 then
-fps = fpsCounter
-fpsCounter = 0
-lastClock = os.clock()
-end
-end)
-
--- =========================
--- FPS / PING LOOP (FIXED)
--- =========================
-task.spawn(function()
-    local fpsCounter = 0
-    local currentFps = 0
-
-    RunService.Heartbeat:Connect(function()
-        fpsCounter += 1
-    end)
-
-    while true do
-        task.wait(1)
-
-        currentFps = fpsCounter
-        fpsCounter = 0
-
-        -- Update FPS
-        if FpsLabel then
-            FpsLabel:SetDesc(tostring(currentFps) .. " FPS")
-        end
-
-        -- Update Ping
-        local ping = math.floor(LP:GetNetworkPing() * 1000)
-        if PingLabel then
-            PingLabel:SetDesc(tostring(ping) .. " ms")
-        end
-    end
-end)
--- // HIDE NAME & CHARACTER LOOP (FIXED)
-RunService.Heartbeat:Connect(function()
-local char = LP.Character
-if not char then return end
-
--- HIDE NAME
-if _G.HideNameEnabled then
-local head = char:FindFirstChild("Head")
-local tag = head and head:FindFirstChildOfClass("BillboardGui")
-if tag then
-tag.Enabled = false
-end
-end
-
--- HIDE CHARACTER
-if _G.HideCharEnabled then
-for _, v in pairs(char:GetDescendants()) do
-if v:IsA("BasePart") then
-v.Transparency = 1
-v.CanCollide = false
-elseif v:IsA("Decal") then
-v.Transparency = 1
-end
-end
-end
-
-end)
-
--- ANTI AFK FIXED
-task.spawn(function()
-    local VU = game:GetService("VirtualUser")
-    while task.wait(60) do
-        if _G.AntiAFK then
-            VU:CaptureController()
-            VU:ClickButton2(Vector2.new(0,0))
-        end
-    end
-end)
+    -- Auto Register
+    print("[Ghost] Serving Order...")
+    safeTween(registerPart.C
