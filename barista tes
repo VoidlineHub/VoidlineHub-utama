@@ -408,88 +408,112 @@ SettingTab:Input({ Title = "Webhook URL", Callback = function(v) _G.WebhookURL =
 SettingTab:Toggle({ Title = "Enable Webhook Log", Callback = function(v) _G.WebhookEnabled = v end })
 SettingTab:Button({ Title = "Test Send Webhook", Callback = function() SendWebhook(true) end })
 
---- // LOGIC BARISTA ANTI-ADONIS
--- Gue ganti cara interaksinya biar nggak manggil service terlarang
 
--- [[ 4. BARISTA LOGIC (FIXED REDUNDANCY) ]] --
+-- =========================================================
+-- BARISTA GHOST MODE (CLEAN LOGIC ONLY)
+-- =========================================================
+
+-- STATE
+local BaristaRunning = false
+local isWorking = false
+
+-- POSITIONS
 local POS_EXIT_BARISTA = Vector3.new(-5004.42, 2.89, -678.09)
 local POS_SUPPLY = Vector3.new(-5114.04, 2.89, -669.93)
 
+-- PATHS
+local BaristaJob = workspace:WaitForChild("BaristaJob")
+local Interactions = BaristaJob:WaitForChild("Interactions")
+local JobEvents = ReplicatedStorage:WaitForChild("JobEvents")
+local TeamChangeRequest = JobEvents:WaitForChild("TeamChangeRequest")
+local BaristaAssets = ReplicatedStorage:WaitForChild("BaristaAssets")
+local BaristaEvent = BaristaAssets:WaitForChild("Events"):WaitForChild("BaristaEvent")
+
+local startPart = Interactions.StartPart.StartPart
+local machinePart = Interactions.MachinePart.MachinePart
+local registerPart = Interactions.RegisterPart.RegisterPart
+local supplyPart = Interactions.SupplyPart.SupplyPart
+
+-- UTILS
+local function getHRP()
+    local char = LP.Character or LP.CharacterAdded:Wait()
+    return char:WaitForChild("HumanoidRootPart")
+end
+
+-- TWEENING
+local function safeTween(targetCF)
+    local hrp = getHRP()
+    local VOID_Y = -27
+    local SPEED = 180 
+
+    local downCF = CFrame.new(hrp.Position.X, VOID_Y, hrp.Position.Z)
+    TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {CFrame = downCF}):Play()
+    task.wait(0.55)
+
+    local targetVoid = CFrame.new(targetCF.X, VOID_Y, targetCF.Z)
+    local dist = (hrp.Position - targetVoid.Position).Magnitude
+    local moveTween = TweenService:Create(hrp, TweenInfo.new(dist / SPEED, Enum.EasingStyle.Linear), {CFrame = targetVoid})
+    moveTween:Play()
+    moveTween.Completed:Wait()
+
+    TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Sine), {CFrame = targetCF + Vector3.new(0, 2, 0)}):Play()
+    task.wait(0.55)
+end
+
+-- MOVEMENT
+local function autoWalk(targetPos)
+    local char = LP.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hum or not hrp then return end
+    
+    hum.WalkSpeed = 19
+    
+    repeat
+        if not _G.AutoFarmBarista then break end
+        hum:MoveTo(targetPos)
+        task.wait(0.1)
+    until (hrp.Position - targetPos).Magnitude < 3.8
+end
+
+-- INTERACTION
 local function safeClick(prompt)
     if not prompt or not prompt.Enabled then return end
-    task.wait(math.random(8, 15)/10)
-    LP.Character.HumanoidRootPart.CFrame = prompt.Parent.CFrame
-    task.wait(0.2)
+    task.wait(0.5)
     fireproximityprompt(prompt)
 end
 
+-- REPAIR FLOW (ADONIS SAFE - NO VIM)
 local function runRepairFlow()
     local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
     local label = missionUI and missionUI:FindFirstChild("ObjectiveLabel", true)
     
     if label and label.TextColor3 == Color3.fromRGB(255, 50, 50) then
-        isWorking = true
-        -- Pakai VoidTweenTo lu yang di bawah
-        _G.VoidTweenTo(CFrame.new(POS_SUPPLY)) 
-        
-        task.wait(0.5)
-        local startHold = os.clock()
-        while os.clock() - startHold < 7.2 do
-            VU:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-            task.wait(0.1)
+        local text = label.Text:lower()
+        if text:find("broke") or text:find("down") or text:find("fix") or text:find("restock") then
+            isWorking = true
+            safeTween(CFrame.new(POS_EXIT_BARISTA))
+            safeTween(CFrame.new(POS_SUPPLY))
+            
+            BaristaEvent:FireServer("RestockSupplies")
+            task.wait(0.5)
+
+            -- Ganti VIM pake simulasi VirtualUser agar tidak kena IndexInstance Detector
+            local VU = game:GetService("VirtualUser")
+            local startHold = os.clock()
+            while os.clock() - startHold < 7.2 do
+                VU:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                task.wait(0.1)
+            end
+            
+            task.wait(1.0)
+            safeTween(CFrame.new(POS_EXIT_BARISTA))
+            isWorking = false
         end
-        _G.VoidTweenTo(CFrame.new(POS_EXIT_BARISTA))
-        isWorking = false
     end
 end
 
--- =========================================================
--- SAFE CLICK (Ganti fireproximityprompt yang kasar)
--- =========================================================
-local function safeClick(prompt)
-    if not prompt or not prompt.Enabled then return end
-    
-    -- Simulasi interaksi manual, bukan manggil fungsi API langsung secara kasar
-    task.wait(math.random(8, 15) / 10) 
-    -- Gunakan interaksi via PromptEditor atau Keypress simulasi yang lebih halus
-    LP.Character.HumanoidRootPart.CFrame = prompt.Parent.CFrame
-    task.wait(0.2)
-    fireproximityprompt(prompt)
-end
-
--- =========================================================
--- REPAIR LOGIC (Ganti VIM yang ke-detect Adonis)
--- =========================================================
-local function runRepairFlow()
-    local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
-    local label = missionUI and missionUI:FindFirstChild("ObjectiveLabel", true)
-    
-    if label and label.TextColor3 == Color3.fromRGB(255, 50, 50) then
-        isWorking = true
-        -- Tween dengan kecepatan yang sedikit berubah-ubah (variabel speed)
-        -- Biar nggak pola lurus yang gampang di-scan Anti-Cheat
-        safeTween(CFrame.new(POS_EXIT_BARISTA))
-        safeTween(CFrame.new(POS_SUPPLY))
-        
-        BaristaEvent:FireServer("RestockSupplies")
-        task.wait(0.5)
-
-        -- GANTI VIM: Pake VirtualUser atau manipulasi manual keycode
-        -- Adonis nyari "VirtualInputManager" di FindService
-        local startHold = os.clock()
-        while os.clock() - startHold < 7.2 do
-            VU:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-            task.wait(0.1)
-        end
-        
-        task.wait(1.0)
-        safeTween(CFrame.new(POS_EXIT_BARISTA))
-        isWorking = false
-    end
-end
--- =========================
--- MINIGAME LOGIC
--- =========================
+-- MINIGAME
 local function handleMinigame()
     local gui = PlayerGui:FindFirstChild("BaristaGUI")
     local mini = gui and gui:FindFirstChild("MinigameFrame")
@@ -500,7 +524,6 @@ local function handleMinigame()
         local target = mini:WaitForChild("BackgroundBar"):WaitForChild("TargetZone")
         target.Size = UDim2.new(1.8, 0, 1.8, 0)
         target.Position = UDim2.new(-0.4, 0, -0.4, 0)
-        target.BackgroundTransparency = 1
     end)
 
     while mini.Visible and _G.AutoFarmBarista do task.wait(0.5) end
@@ -512,16 +535,14 @@ local function handleMinigame()
     isWorking = false
 end
 
--- =========================
--- MAIN CONTROLLER
--- =========================
+-- MAIN START
 local function StartBaristaGhost()
     if BaristaRunning then return end
     BaristaRunning = true
 
     task.spawn(function()
         TeamChangeRequest:FireServer("Barista", 11378976, 1, 0, "Detector")
-        task.wait(2.5)
+        task.wait(2)
         
         while _G.AutoFarmBarista do
             local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
@@ -529,21 +550,11 @@ local function StartBaristaGhost()
             if not missionUI and not isWorking then
                 safeTween(startPart.CFrame)
                 safeClick(startPart:FindFirstChild("JobPrompt"))
-                
-                local retry = 0
-                while not PlayerGui:FindFirstChild("BaristaMissionUI") and retry < 15 do
-                    task.wait(1)
-                    retry = retry + 1
-                end
-                
-                if _G.AutoFarmBarista and PlayerGui:FindFirstChild("BaristaMissionUI") then
-                    autoWalk(machinePart.Position)
-                end
-
+                task.wait(2)
             elseif missionUI and not isWorking then
                 local label = missionUI:FindFirstChild("ObjectiveLabel", true)
                 if label and label.TextColor3 == Color3.fromRGB(255, 50, 50) then
-                    runRepairFlow() -- Mangul fungsi repair lu
+                    runRepairFlow()
                 end
             end
 
@@ -571,10 +582,10 @@ local function StartBaristaGhost()
     end)
 end
 
--- TOGGLE
+-- LOOP CONTROLLER
 task.spawn(function()
     while true do
-        task.wait(0.5)
+        task.wait(1)
         if _G.AutoFarmBarista then StartBaristaGhost() end
     end
 end)
