@@ -1,10 +1,9 @@
--- [[ 2. UI / WINDOWS SECTION ]] --
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
-local VIM = game:GetService("VirtualInputManager") -- Buat simulasi pencet E
+local VU = game:GetService("VirtualUser") -- Ganti VIM jadi VU (Anti-Detect)
 
 local LP = Players.LocalPlayer
 local PlayerGui = LP:WaitForChild("PlayerGui")
