@@ -589,18 +589,20 @@ SettingsTab:Toggle({
    SettingsTab:Toggle({
    Title = "Hide Char",
     Desc = "make a video or something like this visual",
-    Value = _G.HideNameEnabled,
+    Value = _G.HideCharEnabled,
     Callback = function(v)
-        _G.HideNameEnabled = v
+        _G.HideCharEnabled = v
         
-        -- Logic instant buat balikin nama pas toggle OFF
+        -- Logic instant buat balikin karakter pas toggle OFF
         if not v then
             local char = LP.Character
             if char then
-                local head = char:FindFirstChild("Head")
-                if head then 
-                    for _, gui in pairs(head:GetChildren()) do 
-                        if gui:IsA("BillboardGui") then gui.Enabled = true end 
+                for _, part in pairs(char:GetDescendants()) do 
+                    if part:IsA("BasePart") or part:IsA("Decal") then 
+                        -- Jangan buat HumanoidRootPart jadi kelihatan (biasanya emang transparan)
+                        if part.Name ~= "HumanoidRootPart" then
+                            part.Transparency = 0 
+                        end
                     end 
                 end
             end
@@ -608,12 +610,8 @@ SettingsTab:Toggle({
 
         WindUI:Notify({
             Title = "Stealth Mode",
-            Content = "Hide Name: " .. (v and "Enabled" or "Disabled"),
+            Content = "Hide Character: " .. (v and "Enabled" or "Disabled"),
             Duration = 2
         })
-end
+    end
 })
-
-
-
-
