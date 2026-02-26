@@ -538,6 +538,7 @@ local PanelToggle = SettingsTab:Toggle({
 
 SettingsTab:Toggle({
     Title = "Anti-AFK",
+    Desc = "so as not to disconnect",
     Value = _G.AntiAFK, -- Biar posisi awal toggle ngikutin variabel
     Callback = function(v)
         _G.AntiAFK = v
@@ -559,6 +560,7 @@ SettingsTab:Toggle({
 
    SettingsTab:Toggle({
    Title = "Hide Char",
+    Desc = "make a video or something like this visual",
     Value = _G.HideNameEnabled,
     Callback = function(v)
         _G.HideNameEnabled = v
@@ -581,4 +583,6 @@ SettingsTab:Toggle({
             Content = "Hide Name: " .. (v and "Enabled" or "Disabled"),
             Duration = 2
         })
+end
+})
 
