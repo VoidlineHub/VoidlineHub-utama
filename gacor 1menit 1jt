@@ -562,14 +562,14 @@ local StraightToggle = VehicleTab:Toggle({
 
 
 -- 1. BUAT TAB DULU (Wajib di atas toggle)
-local SettingTab = Window:Tab({ 
+local SettingsTab = Window:Tab({ 
     Title = "Setting", 
     Icon = "solar:settings-bold" 
 })
 
 SettingsTab:Section({ Title = "great features" })
 
-local PanelToggle = SettingTab:Toggle({
+local PanelToggle = SettingsTab:Toggle({
     Title = "Panel stats",
     Desc = "View money, session time, and earnings",
     Value = _G.PanelStats or false,
@@ -623,8 +623,8 @@ SettingsTab:Toggle({
     end
 })
 
-SettingsTab:Toggle({
-    Title = "Hide Name",
+   SettingsTab:Toggle({
+   Title = "Hide Char",
     Value = _G.HideNameEnabled,
     Callback = function(v)
         _G.HideNameEnabled = v
@@ -678,4 +678,5 @@ SettingsTab:Toggle({
             Duration = 2
         })
     end
+
 })
