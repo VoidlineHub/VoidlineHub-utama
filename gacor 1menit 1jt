@@ -557,6 +557,35 @@ SettingsTab:Toggle({
     end
 })
 
+SettingsTab:Toggle({
+    Title = "Hide Name",
+    Desc = "idk",
+    Value = _G.HideNameEnabled,
+    Callback = function(v)
+        _G.HideNameEnabled = v
+        
+        -- Logic instant buat balikin nama pas toggle OFF
+        if not v then
+            local char = LP.Character
+            if char then
+                local head = char:FindFirstChild("Head")
+                if head then 
+                    for _, gui in pairs(head:GetChildren()) do 
+                        if gui:IsA("BillboardGui") then gui.Enabled = true end 
+                    end 
+                end
+            end
+        end
+
+        WindUI:Notify({
+            Title = "Stealth Mode",
+            Content = "Hide Name: " .. (v and "Enabled" or "Disabled"),
+            Duration = 2
+        })
+    end
+})
+
+
    SettingsTab:Toggle({
    Title = "Hide Char",
     Desc = "make a video or something like this visual",
@@ -584,6 +613,7 @@ SettingsTab:Toggle({
         })
 end
 })
+
 
 
 
