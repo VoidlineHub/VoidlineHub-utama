@@ -15,6 +15,78 @@ local StartMoney = RPValue and RPValue.Value or 0
 local primaryColor = Color3.fromRGB(48, 255, 106)
 local secondaryColor = Color3.fromRGB(25, 25, 25)
 
+
+-- [[ WINDUI LOAD ]] --
+local WindUI
+local success, result = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+end)
+if success then 
+    WindUI = result 
+else 
+    warn("WindUI Gagal Load:", result)
+    return 
+end
+
+-- [[ Global variabel ]] --
+_G.AutoRaceEnabled = false 
+_G.AutoRaceSpeed = 300
+_G.PanelStats = false
+_G.AntiStaff = true
+_G.HideNameEnabled = false
+_G.HideCharEnabled = false
+_G.Speed = 300   
+_G.Increment = 50       
+_G.Interval = 0.5 
+_G.BoostEnabled = false
+_G.StraightBoost = false
+local lastBoostTime = 0
+
+local Pos_A = Vector3.new(90.9680176, -4.78933477, -852.365662)
+local Pos_B = Vector3.new(1291.37805, -5.28900003, -852.704285)
+local Rotasi_Kanan = CFrame.Angles(0, math.rad(-90), 0)
+
+-- // --- FUNGSI UTAMA (PIVOT TWEEN) --- //
+local function PivotTween(targetPos)
+    local seat = LP.Character and LP.Character.Humanoid.SeatPart
+    if not seat or not _G.AutoRaceEnabled then return end
+    
+    local model = seat.Parent
+    local startCF = model:GetPivot()
+    local targetCF = CFrame.new(targetPos) * Rotasi_Kanan
+    local jarak = (model:GetPivot().Position - targetPos).Magnitude
+    
+    local currentSpeed = _G.AutoRaceSpeed
+    local durasi = jarak / currentSpeed
+
+    local tweenValue = Instance.new("CFrameValue")
+    tweenValue.Value = startCF
+    seat.Anchored = false
+
+    local updateConn = tweenValue.Changed:Connect(function()
+        if not _G.AutoRaceEnabled then return end
+        model:PivotTo(tweenValue.Value)
+        seat.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        seat.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    end)
+
+    local info = TweenInfo.new(durasi, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(tweenValue, info, {Value = targetCF})
+    
+    tween:Play()
+    
+    while tween.PlaybackState == Enum.PlaybackState.Playing do
+        if not _G.AutoRaceEnabled then 
+            tween:Cancel() 
+            break 
+        end
+        task.wait()
+    end
+
+    updateConn:Disconnect()
+    tweenValue:Destroy()
+end
+
 -- // 2. UI CONSTRUCTION
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "Voidline_FinalStats"
@@ -150,79 +222,6 @@ UserInputService.InputChanged:Connect(function(input)
         MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
-
-
-
--- [[ WINDUI LOAD ]] --
-local WindUI
-local success, result = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
-end)
-if success then 
-    WindUI = result 
-else 
-    warn("WindUI Gagal Load:", result)
-    return 
-end
-
--- [[ Global variabel ]] --
-_G.AutoRaceEnabled = false 
-_G.AutoRaceSpeed = 300
-_G.PanelStats = false
-_G.AntiStaff = true
-_G.HideNameEnabled = false
-_G.HideCharEnabled = false
-_G.Speed = 300   
-_G.Increment = 50       
-_G.Interval = 0.5 
-_G.BoostEnabled = false
-_G.StraightBoost = false
-local lastBoostTime = 0
-
-local Pos_A = Vector3.new(90.9680176, -4.78933477, -852.365662)
-local Pos_B = Vector3.new(1291.37805, -5.28900003, -852.704285)
-local Rotasi_Kanan = CFrame.Angles(0, math.rad(-90), 0)
-
--- // --- FUNGSI UTAMA (PIVOT TWEEN) --- //
-local function PivotTween(targetPos)
-    local seat = LP.Character and LP.Character.Humanoid.SeatPart
-    if not seat or not _G.AutoRaceEnabled then return end
-    
-    local model = seat.Parent
-    local startCF = model:GetPivot()
-    local targetCF = CFrame.new(targetPos) * Rotasi_Kanan
-    local jarak = (model:GetPivot().Position - targetPos).Magnitude
-    
-    local currentSpeed = _G.AutoRaceSpeed
-    local durasi = jarak / currentSpeed
-
-    local tweenValue = Instance.new("CFrameValue")
-    tweenValue.Value = startCF
-    seat.Anchored = false
-
-    local updateConn = tweenValue.Changed:Connect(function()
-        if not _G.AutoRaceEnabled then return end
-        model:PivotTo(tweenValue.Value)
-        seat.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        seat.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-    end)
-
-    local info = TweenInfo.new(durasi, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(tweenValue, info, {Value = targetCF})
-    
-    tween:Play()
-    
-    while tween.PlaybackState == Enum.PlaybackState.Playing do
-        if not _G.AutoRaceEnabled then 
-            tween:Cancel() 
-            break 
-        end
-        task.wait()
-    end
-
-    updateConn:Disconnect()
-    tweenValue:Destroy()
-end
 
 -- [[ 2. ANTI-AFK SYSTEM ]] --
 task.spawn(function()
@@ -585,4 +584,5 @@ SettingsTab:Toggle({
         })
 end
 })
+
 
