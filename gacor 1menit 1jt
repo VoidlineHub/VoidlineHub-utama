@@ -649,34 +649,3 @@ SettingsTab:Toggle({
         })
     end
 })
-
-
-SettingsTab:Toggle({
-    Title = "Hide Char",
-    Value = _G.HideCharEnabled,
-    Callback = function(v)
-        _G.HideCharEnabled = v
-        
-        -- Logic instant buat balikin karakter pas toggle OFF
-        if not v then
-            local char = LP.Character
-            if char then
-                for _, part in pairs(char:GetDescendants()) do 
-                    if part:IsA("BasePart") or part:IsA("Decal") then 
-                        -- Jangan buat HumanoidRootPart jadi kelihatan (biasanya emang transparan)
-                        if part.Name ~= "HumanoidRootPart" then
-                            part.Transparency = 0 
-                        end
-                    end 
-                end
-            end
-        end
-
-        WindUI:Notify({
-            Title = "Stealth Mode",
-            Content = "Hide Character: " .. (v and "Enabled" or "Disabled"),
-            Duration = 2
-        })
-    end
-
-})
