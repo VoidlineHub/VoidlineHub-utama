@@ -294,7 +294,7 @@ end)
 
  -- [[ WINDOW ]] --
 local Window = WindUI:CreateWindow({
-    Title = "VoidlineHub | premium",
+    Title = "VoidlineHub beta",
     SubTitle = "v1.0",
     Folder = "VoidlineData",
     Icon = "rbxassetid://135354802260060",
@@ -318,7 +318,7 @@ local Window = WindUI:CreateWindow({
         ButtonsType = "Mac",
         Color = secondaryColor
     },
-    Size = UDim2.fromOffset(560, 350),
+    Size = UDim2.fromOffset(570, 350),
     Transparent = true,
     Resizable = true,
     SideBarWidth = 200,
@@ -342,8 +342,8 @@ local HomeTab = Window:Tab({ Title = "Home", Icon = "solar:home-2-bold" })
 
 HomeTab:Paragraph({
         Title = "UPDATE LOG",
-        Desc = "[+]New speedboost\n[+] autofarm buff",
-        Image = "rbxassetid://135354802260060",
+        Desc = "[+]new autorace",
+        Image = "",
         ImageSize = 60,
        Locked = false,
         BackgroundColor = secondaryColor,
@@ -584,5 +584,6 @@ SettingsTab:Toggle({
         })
 end
 })
+
 
 
