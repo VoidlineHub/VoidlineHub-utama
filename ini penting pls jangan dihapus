@@ -262,29 +262,35 @@ end
 local activeSeconds = 0
 task.spawn(function()
     while task.wait(1) do
-        -- UI ikut toggle
+        -- UI nyala kalau Toggle Panel aktif
         ScreenGui.Enabled = _G.PanelStats
         
-        if _G.AutoRaceEnabled then 
+        -- Ngitung cuma kalau salah satu Auto Farm lagi jalan
+        if _G.AutoRaceEnabled or _G.AutoDrive then 
             activeSeconds = activeSeconds + 1 
             
-            -- Update Stats
+            -- Update Timer (HH:MM:SS)
             local h, m, s = math.floor(activeSeconds/3600), math.floor((activeSeconds%3600)/60), activeSeconds%60
             SessionVal.Text = string.format("%02d:%02d:%02d", h, m, s)
             
             if RPValue then
                 local current = RPValue.Value
                 local earned = current - StartMoney
+                
+                -- Update Text UI
                 CurrentVal.Text = "RP " .. FormatNumber(current)
                 EarnedVal.Text  = "RP " .. FormatNumber(earned)
                 
-                -- Pendapatan per second
-                local eps = earned / activeSeconds
-                EPSVal.Text = string.format("%.2f RP/s", eps)
+                -- Pendapatan per second (EPS)
+                if activeSeconds > 0 then
+                    local eps = earned / activeSeconds
+                    EPSVal.Text = string.format("%.2f RP/s", eps)
+                end
             end
         end
     end
 end)
+
 
 -- // 4. SMOOTH DRAG LOGIC
 local dragging, dragInput, dragStart, startPos
@@ -504,8 +510,6 @@ local SpeedSlider = AutoFarmTab:Slider({
 })
 
 AutoFarmTab:Section({ Title = "Auto drive" })
-
-AutoFarmTab:Section({ Title = "Auto Drive Route" })
 
 AutoFarmTab:Toggle({
     Title = "Auto Drive",
@@ -728,3 +732,4 @@ SettingsTab:Toggle({
         })
     end
 })
+
