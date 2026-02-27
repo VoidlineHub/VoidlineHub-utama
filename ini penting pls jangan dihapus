@@ -479,7 +479,7 @@ AutoFarmTab:Section({ Title = "Auto drag race" })
 
 -- FIXED TOGGLE (Pakai '=' dan panggil 'AutoFarmTab')
 local DragRaceToggle = AutoFarmTab:Toggle({
-    Title = "Enable Auto Farm",
+    Title = "Enable Auto race",
     Desc = "auto drag race",
     Value = _G.AutoRaceEnabled,
     Callback = function(state)
@@ -732,4 +732,5 @@ SettingsTab:Toggle({
         })
     end
 })
+
 
