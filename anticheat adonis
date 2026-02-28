@@ -1,0 +1,451 @@
+local VoidlineBypass = {}
+
+-- Configurable settings
+VoidlineBypass.Settings = {
+    DebugMode = true,      -- Show bypass notifications
+    AutoDisable = true,    -- Automatically disable all protections
+    StealthMode = false,   -- Minimal logging to avoid detection
+    Persistent = true      -- Re-hook if functions are restored
+}
+
+-- Hook tracking
+VoidlineBypass.HookedFunctions = {}
+VoidlineBypass.OriginalFunctions = {}
+
+-- mancing mania
+VoidlineBypass.PrepareEnvironment = function()
+    -- hookfunction
+    local originalIdentity = getthreadidentity or syn.get_thread_identity
+    local currentIdentity = originalIdentity and originalIdentity() or 7
+    
+    if setthreadidentity then
+        setthreadidentity(2)  -- Jangan di utak atik
+    end
+    
+    -- clear junk codes
+    for funcName, original in pairs(VoidlineBypass.OriginalFunctions) do
+        if original and type(original) == "function" then
+            if hookfunction and getrawmetatable then
+                local success = pcall(hookfunction, _G[funcName], original)
+                if success and VoidlineBypass.Settings.DebugMode then
+                    warn("[Voidline] Restored: " .. funcName)
+                end
+            end
+        end
+    end
+    
+    return currentIdentity
+end
+
+-- scanner
+VoidlineBypass.HookDetection = function()
+    -- Method 1: Ngescan GC
+    local detectedFunc = nil
+    local killFunc = nil
+    
+    for i, v in getgc(true) do
+        if type(v) == "table" then
+            local detected = rawget(v, "Detected")
+            local kill = rawget(v, "Kill")
+            local variables = rawget(v, "Variables")
+            local process = rawget(v, "Process")
+            
+            if type(detected) == "function" and not detectedFunc then
+                detectedFunc = detected
+                if VoidlineBypass.Settings.DebugMode then
+                    warn("[Voidline] Found Detected function")
+                end
+            end
+            
+            if variables and process and type(kill) == "function" and not killFunc then
+                killFunc = kill
+                if VoidlineBypass.Settings.DebugMode then
+                    warn("[Voidline] Found Kill function")
+                end
+            end
+        end
+    end
+    
+    -- Hook detected function
+    if detectedFunc then
+        VoidlineBypass.OriginalFunctions.Detected = detectedFunc
+        local hook; hook = hookfunction(detectedFunc, function(method, info)
+            if VoidlineBypass.Settings.DebugMode then
+                warn("[Voidline] Adonis Detection Blocked")
+                warn("  Method: " .. tostring(method))
+                warn("  Info: " .. tostring(info))
+            end
+            return true  -- jangan di utak atik
+        end)
+        table.insert(VoidlineBypass.HookedFunctions, hook)
+    end
+    
+    -- modar-in hookfunction
+    if killFunc then
+        VoidlineBypass.OriginalFunctions.Kill = killFunc
+        local hook; hook = hookfunction(killFunc, function(info)
+            if VoidlineBypass.Settings.DebugMode then
+                warn("[Voidline] Adonis Kill Blocked: " .. tostring(info))
+            end
+            -- sabar jing capek 
+        end)
+        table.insert(VoidlineBypass.HookedFunctions, hook)
+    end
+    
+    return detectedFunc ~= nil or killFunc ~= nil
+end
+
+-- absen dlu ges 
+VoidlineBypass.HookCoreFunctions = function()
+    local coreFunctions = {
+        "Disconnect",   -- v_u_32
+        "Kick",         -- v_u_36
+        "Process",      -- v_u_2.Process
+        "Variables",    -- v_u_38
+        "Anti",         -- v_u_37
+        "Detectors"     -- Detection system
+    }
+    
+    -- tempat deteksi scan 
+    local function findAdonisModule(name)
+        local players = game:GetService("Players")
+        local player = players.LocalPlayer
+        if not player then return nil end
+        
+        -- Check PlayerGui
+        local playerGui = player:FindFirstChild("PlayerGui")
+        if playerGui then
+            for _, gui in pairs(playerGui:GetDescendants()) do
+                if gui.Name == name and gui:IsA("ModuleScript") then
+                    return gui
+                end
+            end
+        end
+        
+        -- Check workspace
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj.Name == name and obj:IsA("ModuleScript") then
+                return obj
+            end
+        end
+        
+        return nil
+    end
+    
+    -- Debugger ,boleh di otak atik.Moal baleggg
+    if debug and debug.info then
+        VoidlineBypass.OriginalFunctions.debug_info = debug.info
+        local hook; hook = hookfunction(debug.info, function(func, what)
+            -- Check if this is Adonis trying to inspect our hooks
+            for _, hooked in pairs(VoidlineBypass.HookedFunctions) do
+                if func == hooked then
+                    if VoidlineBypass.Settings.DebugMode then
+                        warn("[Voidline] Stack trace inspection blocked")
+                    end
+                    -- Return fake info or yield
+                    return "Hooked function", "C", 0, {}, {}, {}, "voidline_bypass"
+                end
+            end
+            return VoidlineBypass.OriginalFunctions.debug_info(func, what)
+        end)
+    end
+    
+    return true
+end
+
+-- Antitemper bypass
+VoidlineBypass.BypassTamperProtection = function()
+    -- Hook name change detection
+    local script = script or getfenv().script
+    if script then
+        local originalName = script.Name
+        local nameChanged = script.Changed
+        
+        if nameChanged then
+            local connection = nameChanged:Connect(function(property)
+                if property == "Name" then
+                    if VoidlineBypass.Settings.DebugMode then
+                        warn("[Voidline] Name change detected, restoring...")
+                    end
+                    -- Allow Adonis to change name but prevent crash
+                    task.wait(0.1)
+                    if script.Name ~= originalName then
+                        script.Name = originalName
+                    end
+                end
+            end)
+            table.insert(VoidlineBypass.HookedFunctions, connection)
+        end
+    end
+    
+    -- Prevent Archivable checks
+    if script and script.Changed then
+        local connection = script.Changed:Connect(function(property)
+            if property == "Archivable" then
+                script.Archivable = false  -- Keep it false as Adonis expects
+            end
+        end)
+        table.insert(VoidlineBypass.HookedFunctions, connection)
+    end
+    
+    -- Hook checkcaller if exists
+    if checkcaller then
+        VoidlineBypass.OriginalFunctions.checkcaller = checkcaller
+        local hook; hook = hookfunction(checkcaller, function()
+            return true  -- Always return true to fake script context
+        end)
+        table.insert(VoidlineBypass.HookedFunctions, hook)
+    end
+end
+
+-- absen part 2
+VoidlineBypass.DisableDetectors = function()
+    local detectorsToDisable = {
+        "Speed",
+        "AntiAntiIdle", 
+        "HumanoidState",
+        "AntiCoreGui",
+        "MainDetection"
+    }
+    
+    -- Method 1: Find and nullify detector functions
+    for i, v in getgc(true) do
+        if type(v) == "table" and rawget(v, "AddDetector") then
+            local addDetector = rawget(v, "AddDetector")
+            if type(addDetector) == "function" then
+                -- Hook AddDetector to block new detectors
+                VoidlineBypass.OriginalFunctions.AddDetector = addDetector
+                local hook; hook = hookfunction(addDetector, function(name, func)
+                    if VoidlineBypass.Settings.DebugMode then
+                        warn("[Voidline] Detector blocked: " .. tostring(name))
+                    end
+                    -- Return dummy connection
+                    return {
+                        Disconnect = function() end,
+                        Connected = true
+                    }
+                end)
+                table.insert(VoidlineBypass.HookedFunctions, hook)
+            end
+        end
+    end
+    
+    -- Method 2: Find running detector loops
+    for i, v in getrenv() do
+        if type(v) == "table" and v.__type == "Loop" then
+            local stop = rawget(v, "Stop")
+            if type(stop) == "function" then
+                pcall(stop)  -- Try to stop the loop
+            end
+        end
+    end
+    
+    return true
+end
+
+-- gatau fungsi nya (dari A.I)
+VoidlineBypass.BypassLogSystem = function()
+    local logService = game:GetService("LogService")
+    if logService then
+        -- Clear existing messages
+        pcall(function()
+            for i = 1, 100 do
+                logService.MessageOut:ClearAllChildren()
+            end
+        end)
+        
+        -- Hook message output
+        if logService.MessageOut then
+            local messageAdded = logService.MessageOut.ChildAdded
+            if messageAdded then
+                local connection = messageAdded:Connect(function(msg)
+                    -- Filter out bypass-related messages
+                    if msg:IsA("Message") and msg.Text then
+                        local text = msg.Text:lower()
+                        local blockedPatterns = {
+                            "voidline", "bypass", "hook", 
+                            "detected", "exploit", "infinite yield"
+                        }
+                        
+                        for _, pattern in pairs(blockedPatterns) do
+                            if text:find(pattern) then
+                                task.wait(0)
+                                msg:Destroy()
+                                break
+                            end
+                        end
+                    end
+                end)
+                table.insert(VoidlineBypass.HookedFunctions, connection)
+            end
+        end
+    end
+end
+
+-- metatable hama
+VoidlineBypass.BypassMetatableHooks = function()
+    -- Check for proxy objects
+    local proxies = {}
+    
+    for i, v in getgc(true) do
+        if type(v) == "userdata" then
+            local mt = getmetatable(v)
+            if mt and rawget(mt, "__metatable") == "The metatable is locked" then
+                table.insert(proxies, {object = v, metatable = mt})
+            end
+        end
+    end
+    
+    -- Hook metatable methods
+    for _, proxy in pairs(proxies) do
+        local mt = proxy.metatable
+        
+        -- Replace dangerous metamethods
+        local metamethods = {
+            "__index", "__newindex", "__tostring", "__unm",
+            "__add", "__sub", "__mul", "__div", "__mod",
+            "__pow", "__len"
+        }
+        
+        for _, mm in pairs(metamethods) do
+            local original = rawget(mt, mm)
+            if type(original) == "function" then
+                rawset(mt, mm, function(...)
+                    if VoidlineBypass.Settings.DebugMode then
+                        warn("[Voidline] Metamethod blocked: " .. mm)
+                    end
+                    -- Return safe values
+                    if mm == "__index" then return nil end
+                    if mm == "__tostring" then return "Voidline Protected" end
+                    if mm:find("__add") or mm:find("__sub") or mm:find("__mul") then
+                        return 0
+                    end
+                    return nil
+                end)
+            end
+        end
+    end
+    
+    return #proxies > 0
+end
+
+--[[
+    MAIN EXECUTION FUNCTION
+    Run all bypass phases
+]]
+VoidlineBypass.Execute = function()
+    if VoidlineBypass.Settings.DebugMode then
+        warn("╔══════════════════════════════════════════════════╗")
+        warn("║   VOIDLINE NIEH BOS SENGGOL DONG                 ║")
+        warn("╚══════════════════════════════════════════════════╝")
+    end
+    
+    -- Phase 1: Environment  NOTE : DI BAWAH INI FULL AI.boleh di otak atik :)
+    local originalIdentity = VoidlineBypass.PrepareEnvironment()
+    
+    -- Phase 2-7: Execute all bypass methods
+    local results = {
+        Detection = VoidlineBypass.HookDetection(),
+        CoreFunctions = VoidlineBypass.HookCoreFunctions(),
+        TamperProtection = VoidlineBypass.BypassTamperProtection(),
+        Detectors = VoidlineBypass.DisableDetectors(),
+        LogSystem = VoidlineBypass.BypassLogSystem(),
+        Metatable = VoidlineBypass.BypassMetatableHooks()
+    }
+    
+    -- Restore thread identity
+    if setthreadidentity then
+        setthreadidentity(originalIdentity)
+    end
+    
+    -- Summary
+    if VoidlineBypass.Settings.DebugMode then
+        warn("\n[Voidline] Bypass Summary:")
+        for phase, success in pairs(results) do
+            warn("  " .. phase .. ": " .. (success and "✅" or "❌"))
+        end
+        warn("\n[Voidline] Total hooks: " .. #VoidlineBypass.HookedFunctions)
+        warn("[Voidline] Adonis bypass complete ✓")
+    end
+    
+    return results
+end
+
+--[[
+    PERSISTENCE SYSTEM
+    Re-apply hooks if they're restored
+]]
+VoidlineBypass.MonitorAndMaintain = function()
+    task.spawn(function()
+        while VoidlineBypass.Settings.Persistent do
+            task.wait(5)
+            
+            -- Check if our hooks are still active
+            local needsRehook = false
+            
+            -- Check detection function
+            for i, v in getgc(true) do
+                if type(v) == "table" then
+                    local detected = rawget(v, "Detected")
+                    if detected and detected == VoidlineBypass.OriginalFunctions.Detected then
+                        needsRehook = true
+                        break
+                    end
+                end
+            end
+            
+            if needsRehook and VoidlineBypass.Settings.DebugMode then
+                warn("[Voidline] Re-hooking detected functions...")
+                VoidlineBypass.HookDetection()
+            end
+        end
+    end)
+end
+
+--[[
+    CLEANUP FUNCTION
+    Restore original functions
+]]
+VoidlineBypass.Cleanup = function()
+    if VoidlineBypass.Settings.DebugMode then
+        warn("[Voidline] Cleaning up hooks...")
+    end
+    
+    -- Disconnect all connections
+    for _, connection in pairs(VoidlineBypass.HookedFunctions) do
+        if type(connection) == "userdata" and connection.Disconnect then
+            pcall(connection.Disconnect, connection)
+        end
+    end
+    
+    -- Restore original functions
+    for funcName, original in pairs(VoidlineBypass.OriginalFunctions) do
+        if original and type(original) == "function" then
+            if hookfunction then
+                pcall(hookfunction, _G[funcName], original)
+            end
+        end
+    end
+    
+    VoidlineBypass.HookedFunctions = {}
+    VoidlineBypass.OriginalFunctions = {}
+    
+    if VoidlineBypass.Settings.DebugMode then
+        warn("[Voidline] Cleanup complete")
+    end
+end
+
+--[[
+    AUTO-EXECUTE WITH SAFETY
+]]
+local success, err = pcall(function()
+    VoidlineBypass.Execute()
+    VoidlineBypass.MonitorAndMaintain()
+end)
+
+if not success then
+    warn("[Voidline] Bypass error: " .. tostring(err))
+end
+
+-- Return interface for manual control
+return VoidlineBypass
