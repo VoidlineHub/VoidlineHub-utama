@@ -68,15 +68,21 @@ local data = {
     }}
 }
 
--- 5. Request Execution
+-- 5. Request Execution (Safe Version)
 local req = syn and syn.request or http_request or request
 if req then
-    req({
-        Url = _G.WebhookURL,
-        Method = "POST",
-        Headers = {["Content-Type"] = "application/json"},
-        Body = game:GetService("HttpService"):JSONEncode(data)
-    })
+    -- Cek dulu URL-nya ada isinya gak, biar gak error "Invalid URL"
+    if _G.WebhookURL and _G.WebhookURL ~= "" and _G.WebhookURL:find("http") then
+        req({
+            Url = _G.WebhookURL,
+            Method = "POST",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = game:GetService("HttpService"):JSONEncode(data)
+        })
+    else
+        -- Notif biar lu tau kalo URL-nya belum diisi/salah
+        warn("VoidlineHub: Webhook URL is empty or invalid!")
+    end
 end
 
 
