@@ -23,127 +23,63 @@ _G.AutoPlant = false
 _G.AutoCollect = false
 _G.SelectedWorldTP = "Merchant"
 _G.SelectedFarmTP = "1"
-_G.WebhookURL = ""
-
-_G.WebhookEnabled = false
-
-_G.HideUsername = false
-
-_G.StartTime = os.time()
-
-
-
--- [[ 2. WEBHOOK FUNCTION (With Proxy Support) ]] --
-
-local function SendWebhook()
-
-    -- Jangan kirim kalau fitur Enable Webhook mati atau URL kosong
-
-    if not _G.WebhookEnabled or _G.WebhookURL == "" then return end
-
-
-
-    -- FIX DISCORD BLOCK: Ganti discord.com ke hooks.hyra.io atau proxy lain
-
-    local cleanUrl = string.gsub(_G.WebhookURL, "discord.com", "hooks.hyra.io")
-
-    
-
-    local lp = game.Players.LocalPlayer
-
-    local username = _G.HideUsername and "||" .. lp.Name .. "||" or lp.Name
-
-    
-
-    -- Data Player (Sesuaikan nama leaderstats game lu)
-
-    local money = lp:FindFirstChild("leaderstats") and lp.leaderstats:FindFirstChild("Money") and lp.leaderstats.Money.Value or 0
-
-    local level = lp:FindFirstChild("leaderstats") and lp.leaderstats:FindFirstChild("Level") and lp.leaderstats.Level.Value or 0
-
-    
-
-    -- Scan Backpack
-
-    local items = {}
-
-    for _, tool in pairs(lp.Backpack:GetChildren()) do
-
-        if tool:IsA("Tool") then table.insert(items, "• " .. tool.Name) end
-
-    end
-
-    local itemList = #items > 0 and table.concat(items, "\n") or "Empty"
-
-
-
-    -- Time Calculation
-
-    local diff = os.difftime(os.time(), _G.StartTime)
-
-    local runningTime = string.format("%02d:%02d:%02d", math.floor(diff/3600), math.floor((diff%3600)/60), diff%60)
-
-
-
-    local data = {
-
-        ["embeds"] = {{
-
-            ["title"] = "VOIDLINE HUB - Status Update",
-
-            ["color"] = 0x2f3136,
-
-            ["fields"] = {
-
-                {["name"] = "User", ["value"] = username, ["inline"] = true},
-
-                {["name"] = "Level", ["value"] = tostring(level), ["inline"] = true},
-
-                {["name"] = "Money", ["value"] = "RP. " .. tostring(money), ["inline"] = false},
-
-                {["name"] = "Inventory", ["value"] = itemList, ["inline"] = false},
-
-                {["name"] = "Running Time", ["value"] = runningTime, ["inline"] = true}
-
-            },
-
-            ["footer"] = {["text"] = "Automated Monitoring System"},
-
-            ["timestamp"] = os.date("!Y-%m-%dT%H:%M:%SZ")
-
-        }}
-
-    }
-
-
-
-    local jsonData = game:GetService("HttpService"):JSONEncode(data)
-
-    local request = syn and syn.request or http_request or request
-
-    
-
-    if request then
-
-        request({
-
-            Url = cleanUrl,
-
-            Method = "POST",
-
-            Headers = {["Content-Type"] = "application/json"},
-
-            Body = jsonData
-
-        })
-
-    else
-
-        warn("Executor lu gak support request!")
-
-    end
-
+_G.WebhookURL = ""         -- Tempat simpen link Discord
+_G.WebhookEnabled = false  -- Status On/Off Webhook
+_G.HideUsername = false    -- Status Blur Username
+local StartTime = os.time() 
+
+-- [[ WEBHOOK LOGIC ONLY - AROEL STYLE ]] --
+local lp = game.Players.LocalPlayer
+local stats = lp:FindFirstChild("leaderstats")
+
+-- 1. Data Pemain & Status
+local money = stats and stats:FindFirstChild("Money") and stats.Money.Value or 0
+local level = stats and stats:FindFirstChild("Level") and stats.Level.Value or 0
+local username = _G.HideUsername and "||" .. lp.Name .. "||" or lp.Name
+
+-- 2. Scan Inventory
+local items = {}
+for _, v in pairs(lp.Backpack:GetChildren()) do
+    if v:IsA("Tool") then table.insert(items, v.Name) end
 end
+local itemList = #items > 0 and table.concat(items, "\n") or "None"
+
+-- 3. Farm Time Calculation
+local diff = os.time() - StartTime
+local hours = math.floor(diff / 3600)
+local mins = math.floor((diff % 3600) / 60)
+local secs = diff % 60
+local runningTime = string.format("%02d:%02d:%02d", hours, mins, secs)
+
+-- 4. Format Payload (Tanpa Emoji, Persis Screenshot)
+local data = {
+    ["embeds"] = {{
+        ["title"] = "Cycle Completed",
+        ["color"] = 0xFFFFFF, -- Putih/Neutral
+        ["fields"] = {
+            {["name"] = "Username", ["value"] = username, ["inline"] = false},
+            {["name"] = "Level", ["value"] = tostring(level), ["inline"] = false},
+            {["name"] = "Current Money", ["value"] = "RP. " .. tostring(money), ["inline"] = false},
+            {["name"] = "Items in Inventory", ["value"] = itemList, ["inline"] = false},
+            {["name"] = "Running Time", ["value"] = runningTime, ["inline"] = false}
+        },
+        ["footer"] = {["text"] = "VoidlineHub System"},
+        ["timestamp"] = os.date("!Y-%m-%dT%H:%M:%SZ")
+    }}
+}
+
+-- 5. Request Execution
+local req = syn and syn.request or http_request or request
+if req then
+    req({
+        Url = _G.WebhookURL,
+        Method = "POST",
+        Headers = {["Content-Type"] = "application/json"},
+        Body = game:GetService("HttpService"):JSONEncode(data)
+    })
+end
+
+
 -- [[ 3. WINDOW SETUP ]] --
 local Window = WindUI:CreateWindow({
     Title = "VOIDLINE HUB",
