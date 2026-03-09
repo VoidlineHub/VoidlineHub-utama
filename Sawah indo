@@ -28,6 +28,61 @@ _G.HideUsername = false
 _G.StartTime = os.time()
 _G.CycleCount = 0
 
+-- [[ webhooks ]] --
+local function SendWebhook()
+    local url = _G.WebhookURL
+    if url == "" then return end
+
+    local lp = game.Players.LocalPlayer
+    local username = _G.HideUsername and "||Hidden||" or lp.Name
+    
+    -- Ambil Data (Sesuaikan path leaderstats game lu)
+    local money = lp.leaderstats:FindFirstChild("Money") and lp.leaderstats.Money.Value or 0
+    local level = lp.leaderstats:FindFirstChild("Level") and lp.leaderstats.Level.Value or 0
+    
+    -- Scan Inventaris (Items)
+    local inventoryItems = {}
+    for _, item in pairs(lp.Backpack:GetChildren()) do
+        if item:IsA("Tool") then
+            table.insert(inventoryItems, "• " .. item.Name)
+        end
+    end
+    local itemList = #inventoryItems > 0 and table.concat(inventoryItems, "\n") or "No Items"
+
+    -- Hitung Running Time
+    local diff = os.difftime(os.time(), _G.StartTime)
+    local hours = math.floor(diff / 3600)
+    local mins = math.floor((diff % 3600) / 60)
+    local secs = diff % 60
+    local runningTime = string.format("%02d:%02d:%02d", hours, mins, secs)
+
+    local data = {
+        ["embeds"] = {{
+            ["title"] = "Cycle Completed",
+            ["color"] = 0x2f3136, -- Dark Mode Color
+            ["fields"] = {
+                {["name"] = "Username", ["value"] = username, ["inline"] = true},
+                {["name"] = "Level", ["value"] = tostring(level), ["inline"] = true},
+                {["name"] = "Current Money", ["value"] = "RP. " .. string.format('%.0f', money), ["inline"] = false},
+                {["name"] = "Items in Inventory", ["value"] = itemList, ["inline"] = false},
+                {["name"] = "Cycle Count", ["value"] = tostring(_G.CycleCount), ["inline"] = true},
+                {["name"] = "Running Time", ["value"] = runningTime, ["inline"] = true}
+            },
+            ["footer"] = {["text"] = "VOIDLINE HUB | Monitoring System"},
+            ["timestamp"] = os.date("!Y-%m-%dT%H:%M:%SZ")
+        }}
+    }
+
+    local jsonData = game:GetService("HttpService"):JSONEncode(data)
+    local request = syn and syn.request or http_request or request or HttpPost
+    request({
+        Url = url,
+        Method = "POST",
+        Headers = {["Content-Type"] = "application/json"},
+        Body = jsonData
+    })
+end
+
 -- [[ 3. WINDOW SETUP ]] --
 local Window = WindUI:CreateWindow({
     Title = "VOIDLINE HUB",
@@ -283,5 +338,29 @@ FarmTPSection:Button({
                 })
             end
         end
+    end
+})
+
+local WebhookTab = Window:Tab({ Title = "Webhook", Icon = "rbxassetid://10734950309" })
+local WebSection = WebhookTab:Section({ Title = "Discord Monitoring" })
+
+WebSection:Input({
+    Title = "Webhook URL",
+    Placeholder = "Paste Discord Webhook URL",
+    Callback = function(val) _G.WebhookURL = val end
+})
+
+WebSection:Toggle({
+    Title = "Hide Username",
+    Desc = "Blur your name in Discord logs",
+    Callback = function(state) _G.HideUsername = state end
+})
+
+WebSection:Button({
+    Title = "Send Manual Update",
+    Desc = "Check if webhook is working",
+    Callback = function() 
+        SendWebhook() 
+        WindUI:Notify({Title = "Webhook", Content = "Data Sent!", Duration = 2})
     end
 })
