@@ -44,7 +44,7 @@ local MainTab = Window:Tab({ Title = "Main", Icon = "rbxassetid://10734949856" }
 HomeTab:Section({ Title = "Update Log" })
 HomeTab:Button({
     Title = "Version 1.0",
-    Desc = "[+] Added New Autofarm\n[+] Added Smart Auto Equip\n[+] Fixed Vector Logic\n[+] New UI Layout",
+    Desc = "[+] Added New Autofarm\n[+] Added Smart Auto Equip\n[+] Fixed Vector Logic\n[+] New UI Layout\n[+] Teleport world\n[+] Teleport Farm",
     Icon = "file-text"
 })
 
