@@ -30,19 +30,24 @@ local StartTime = os.time()
 
 -- [[ WEBHOOK LOGIC ONLY - AROEL STYLE ]] --
 local function SendWebhook(isTest)
-    if _G.WebhookURL == "" or not _G.WebhookEnabled then return end
-    
+    -- Logic Cek: Jangan kirim kalo URL kosong atau fitur mati
+    if _G.WebhookURL == "" or not _G.WebhookEnabled then 
+        return 
+    end
+
     local stats = lp:FindFirstChild("leaderstats")
     local money = stats and stats:FindFirstChild("Money") and stats.Money.Value or 0
     local level = stats and stats:FindFirstChild("Level") and stats.Level.Value or 0
     local username = _G.HideUsername and "||" .. lp.Name .. "||" or lp.Name
 
+    -- Scan Inventory
     local items = {}
     for _, v in pairs(lp.Backpack:GetChildren()) do
         if v:IsA("Tool") then table.insert(items, v.Name) end
     end
     local itemList = #items > 0 and table.concat(items, "\n") or "None"
 
+    -- Time
     local diff = os.time() - StartTime
     local runningTime = string.format("%02d:%02d:%02d", math.floor(diff/3600), math.floor((diff%3600)/60), diff%60)
 
