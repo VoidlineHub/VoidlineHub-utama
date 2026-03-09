@@ -344,81 +344,37 @@ FarmTPSection:Button({
     end
 })
 
+-- [[ WEBHOOK TAB & SECTION ]] --
+local WebhookTab = Window:Tab({ Title = "Webhook", Icon = "activity" })
 
--- [[ 3. UI SECTION (URUTAN SESUAI REQUEST) ]] --
-
-local WebhookTab = Window:Tab({ Title = "Webhook", Icon = "rbxassetid://10734950309" })
-
-local WebSection = WebhookTab:Section({ Title = "Discord Configuration" })
-
-
+-- Pakai variabel SettingTab sesuai request lu
+local SettingTab = WebhookTab:Section({ Title = "Webhook Log" })
 
 -- 1. Input URL
-
-WebSection:Input({
-
-    Title = "Webhook URL",
-
+SettingTab:Input({ 
+    Title = "Webhook URL", 
     Placeholder = "Paste Discord URL here...",
-
-    Callback = function(val) _G.WebhookURL = val end
-
+    Callback = function(v) _G.WebhookURL = v end 
 })
 
-
-
--- 2. Enable Webhook
-
-WebSection:Toggle({
-
-    Title = "Enable Webhook",
-
-    Desc = "Allow script to send data to Discord",
-
-    Callback = function(state) _G.WebhookEnabled = state end
-
+-- 2. Enable Toggle
+SettingTab:Toggle({ 
+    Title = "Enable Webhook Log", 
+    Callback = function(v) _G.WebhookEnabled = v v end 
 })
 
-
-
--- 3. Send Webhook (Button)
-
-WebSection:Button({
-
-    Title = "Send Webhook",
-
-    Desc = "Click to send manual data update",
-
-    Icon = "send",
-
+-- 3. Test Button
+SettingTab:Button({ 
+    Title = "Test Send Webhook", 
     Callback = function() 
-
-        if _G.WebhookURL ~= "" and _G.WebhookEnabled then
-
-            SendWebhook() 
-
-            WindUI:Notify({Title = "Success", Content = "Data sent to Discord!", Duration = 2})
-
-        else
-
-            WindUI:Notify({Title = "Warning", Content = "Set URL and Enable first!", Duration = 3})
-
-        end
-
-    end
-
+        -- Panggil function logic yang tadi (pake isTest = true)
+        SendWebhook(true) 
+    end 
 })
 
-
-
--- 4. Blur Username
-
-WebSection:Toggle({
-
-    Title = "Blur Username",
-
-    Desc = "Hide your name in Discord embed",
-
-    Callback = function(state) _G.HideUsername = state end
-
+-- 4. Blur Username (Tambahin ini di bawah biar lengkap)
+SettingTab:Toggle({ 
+    Title = "Blur Username", 
+    Callback = function(v) _G.HideUsername = v end 
 })
+
