@@ -344,37 +344,32 @@ FarmTPSection:Button({
     end
 })
 
--- [[ WEBHOOK TAB & SECTION ]] --
 local WebhookTab = Window:Tab({ Title = "Webhook", Icon = "activity" })
 
--- Pakai variabel SettingTab sesuai request lu
-local SettingTab = WebhookTab:Section({ Title = "Webhook Log" })
+WebhookTab:Section({ Title = "Webhook Log" })
 
 -- 1. Input URL
-SettingTab:Input({ 
+WebhookTab:Input({ 
     Title = "Webhook URL", 
-    Placeholder = "Paste Discord URL here...",
     Callback = function(v) _G.WebhookURL = v end 
 })
 
 -- 2. Enable Toggle
-SettingTab:Toggle({ 
+WebhookTab:Toggle({ 
     Title = "Enable Webhook Log", 
-    Callback = function(v) _G.WebhookEnabled = v v end 
+    Callback = function(v) _G.WebhookEnabled = v end 
 })
 
 -- 3. Test Button
-SettingTab:Button({ 
+WebhookTab:Button({ 
     Title = "Test Send Webhook", 
     Callback = function() 
-        -- Panggil function logic yang tadi (pake isTest = true)
         SendWebhook(true) 
     end 
 })
 
--- 4. Blur Username (Tambahin ini di bawah biar lengkap)
-SettingTab:Toggle({ 
-    Title = "Blur Username", 
+-- 4. Hide Username (Tambahan sesuai request)
+WebhookTab:Toggle({ 
+    Title = "Hide Username", 
     Callback = function(v) _G.HideUsername = v end 
 })
-
