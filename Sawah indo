@@ -24,65 +24,126 @@ _G.AutoCollect = false
 _G.SelectedWorldTP = "Merchant"
 _G.SelectedFarmTP = "1"
 _G.WebhookURL = ""
-_G.HideUsername = false
-_G.StartTime = os.time()
-_G.CycleCount = 0
 
--- [[ webhooks ]] --
+_G.WebhookEnabled = false
+
+_G.HideUsername = false
+
+_G.StartTime = os.time()
+
+
+
+-- [[ 2. WEBHOOK FUNCTION (With Proxy Support) ]] --
+
 local function SendWebhook()
-    local url = _G.WebhookURL
-    if url == "" then return end
+
+    -- Jangan kirim kalau fitur Enable Webhook mati atau URL kosong
+
+    if not _G.WebhookEnabled or _G.WebhookURL == "" then return end
+
+
+
+    -- FIX DISCORD BLOCK: Ganti discord.com ke hooks.hyra.io atau proxy lain
+
+    local cleanUrl = string.gsub(_G.WebhookURL, "discord.com", "hooks.hyra.io")
+
+    
 
     local lp = game.Players.LocalPlayer
-    local username = _G.HideUsername and "||Hidden||" or lp.Name
-    
-    -- Ambil Data (Sesuaikan path leaderstats game lu)
-    local money = lp.leaderstats:FindFirstChild("Money") and lp.leaderstats.Money.Value or 0
-    local level = lp.leaderstats:FindFirstChild("Level") and lp.leaderstats.Level.Value or 0
-    
-    -- Scan Inventaris (Items)
-    local inventoryItems = {}
-    for _, item in pairs(lp.Backpack:GetChildren()) do
-        if item:IsA("Tool") then
-            table.insert(inventoryItems, "• " .. item.Name)
-        end
-    end
-    local itemList = #inventoryItems > 0 and table.concat(inventoryItems, "\n") or "No Items"
 
-    -- Hitung Running Time
+    local username = _G.HideUsername and "||" .. lp.Name .. "||" or lp.Name
+
+    
+
+    -- Data Player (Sesuaikan nama leaderstats game lu)
+
+    local money = lp:FindFirstChild("leaderstats") and lp.leaderstats:FindFirstChild("Money") and lp.leaderstats.Money.Value or 0
+
+    local level = lp:FindFirstChild("leaderstats") and lp.leaderstats:FindFirstChild("Level") and lp.leaderstats.Level.Value or 0
+
+    
+
+    -- Scan Backpack
+
+    local items = {}
+
+    for _, tool in pairs(lp.Backpack:GetChildren()) do
+
+        if tool:IsA("Tool") then table.insert(items, "• " .. tool.Name) end
+
+    end
+
+    local itemList = #items > 0 and table.concat(items, "\n") or "Empty"
+
+
+
+    -- Time Calculation
+
     local diff = os.difftime(os.time(), _G.StartTime)
-    local hours = math.floor(diff / 3600)
-    local mins = math.floor((diff % 3600) / 60)
-    local secs = diff % 60
-    local runningTime = string.format("%02d:%02d:%02d", hours, mins, secs)
+
+    local runningTime = string.format("%02d:%02d:%02d", math.floor(diff/3600), math.floor((diff%3600)/60), diff%60)
+
+
 
     local data = {
+
         ["embeds"] = {{
-            ["title"] = "Cycle Completed",
-            ["color"] = 0x2f3136, -- Dark Mode Color
+
+            ["title"] = "VOIDLINE HUB - Status Update",
+
+            ["color"] = 0x2f3136,
+
             ["fields"] = {
-                {["name"] = "Username", ["value"] = username, ["inline"] = true},
+
+                {["name"] = "User", ["value"] = username, ["inline"] = true},
+
                 {["name"] = "Level", ["value"] = tostring(level), ["inline"] = true},
-                {["name"] = "Current Money", ["value"] = "RP. " .. string.format('%.0f', money), ["inline"] = false},
-                {["name"] = "Items in Inventory", ["value"] = itemList, ["inline"] = false},
-                {["name"] = "Cycle Count", ["value"] = tostring(_G.CycleCount), ["inline"] = true},
+
+                {["name"] = "Money", ["value"] = "RP. " .. tostring(money), ["inline"] = false},
+
+                {["name"] = "Inventory", ["value"] = itemList, ["inline"] = false},
+
                 {["name"] = "Running Time", ["value"] = runningTime, ["inline"] = true}
+
             },
-            ["footer"] = {["text"] = "VOIDLINE HUB | Monitoring System"},
+
+            ["footer"] = {["text"] = "Automated Monitoring System"},
+
             ["timestamp"] = os.date("!Y-%m-%dT%H:%M:%SZ")
+
         }}
+
     }
 
-    local jsonData = game:GetService("HttpService"):JSONEncode(data)
-    local request = syn and syn.request or http_request or request or HttpPost
-    request({
-        Url = url,
-        Method = "POST",
-        Headers = {["Content-Type"] = "application/json"},
-        Body = jsonData
-    })
-end
 
+
+    local jsonData = game:GetService("HttpService"):JSONEncode(data)
+
+    local request = syn and syn.request or http_request or request
+
+    
+
+    if request then
+
+        request({
+
+            Url = cleanUrl,
+
+            Method = "POST",
+
+            Headers = {["Content-Type"] = "application/json"},
+
+            Body = jsonData
+
+        })
+
+    else
+
+        warn("Executor lu gak support request!")
+
+    end
+
+end
 -- [[ 3. WINDOW SETUP ]] --
 local Window = WindUI:CreateWindow({
     Title = "VOIDLINE HUB",
@@ -341,26 +402,81 @@ FarmTPSection:Button({
     end
 })
 
+
+-- [[ 3. UI SECTION (URUTAN SESUAI REQUEST) ]] --
+
 local WebhookTab = Window:Tab({ Title = "Webhook", Icon = "rbxassetid://10734950309" })
-local WebSection = WebhookTab:Section({ Title = "Discord Monitoring" })
+
+local WebSection = WebhookTab:Section({ Title = "Discord Configuration" })
+
+
+
+-- 1. Input URL
 
 WebSection:Input({
+
     Title = "Webhook URL",
-    Placeholder = "Paste Discord Webhook URL",
+
+    Placeholder = "Paste Discord URL here...",
+
     Callback = function(val) _G.WebhookURL = val end
+
 })
+
+
+
+-- 2. Enable Webhook
 
 WebSection:Toggle({
-    Title = "Hide Username",
-    Desc = "Blur your name in Discord logs",
-    Callback = function(state) _G.HideUsername = state end
+
+    Title = "Enable Webhook",
+
+    Desc = "Allow script to send data to Discord",
+
+    Callback = function(state) _G.WebhookEnabled = state end
+
 })
 
+
+
+-- 3. Send Webhook (Button)
+
 WebSection:Button({
-    Title = "Send Manual Update",
-    Desc = "Check if webhook is working",
+
+    Title = "Send Webhook",
+
+    Desc = "Click to send manual data update",
+
+    Icon = "send",
+
     Callback = function() 
-        SendWebhook() 
-        WindUI:Notify({Title = "Webhook", Content = "Data Sent!", Duration = 2})
+
+        if _G.WebhookURL ~= "" and _G.WebhookEnabled then
+
+            SendWebhook() 
+
+            WindUI:Notify({Title = "Success", Content = "Data sent to Discord!", Duration = 2})
+
+        else
+
+            WindUI:Notify({Title = "Warning", Content = "Set URL and Enable first!", Duration = 3})
+
+        end
+
     end
+
+})
+
+
+
+-- 4. Blur Username
+
+WebSection:Toggle({
+
+    Title = "Blur Username",
+
+    Desc = "Hide your name in Discord embed",
+
+    Callback = function(state) _G.HideUsername = state end
+
 })
