@@ -21,7 +21,7 @@ _G.BuyAmount = 1
 _G.AutoEquip = false
 _G.AutoPlant = false
 _G.AutoCollect = false
-_G.SelectedTP = "Merchant"
+_G.SelectedWorldTP = "Merchant"
 _G.SelectedFarmTP = "1"
 
 -- [[ 3. WINDOW SETUP ]] --
