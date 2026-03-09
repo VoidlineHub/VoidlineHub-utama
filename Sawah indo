@@ -22,6 +22,7 @@ _G.AutoEquip = false
 _G.AutoPlant = false
 _G.AutoCollect = false
 _G.SelectedTP = "Merchant"
+_G.SelectedFarmTP = "1"
 
 -- [[ 3. WINDOW SETUP ]] --
 local Window = WindUI:CreateWindow({
@@ -181,8 +182,8 @@ SellingSection:Button({
 -- [[ 1. TAB SETUP ]] --
 local TeleportTab = Window:Tab({ Title = "Teleport", Icon = "rbxassetid://10734950309" })
 
--- [[ 2. DATA LOCATIONS ]] --
-local locations = {
+-- [[ 2. DATA WORLD LOCATIONS ]] --
+local worldLocations = {
     ["Pemandian"] = CFrame.new(86.89328, 36.1017456, -239.450577),
     ["Fruit Trader"] = CFrame.new(55.6572151, 48.53125, -208.344406),
     ["Tool Shop"] = CFrame.new(-41.2916565, 48.53125, -180),
@@ -191,43 +192,77 @@ local locations = {
     ["Egg Trader"] = CFrame.new(-98, 48.5393639, -176)
 }
 
-local locationNames = {}
-for name, _ in pairs(locations) do
-    table.insert(locationNames, name)
+local worldNames = {"Pemandian", "Fruit Trader", "Tool Shop", "Farmer", "Merchant", "Egg Trader"}
+
+-- [[ 3. DATA FARM LOCATIONS (1-32) ]] --
+local farmNames = {}
+for i = 1, 32 do
+    table.insert(farmNames, "Farm Area " .. tostring(i))
 end
 
--- State
-_G.SelectedTP = "Pemandian"
+-- States
+_G.SelectedWorldTP = "Merchant"
+_G.SelectedFarmTP = "Farm Area 1"
 
--- [[ 3. SECTION TELEPORT ]] --
-local TPSection = TeleportTab:Section({ Title = "World Teleport" })
+-- ==========================================
+-- [[ 🌍 SECTION: WORLD TELEPORT ]]
+-- ==========================================
+local WorldSection = TeleportTab:Section({ Title = "World Teleport" })
 
-TPSection:Dropdown({
+WorldSection:Dropdown({
     Title = "Select Destination",
-    Desc = "Choose a location to teleport",
-    Values = locationNames,
-    Value = "Pemandian",
-    Callback = function(option)
-        _G.SelectedTP = option
+    Desc = "Choose a main location to visit",
+    Values = worldNames,
+    Value = _G.SelectedWorldTP,
+    Callback = function(option) _G.SelectedWorldTP = option end
+})
+
+WorldSection:Button({
+    Title = "Teleport Now",
+    Desc = "Move to selected world location",
+    Icon = "map-pin",
+    Callback = function()
+        local char = lp.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            local target = worldLocations[_G.SelectedWorldTP]
+            if target then char.HumanoidRootPart.CFrame = target end
+        end
     end
 })
 
-TPSection:Button({
-    Title = "Teleport Now",
-    Desc = "Instantly move to the selected location",
-    Icon = "map-pin",
+-- ==========================================
+-- [[ 🌾 SECTION: FARM TELEPORT ]]
+-- ==========================================
+local FarmTPSection = TeleportTab:Section({ Title = "Farm Area Teleport" })
+
+FarmTPSection:Dropdown({
+    Title = "Select Farm Number",
+    Desc = "Choose farm area from 1 to 32",
+    Values = farmNames,
+    Value = _G.SelectedFarmTP,
+    Callback = function(option) _G.SelectedFarmTP = option end
+})
+
+FarmTPSection:Button({
+    Title = "Teleport to Farm",
+    Desc = "Move to the specific farming plot",
+    Icon = "leaf",
     Callback = function()
-        local char = game.Players.LocalPlayer.Character
+        local char = lp.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
-            local targetCFrame = locations[_G.SelectedTP]
-            if targetCFrame then
-                char.HumanoidRootPart.CFrame = targetCFrame
-                
-                WindUI:Notify({
-                    Title = "Teleport Success",
-                    Content = "Arrived at " .. _G.SelectedTP,
-                    Duration = 2
-                })
+            -- Ambil angka dari string "Farm Area 1" -> "1"
+            local farmNum = string.match(_G.SelectedFarmTP, "%d+") 
+            local farmPath = workspace:FindFirstChild("AreaTanamBesar32")
+            
+            if farmPath then
+                local targetFarm = farmPath:FindFirstChild(farmNum)
+                if targetFarm and targetFarm:IsA("BasePart") then
+                    -- TP ke atas kebun (biar gak kejebak di dalem tanah)
+                    char.HumanoidRootPart.CFrame = targetFarm.CFrame * CFrame.new(0, 3, 0)
+                elseif targetFarm and targetFarm:IsA("Model") then
+                    -- Kalau kebunnya berbentuk model, cari PrimaryPart-nya
+                    char.HumanoidRootPart.CFrame = targetFarm:GetModelCFrame() * CFrame.new(0, 3, 0)
+                end
             end
         end
     end
