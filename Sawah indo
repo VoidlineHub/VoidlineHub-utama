@@ -14,7 +14,7 @@ local PlantCropRemote = RemotesFolder:WaitForChild("PlantCrop")
 local seedOptions = {"Bibit Padi", "Bibit Jagung", "Bibit Tomat", "Bibit Terong", "Bibit Strawberry", "Bibit Sawit", "Bibit Durian"}
 local itemNames = {"Padi", "Jagung", "Tomat", "Terong", "Strawberry", "Sawit", "Durian"}
 
--- States (Dipisah biar gak bentrok)
+-- States
 _G.ShopSelected = "Bibit Padi"
 _G.EquipSelected = "Bibit Padi"
 _G.BuyAmount = 1
@@ -25,77 +25,99 @@ _G.AutoCollect = false
 -- [[ 3. WINDOW SETUP ]] --
 local Window = WindUI:CreateWindow({
     Title = "VOIDLINE HUB",
-    SubTitle = "Professional Farmer",
-    Icon = "rbxassetid://15515065445",
+    SubTitle = "Indonesian Farming Script",
+    Author = "Billzz",
+    Icon = "bank",
     Color = Color3.fromRGB(15, 15, 15),
     Transparent = true,
     Blur = true
 })
 
+local HomeTab = Window:Tab({ Title = "Home", Icon = "rbxassetid://10734949530" })
 local MainTab = Window:Tab({ Title = "Main", Icon = "rbxassetid://10734949856" })
 
--- --- SECTION 1: MARKET (BELANJA) ---
-local MarketSection = MainTab:Section({ Title = "Market System" })
+-- ==========================================
+-- [[ 🏠 HOME TAB ]]
+-- ==========================================
 
-MarketSection:Dropdown({
-    Title = "Pilih Bibit Yang Mau Dibeli",
+HomeTab:Section({ Title = "Update Log" })
+HomeTab:Button({
+    Title = "Version 1.0",
+    Desc = "[+] Added New Autofarm\n[+] Added Smart Auto Equip\n[+] Fixed Vector Logic\n[+] New UI Layout",
+    Icon = "file-text"
+})
+
+
+HomeTab:Section({ Title = "Social Links" })
+HomeTab:Button({
+    Title = "Discord Server",
+    Desc = "Join our community for latest updates",
+    Icon = "link",
+    Callback = function() setclipboard("https://discord.gg/voidline") end
+})
+HomeTab:Button({
+    Title = "Tiktok Media",
+    Desc = "Follow us for more script showcases",
+    Icon = "link",
+    Callback = function() setclipboard("tiktok.com/@billzzhub") end
+})
+
+-- ==========================================
+-- [[ 🌾 MAIN TAB ]]
+-- ==========================================
+
+-- --- SECTION 1: BUY SEEDS ---
+local BuySeedSection = MainTab:Section({ Title = "Market System" })
+
+BuySeedSection:Dropdown({
+    Title = "Select Seed Type",
+    Desc = "Choose which seed you want to purchase",
     Values = seedOptions,
     Value = "Bibit Padi",
     Callback = function(option) _G.ShopSelected = option end
 })
 
-MarketSection:Input({
-    Title = "Nominal Jumlah",
-    Placeholder = "Contoh: 31",
+BuySeedSection:Input({
+    Title = "Purchase Amount",
+    Placeholder = "Example: 31",
     Callback = function(val) _G.BuyAmount = tonumber(val) or 1 end
 })
 
-MarketSection:Button({
-    Title = "Beli Bibit Sekarang",
-    Callback = function() 
-        RequestShop:InvokeServer("BUY", _G.ShopSelected, _G.BuyAmount) 
-    end
+BuySeedSection:Button({
+    Title = "Buy Seeds Now",
+    Desc = "Execute purchase for selected seeds",
+    Callback = function() RequestShop:InvokeServer("BUY", _G.ShopSelected, _G.BuyAmount) end
 })
 
--- --- SECTION 2: AUTO EQUIP (PEMAKAIAN) ---
-local EquipSection = MainTab:Section({ Title = "Auto Equip" })
+-- --- SECTION 2: AUTO EQUIP ---
+local AutoEquipSection = MainTab:Section({ Title = "Auto Equip" })
 
-EquipSection:Dropdown({
-    Title = "Pilih Bibit Yang Mau Di-Equip",
+AutoEquipSection:Dropdown({
+    Title = "Select Seed to Equip",
+    Desc = "Tool will be automatically equipped from backpack",
     Values = seedOptions,
     Value = "Bibit Padi",
     Callback = function(option) _G.EquipSelected = option end
 })
 
-EquipSection:Toggle({
-    Title = "Auto Equip Toggle",
+AutoEquipSection:Toggle({
+    Title = "Auto Equip",
+    Desc = "Enable smart tool equipment system",
     Callback = function(state)
         _G.AutoEquip = state
         task.spawn(function()
             while _G.AutoEquip do
                 local char = lp.Character
                 if char and char:FindFirstChild("Humanoid") then
-                    -- Cari tool yang mengandung nama bibit pilihan (Support Stacking x27)
                     local toolInBackpack = nil
                     for _, tool in pairs(lp.Backpack:GetChildren()) do
-                        if string.find(tool.Name, _G.EquipSelected) then
-                            toolInBackpack = tool
-                            break
-                        end
+                        if string.find(tool.Name, _G.EquipSelected) then toolInBackpack = tool break end
                     end
-                    
-                    -- Cek apa player sudah pegang tool-nya
                     local isHolding = false
                     for _, tool in pairs(char:GetChildren()) do
-                        if tool:IsA("Tool") and string.find(tool.Name, _G.EquipSelected) then
-                            isHolding = true
-                            break
-                        end
+                        if tool:IsA("Tool") and string.find(tool.Name, _G.EquipSelected) then isHolding = true break end
                     end
-
-                    if toolInBackpack and not isHolding then
-                        char.Humanoid:EquipTool(toolInBackpack)
-                    end
+                    if toolInBackpack and not isHolding then char.Humanoid:EquipTool(toolInBackpack) end
                 end
                 task.wait(0.5)
             end
@@ -103,11 +125,12 @@ EquipSection:Toggle({
     end
 })
 
--- --- SECTION 3: AUTOMATION (KERJA) ---
+-- --- SECTION 3: AUTOMATION ---
 local FarmSection = MainTab:Section({ Title = "Farming Automation" })
 
 FarmSection:Toggle({
-    Title = "Auto Plant (Follow Player)",
+    Title = "Auto Plant",
+    Desc = "Automatically plant seeds based on player position",
     Callback = function(state)
         _G.AutoPlant = state
         task.spawn(function()
@@ -124,7 +147,8 @@ FarmSection:Toggle({
 })
 
 FarmSection:Toggle({
-    Title = "Auto Collect (Sniper)",
+    Title = "Auto Collect plant",
+    Desc = "Harvest all nearby ready-to-pick crops",
     Callback = function(state)
         _G.AutoCollect = state
         task.spawn(function()
@@ -144,14 +168,14 @@ FarmSection:Toggle({
 })
 
 -- --- SECTION 4: SELLING ---
-local SellSection = MainTab:Section({ Title = "Selling" })
+local SellingSection = MainTab:Section({ Title = "Selling System" })
 
-SellSection:Button({
+SellingSection:Button({
     Title = "Sell All Inventory",
+    Desc = "Instantly sell all harvested items in your bag",
     Callback = function()
         for _, name in pairs(itemNames) do RequestSell:InvokeServer("SELL", name, 999) end
-        WindUI:Notify({Title = "Market", Content = "Semua hasil panen telah dijual!", Duration = 2})
     end
 })
 
-WindUI:Notify({Title = "Voidline Hub", Content = "V8 Loaded! Dropdown separated.", Duration = 3})
+WindUI:Notify({Title = "Voidline Hub", Content = "Script Ready, Billzz!", Duration = 3})
