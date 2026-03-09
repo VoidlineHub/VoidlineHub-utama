@@ -29,59 +29,47 @@ _G.HideUsername = false    -- Status Blur Username
 local StartTime = os.time() 
 
 -- [[ WEBHOOK LOGIC ONLY - AROEL STYLE ]] --
-local lp = game.Players.LocalPlayer
-local stats = lp:FindFirstChild("leaderstats")
+local function SendWebhook(isTest)
+    if _G.WebhookURL == "" or not _G.WebhookEnabled then return end
+    
+    local stats = lp:FindFirstChild("leaderstats")
+    local money = stats and stats:FindFirstChild("Money") and stats.Money.Value or 0
+    local level = stats and stats:FindFirstChild("Level") and stats.Level.Value or 0
+    local username = _G.HideUsername and "||" .. lp.Name .. "||" or lp.Name
 
--- 1. Data Pemain & Status
-local money = stats and stats:FindFirstChild("Money") and stats.Money.Value or 0
-local level = stats and stats:FindFirstChild("Level") and stats.Level.Value or 0
-local username = _G.HideUsername and "||" .. lp.Name .. "||" or lp.Name
+    local items = {}
+    for _, v in pairs(lp.Backpack:GetChildren()) do
+        if v:IsA("Tool") then table.insert(items, v.Name) end
+    end
+    local itemList = #items > 0 and table.concat(items, "\n") or "None"
 
--- 2. Scan Inventory
-local items = {}
-for _, v in pairs(lp.Backpack:GetChildren()) do
-    if v:IsA("Tool") then table.insert(items, v.Name) end
-end
-local itemList = #items > 0 and table.concat(items, "\n") or "None"
+    local diff = os.time() - StartTime
+    local runningTime = string.format("%02d:%02d:%02d", math.floor(diff/3600), math.floor((diff%3600)/60), diff%60)
 
--- 3. Farm Time Calculation
-local diff = os.time() - StartTime
-local hours = math.floor(diff / 3600)
-local mins = math.floor((diff % 3600) / 60)
-local secs = diff % 60
-local runningTime = string.format("%02d:%02d:%02d", hours, mins, secs)
+    local data = {
+        ["embeds"] = {{
+            ["title"] = isTest and "Webhook Test Successful" or "Cycle Completed",
+            ["color"] = 0xFFFFFF,
+            ["fields"] = {
+                {["name"] = "Username", ["value"] = username, ["inline"] = false},
+                {["name"] = "Level", ["value"] = tostring(level), ["inline"] = false},
+                {["name"] = "Current Money", ["value"] = "RP. " .. tostring(money), ["inline"] = false},
+                {["name"] = "Items in Inventory", ["value"] = itemList, ["inline"] = false},
+                {["name"] = "Running Time", ["value"] = runningTime, ["inline"] = false}
+            },
+            ["footer"] = {["text"] = "VoidlineHub System"},
+            ["timestamp"] = os.date("!Y-%m-%dT%H:%M:%SZ")
+        }}
+    }
 
--- 4. Format Payload (Tanpa Emoji, Persis Screenshot)
-local data = {
-    ["embeds"] = {{
-        ["title"] = "Cycle Completed",
-        ["color"] = 0xFFFFFF, -- Putih/Neutral
-        ["fields"] = {
-            {["name"] = "Username", ["value"] = username, ["inline"] = false},
-            {["name"] = "Level", ["value"] = tostring(level), ["inline"] = false},
-            {["name"] = "Current Money", ["value"] = "RP. " .. tostring(money), ["inline"] = false},
-            {["name"] = "Items in Inventory", ["value"] = itemList, ["inline"] = false},
-            {["name"] = "Running Time", ["value"] = runningTime, ["inline"] = false}
-        },
-        ["footer"] = {["text"] = "VoidlineHub System"},
-        ["timestamp"] = os.date("!Y-%m-%dT%H:%M:%SZ")
-    }}
-}
-
--- 5. Request Execution (Safe Version)
-local req = syn and syn.request or http_request or request
-if req then
-    -- Cek dulu URL-nya ada isinya gak, biar gak error "Invalid URL"
-    if _G.WebhookURL and _G.WebhookURL ~= "" and _G.WebhookURL:find("http") then
+    local req = syn and syn.request or http_request or request
+    if req then
         req({
             Url = _G.WebhookURL,
             Method = "POST",
             Headers = {["Content-Type"] = "application/json"},
             Body = game:GetService("HttpService"):JSONEncode(data)
         })
-    else
-        -- Notif biar lu tau kalo URL-nya belum diisi/salah
-        warn("VoidlineHub: Webhook URL is empty or invalid!")
     end
 end
 
@@ -348,28 +336,8 @@ local WebhookTab = Window:Tab({ Title = "Webhook", Icon = "activity" })
 
 WebhookTab:Section({ Title = "Webhook Log" })
 
--- 1. Input URL
-WebhookTab:Input({ 
-    Title = "Webhook URL", 
-    Callback = function(v) _G.WebhookURL = v end 
-})
-
--- 2. Enable Toggle
-WebhookTab:Toggle({ 
-    Title = "Enable Webhook Log", 
-    Callback = function(v) _G.WebhookEnabled = v end 
-})
-
--- 3. Test Button
-WebhookTab:Button({ 
-    Title = "Test Send Webhook", 
-    Callback = function() 
-        SendWebhook(true) 
-    end 
-})
-
--- 4. Hide Username (Tambahan sesuai request)
-WebhookTab:Toggle({ 
-    Title = "Hide Username", 
-    Callback = function(v) _G.HideUsername = v end 
-})
+-- Langsung ke Tab, Gak pake Section-sectionan dongo
+WebhookTab:Input({ Title = "Webhook URL", Callback = function(v) _G.WebhookURL = v end })
+WebhookTab:Toggle({ Title = "Enable Webhook Log", Callback = function(v) _G.WebhookEnabled = v end })
+WebhookTab:Button({ Title = "Test Send Webhook", Callback = function() SendWebhook(true) end })
+WebhookTab:Toggle({ Title = "Hide Username", Callback = function(v) _G.HideUsername = v end })
