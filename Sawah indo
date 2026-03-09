@@ -21,11 +21,11 @@ _G.BuyAmount = 1
 _G.AutoEquip = false
 _G.AutoPlant = false
 _G.AutoCollect = false
+_G.SelectedTP "Pemandian"
 
 -- [[ 3. WINDOW SETUP ]] --
 local Window = WindUI:CreateWindow({
     Title = "VOIDLINE HUB",
-    SubTitle = "Indonesian Farming Script",
     Author = "Billzz",
     Icon = "bank",
     Color = Color3.fromRGB(15, 15, 15),
@@ -33,7 +33,7 @@ local Window = WindUI:CreateWindow({
     Blur = true
 })
 
-local HomeTab = Window:Tab({ Title = "Home", Icon = "rbxassetid://10734949530" })
+local HomeTab = Window:Tab({ Title = "Home", Icon = "house" })
 local MainTab = Window:Tab({ Title = "Main", Icon = "rbxassetid://10734949856" })
 
 -- ==========================================
@@ -178,4 +178,57 @@ SellingSection:Button({
     end
 })
 
-WindUI:Notify({Title = "Voidline Hub", Content = "Script Ready, Billzz!", Duration = 3})
+-- [[ 1. TAB SETUP ]] --
+local TeleportTab = Window:Tab({ Title = "Teleport", Icon = "rbxassetid://10734950309" })
+
+-- [[ 2. DATA LOCATIONS ]] --
+local locations = {
+    ["Pemandian"] = CFrame.new(86.89328, 36.1017456, -239.450577),
+    ["Fruit Trader"] = CFrame.new(55.6572151, 48.53125, -208.344406),
+    ["Tool Shop"] = CFrame.new(-41.2916565, 48.53125, -180),
+    ["Farmer"] = CFrame.new(-42, 48.3513184, -206.83902),
+    ["Merchant"] = CFrame.new(-59.4032822, 48.3513184, -206.553253),
+    ["Egg Trader"] = CFrame.new(-98, 48.5393639, -176)
+}
+
+local locationNames = {}
+for name, _ in pairs(locations) do
+    table.insert(locationNames, name)
+end
+
+-- State
+_G.SelectedTP = "Pemandian"
+
+-- [[ 3. SECTION TELEPORT ]] --
+local TPSection = TeleportTab:Section({ Title = "World Teleport" })
+
+TPSection:Dropdown({
+    Title = "Select Destination",
+    Desc = "Choose a location to teleport",
+    Values = locationNames,
+    Value = "Pemandian",
+    Callback = function(option)
+        _G.SelectedTP = option
+    end
+})
+
+TPSection:Button({
+    Title = "Teleport Now",
+    Desc = "Instantly move to the selected location",
+    Icon = "map-pin",
+    Callback = function()
+        local char = game.Players.LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            local targetCFrame = locations[_G.SelectedTP]
+            if targetCFrame then
+                char.HumanoidRootPart.CFrame = targetCFrame
+                
+                WindUI:Notify({
+                    Title = "Teleport Success",
+                    Content = "Arrived at " .. _G.SelectedTP,
+                    Duration = 2
+                })
+            end
+        end
+    end
+})
