@@ -1,0 +1,157 @@
+-- [[ 1. LOADER ]] --
+local WindUI = loadstring(game:HttpGet('https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua'))()
+
+-- [[ 2. VARIABEL & REMOTES ]] --
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local lp = game.Players.LocalPlayer
+local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TutorialRemotes")
+
+local RequestShop = RemotesFolder:WaitForChild("RequestShop")
+local RequestSell = RemotesFolder:WaitForChild("RequestSell")
+local PlantCropRemote = RemotesFolder:WaitForChild("PlantCrop")
+
+-- Data Config
+local seedOptions = {"Bibit Padi", "Bibit Jagung", "Bibit Tomat", "Bibit Terong", "Bibit Strawberry", "Bibit Sawit", "Bibit Durian"}
+local itemNames = {"Padi", "Jagung", "Tomat", "Terong", "Strawberry", "Sawit", "Durian"}
+
+-- States (Dipisah biar gak bentrok)
+_G.ShopSelected = "Bibit Padi"
+_G.EquipSelected = "Bibit Padi"
+_G.BuyAmount = 1
+_G.AutoEquip = false
+_G.AutoPlant = false
+_G.AutoCollect = false
+
+-- [[ 3. WINDOW SETUP ]] --
+local Window = WindUI:CreateWindow({
+    Title = "VOIDLINE HUB",
+    SubTitle = "Professional Farmer",
+    Icon = "rbxassetid://15515065445",
+    Color = Color3.fromRGB(15, 15, 15),
+    Transparent = true,
+    Blur = true
+})
+
+local MainTab = Window:Tab({ Title = "Main", Icon = "rbxassetid://10734949856" })
+
+-- --- SECTION 1: MARKET (BELANJA) ---
+local MarketSection = MainTab:Section({ Title = "Market System" })
+
+MarketSection:Dropdown({
+    Title = "Pilih Bibit Yang Mau Dibeli",
+    Values = seedOptions,
+    Value = "Bibit Padi",
+    Callback = function(option) _G.ShopSelected = option end
+})
+
+MarketSection:Input({
+    Title = "Nominal Jumlah",
+    Placeholder = "Contoh: 31",
+    Callback = function(val) _G.BuyAmount = tonumber(val) or 1 end
+})
+
+MarketSection:Button({
+    Title = "Beli Bibit Sekarang",
+    Callback = function() 
+        RequestShop:InvokeServer("BUY", _G.ShopSelected, _G.BuyAmount) 
+    end
+})
+
+-- --- SECTION 2: AUTO EQUIP (PEMAKAIAN) ---
+local EquipSection = MainTab:Section({ Title = "Auto Equip" })
+
+EquipSection:Dropdown({
+    Title = "Pilih Bibit Yang Mau Di-Equip",
+    Values = seedOptions,
+    Value = "Bibit Padi",
+    Callback = function(option) _G.EquipSelected = option end
+})
+
+EquipSection:Toggle({
+    Title = "Auto Equip Toggle",
+    Callback = function(state)
+        _G.AutoEquip = state
+        task.spawn(function()
+            while _G.AutoEquip do
+                local char = lp.Character
+                if char and char:FindFirstChild("Humanoid") then
+                    -- Cari tool yang mengandung nama bibit pilihan (Support Stacking x27)
+                    local toolInBackpack = nil
+                    for _, tool in pairs(lp.Backpack:GetChildren()) do
+                        if string.find(tool.Name, _G.EquipSelected) then
+                            toolInBackpack = tool
+                            break
+                        end
+                    end
+                    
+                    -- Cek apa player sudah pegang tool-nya
+                    local isHolding = false
+                    for _, tool in pairs(char:GetChildren()) do
+                        if tool:IsA("Tool") and string.find(tool.Name, _G.EquipSelected) then
+                            isHolding = true
+                            break
+                        end
+                    end
+
+                    if toolInBackpack and not isHolding then
+                        char.Humanoid:EquipTool(toolInBackpack)
+                    end
+                end
+                task.wait(0.5)
+            end
+        end)
+    end
+})
+
+-- --- SECTION 3: AUTOMATION (KERJA) ---
+local FarmSection = MainTab:Section({ Title = "Farming Automation" })
+
+FarmSection:Toggle({
+    Title = "Auto Plant (Follow Player)",
+    Callback = function(state)
+        _G.AutoPlant = state
+        task.spawn(function()
+            while _G.AutoPlant do
+                local char = lp.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local p = char.HumanoidRootPart.Position - Vector3.new(0, 3, 0)
+                    PlantCropRemote:FireServer(vector.create(p.X, p.Y, p.Z))
+                end
+                task.wait(0.2)
+            end
+        end)
+    end
+})
+
+FarmSection:Toggle({
+    Title = "Auto Collect (Sniper)",
+    Callback = function(state)
+        _G.AutoCollect = state
+        task.spawn(function()
+            while _G.AutoCollect do
+                local crops = workspace:FindFirstChild("ActiveCrops")
+                if crops then
+                    for _, crop in pairs(crops:GetChildren()) do
+                        if not _G.AutoCollect then break end
+                        local prompt = crop:FindFirstChildWhichIsA("ProximityPrompt", true)
+                        if prompt then fireproximityprompt(prompt) end
+                    end
+                end
+                task.wait(0.5)
+            end
+        end)
+    end
+})
+
+-- --- SECTION 4: SELLING ---
+local SellSection = MainTab:Section({ Title = "Selling" })
+
+SellSection:Button({
+    Title = "Sell All Inventory",
+    Callback = function()
+        for _, name in pairs(itemNames) do RequestSell:InvokeServer("SELL", name, 999) end
+        WindUI:Notify({Title = "Market", Content = "Semua hasil panen telah dijual!", Duration = 2})
+    end
+})
+
+WindUI:Notify({Title = "Voidline Hub", Content = "V8 Loaded! Dropdown separated.", Duration = 3})
