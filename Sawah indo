@@ -245,37 +245,36 @@ FarmTPSection:Dropdown({
 
 FarmTPSection:Button({
     Title = "Teleport to Farm",
-    Desc = "Move directly to the numbered plot",
+    Desc = "Move directly to the AreaTanam plot",
     Icon = "leaf",
     Callback = function()
         local char = lp.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
-            -- Logic: Ambil angka doang dari "Farm Area 1" jadi "1"
+            -- 1. Ambil angka dari dropdown (misal dari "Farm Area 2" dapet "2")
             local farmNum = string.match(_G.SelectedFarmTP, "%d+") 
             
-            -- LANGSUNG CARI DI WORKSPACE (KARENA GAK ADA FOLDER)
-            local targetFarm = workspace:FindFirstChild(farmNum)
+            -- 2. Gabungin kata "AreaTanam" sama angkanya (jadi "AreaTanam2")
+            local targetName = "AreaTanam" .. farmNum
+            
+            -- 3. Cari objek dengan nama lengkap tersebut di Workspace
+            local targetFarm = workspace:FindFirstChild(targetName)
             
             if targetFarm then
-                if targetFarm:IsA("BasePart") then
-                    -- Teleport ke Part
-                    char.HumanoidRootPart.CFrame = targetFarm.CFrame * CFrame.new(0, 5, 0)
-                elseif targetFarm:IsA("Model") then
-                    -- Teleport ke Model (pake PrimaryPart atau Center)
-                    local pos = targetFarm.PrimaryPart and targetFarm.PrimaryPart.CFrame or targetFarm:GetModelCFrame()
-                    char.HumanoidRootPart.CFrame = pos * CFrame.new(0, 5, 0)
-                end
+                -- Logic TP (Cek Part atau Model)
+                local pos = (targetFarm:IsA("Model") and (targetFarm.PrimaryPart and targetFarm.PrimaryPart.CFrame or targetFarm:GetModelCFrame())) or targetFarm.CFrame
+                
+                char.HumanoidRootPart.CFrame = pos * CFrame.new(0, 5, 0)
                 
                 WindUI:Notify({
                     Title = "Teleport",
-                    Content = "Arrived at Plot " .. farmNum,
+                    Content = "Arrived at " .. targetName,
                     Duration = 2
                 })
             else
-                -- Notif kalau objek angkanya kaga ketemu di Workspace
+                -- Kalau masih kaga ketemu, munculin nama yang dicari biar lu tau salahnya dimana
                 WindUI:Notify({
                     Title = "Error",
-                    Content = "Plot '" .. tostring(farmNum) .. "' not found in Workspace!",
+                    Content = "Object '" .. targetName .. "' not found in Workspace!",
                     Duration = 3
                 })
             end
