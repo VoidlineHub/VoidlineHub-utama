@@ -23,6 +23,10 @@ _G.AutoPlant = false
 _G.AutoCollect = false
 _G.SelectedWorldTP = "Merchant"
 _G.SelectedFarmTP = "1"
+_G.WebhookURL = ""
+_G.HideUsername = false
+_G.StartTime = os.time()
+_G.CycleCount = 0
 
 -- [[ 3. WINDOW SETUP ]] --
 local Window = WindUI:CreateWindow({
