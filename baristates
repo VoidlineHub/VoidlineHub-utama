@@ -234,10 +234,11 @@ local Window = WindUI:CreateWindow({
 Title = "VoidlineHub | free version.",
 Folder = "adadeh",
 Icon = "rbxassetid://124846601689213",
+Transparent= true,
 NewElements = true,
 Size = UDim2.fromOffset(300, 350),
 OpenButton = { Title = "VoidlineHub", Enabled = true, Draggable = true, Color = ColorSequence.new(Color3.fromHex("#30FF6A"), Color3.fromHex("#e7ff2f")) },
-Topbar = { Height = 44, ButtonsType = "Mac" },
+Topbar = { Height = 44, ButtonsType = "" },
 })
 
 -- // TAB: HOME
@@ -478,7 +479,6 @@ local BaristaEvent = BaristaAssets:WaitForChild("Events"):WaitForChild("BaristaE
 local startPart = Interactions.StartPart.StartPart
 local machinePart = Interactions.MachinePart.MachinePart
 local registerPart = Interactions.RegisterPart.RegisterPart
-local supplyPart = Interactions.SupplyPart.SupplyPart
 
 -- UTILS
 local function getHRP()
@@ -517,7 +517,7 @@ local function autoWalk(targetPos)
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if not hum or not hrp then return end
     
-    hum.WalkSpeed = 19
+    hum.WalkSpeed = 23
     
     repeat
         if not _G.AutoFarmBarista then break end
@@ -538,81 +538,7 @@ local function safeClick(prompt)
 end
 
 
--- =========================================================
--- REPAIR LOGIC (Improved Anti-Timeout 2026)
--- =========================================================
-local function runRepairFlow()
-    local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
-    if not missionUI then return end
-    
-    local label = missionUI:FindFirstChild("ObjectiveLabel", true)
-    if not label then return end
-    
-    -- Human-like wait sebelum baca objective
-    task.wait(math.random(7,14)/10)  -- 0.7-1.4 detik
-    
-    local text = label.Text:lower()
-    
-    -- Handle Anomaly / Strange / Person (event feature, jangan di-skip paksa!)
-    if text:find("anomaly") or text:find("strange") or text:find("person") or text:find("brainrot") or text:find("cursed") then
-        print("⚠️ Anomaly/Strange/Person Detected! (Event mungkin, tunggu manual atau reset)")
-        -- Jangan return langsung, tapi cooldown panjang biar ga loop spam
-        isWorking = true
-        task.wait(20 + math.random(10,30))  -- tunggu 20-50 detik, game biasanya reset sendiri
-        -- Optional: kalau mau auto-skip anomaly, uncomment ini (tapi risk ban lebih tinggi)
-        -- BaristaEvent:FireServer("CancelJob") -- kalau ada event cancel
-        isWorking = false
-        return
-    end
-    
-    -- Normal repair/restock detect
-    if text:find("broke") or text:find("down") or text:find("fix") or text:find("restock") or text:find("supply") then
-        isWorking = true
-        print("🛠️ Machine/Supply Issue Detected - Starting safe repair flow...")
-        
-        -- Pre-delay sebelum gerak (biar ga langsung setelah objective muncul)
-        task.wait(math.random(12,25)/10)  -- 1.2-2.5s
-        
-        -- Tween ke exit lalu supply (atau ganti autoWalk kalau tween sering kena)
-        safeTween(CFrame.new(POS_EXIT_BARISTA))
-        task.wait(math.random(8,18)/10)   -- pause di exit
-        
-        safeTween(CFrame.new(POS_SUPPLY))
-        task.wait(math.random(10,22)/10)  -- arrive & settle
-        
-        -- Cari prompt dulu & check enabled
-        local prompt = supplyPart:FindFirstChild("SupplyPrompt")
-        if not prompt or not prompt.Enabled then
-            print("[WARN] SupplyPrompt not found/enabled - retrying in 3s")
-            task.wait(3)
-            return runRepairFlow()  -- recursive retry (max 2x biar ga infinite)
-        end
-        
-        -- Delay sebelum fire event
-        task.wait(math.random(18,35)/10)  -- 1.8-3.5s
-        
-        -- Fire Restock dengan safety
-        BaristaEvent:FireServer("RestockSupplies")
-        print("[RESTOCK] Fired RestockSupplies safely")
-        
-        -- Fire prompt dengan variasi wait
-        task.wait(math.random(12,28)/10)  -- 1.2-2.8s
-        fireproximityprompt(prompt)
-        
-        -- Tunggu proses restock (6.5s base + random ± variasi)
-        task.wait(6.5 + math.random(-12,18)/10)  -- 5-8 detik variasi
-        
-        -- Balik ke barista area
-        task.wait(math.random(10,20)/10)
-        safeTween(CFrame.new(POS_EXIT_BARISTA))
-        
-        -- Cooldown akhir biar ga langsung trigger task lain
-        task.wait(4 + math.random(10,25))  -- 4-29 detik extra safety
-        
-        print("[REPAIR] Flow selesai - kembali normal")
-        isWorking = false
-    end
-end
+
 
 -- =========================
 -- MINIGAME LOGIC
