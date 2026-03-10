@@ -30,31 +30,30 @@ local StartTime = os.time()
 
 -- [[ 2. FUNGSI WEBHOOK ]] --
 local function SendWebhook(isTest)
-    -- Cek fitur nyala dan URL gak kosong
-    if _G.WebhookURL == "" or not _G.WebhookEnabled then 
-        return 
-    end
-
-    -- Ambil Data dari Leaderstats (Sawah Indo)
+    if _G.WebhookURL == "" or not _G.WebhookEnabled then return end
+    
+    local lp = game.Players.LocalPlayer
     local stats = lp:FindFirstChild("leaderstats")
-    local money = stats and stats:FindFirstChild("Money") and stats.Money.Value or 0
+    
+    -- Path leaderstats Coins, Level, Panen
+    local panen = stats and stats:FindFirstChild("Panen") and stats.Panen.Value or 0
     local level = stats and stats:FindFirstChild("Level") and stats.Level.Value or 0
+    local coins = stats and stats:FindFirstChild("Coins") and stats.Coins.Value or 0
     local username = _G.HideUsername and "||" .. lp.Name .. "||" or lp.Name
 
-    -- [[ SCAN INVENTARIS ]] --
+    -- Scan Inventory dengan pemisah teks
     local items = {}
     for _, v in pairs(lp.Backpack:GetChildren()) do
-        if v:IsA("Tool") then 
-            table.insert(items, "• " .. v.Name) 
-        end
+        if v:IsA("Tool") then table.insert(items, v.Name) end
     end
-    local itemList = #items > 0 and table.concat(items, "\n") or "Tidak ada item"
+    
+    -- Tambahin teks pemisah di awal list item
+    local itemList = #items > 0 and "-- inventaris --\n" .. table.concat(items, "\n") or "-- inventaris --\nNone"
 
     -- Time Calculation
     local diff = os.time() - StartTime
     local runningTime = string.format("%02d:%02d:%02d", math.floor(diff/3600), math.floor((diff%3600)/60), diff%60)
 
-    -- JSON DATA (Struktur sesuai mau lu)
     local data = {
         ["embeds"] = {{
             ["title"] = isTest and "Webhook Test Successful" or "Cycle Completed",
@@ -62,8 +61,9 @@ local function SendWebhook(isTest)
             ["fields"] = {
                 {["name"] = "Username", ["value"] = username, ["inline"] = false},
                 {["name"] = "Level", ["value"] = tostring(level), ["inline"] = false},
-                {["name"] = "Current Money", ["value"] = "RP. " .. tostring(money), ["inline"] = false},
-                {["name"] = "Items in Inventory", ["value"] = "```\n" .. itemList .. "\n```", ["inline"] = false},
+                {["name"] = "Coins", ["value"] = "RP. " .. tostring(coins), ["inline"] = false},
+                {["name"] = "Panen", ["value"] = tostring(panen), ["inline"] = false},
+                {["name"] = "Items in Inventory", ["value"] = itemList, ["inline"] = false},
                 {["name"] = "Running Time", ["value"] = runningTime, ["inline"] = false}
             },
             ["footer"] = {["text"] = "VoidlineHub System"},
@@ -71,30 +71,16 @@ local function SendWebhook(isTest)
         }}
     }
 
-    -- Kirim Request (Support semua executor)
-    local request_func = syn and syn.request or http_request or request or (http and http.request)
-    
-    if request_func then
-        pcall(function()
-            request_func({
-                Url = _G.WebhookURL,
-                Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = game:GetService("HttpService"):JSONEncode(data) -- FIX: JSONEncode (Bukan JEON)
-            })
-        end)
+    local req = syn and syn.request or http_request or request
+    if req then
+        req({
+            Url = _G.WebhookURL,
+            Method = "POST",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = game:GetService("HttpService"):JSONEncode(data)
+        })
     end
 end
-
--- [[ 3. MESIN LOOP 50 DETIK (TARUH DI PALING BAWAH) ]] --
-task.spawn(function()
-    while true do
-        task.wait(50) -- Interval 50 detik
-        if _G.WebhookEnabled and _G.WebhookURL ~= "" then
-            SendWebhook(false)
-        end
-    end
-end)
 
 
 -- [[ 3. WINDOW SETUP ]] --
