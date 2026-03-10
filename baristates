@@ -1,60 +1,14 @@
-local lp = game.Players.LocalPlayer
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local PlayerGui = lp:WaitForChild("PlayerGui")
-local TweenService = game:GetService("TweenService")
+-- [[ 🛡️ BYPASS ADONIS & NETWORK ]] --
+local genv = getgenv()
+local fenv = getfenv()
 
-local RUNNING = true  -- matiin kalau ga perlu
-
-task.wait(3)
-
--- String filter anti-log
-local bad = {
-    "fireproximityprompt","FireServer","InvokeServer","hookfunction","hookmetamethod",
-    "getrenv","identifyexecutor","newcclosure","getrawmetatable","getgc",
-    "setthreadidentity","cloneref","firesignal","Detected","Kill","NoClipping",
-    "Proxy methamethod","Tamper Protection","0xC0FA6","0x215F","0x273A"
-}
-local oldWarn = warn
-warn = function(...)
-    local msg = table.concat({...}, " ")
-    for _, s in bad do
-        msg = msg:gsub(s, "???"):gsub(s:upper(), "???")
-    end
-    oldWarn(msg)
-end
-
--- Noclip reset (penting buat void tween atau gerakan aneh)
-task.spawn(function()
-    while RUNNING do
-        task.wait(0.35)
-        pcall(function()
-            local h = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
-            if h and h:GetState() == Enum.HumanoidStateType.StrafingNoPhysics then
-                h.PlatformStand = false
-                h:ChangeState(Enum.HumanoidStateType.GettingUp)
-            end
-        end)
+-- Load bypass dari source yang lu kasih
+pcall(function()
+    loadstring(game:HttpGet('https://raw.githubusercontent.com/LynX99-9/komtolmmek2/refs/heads/main/Adonis'))()
+    if game:GetService('CoreGui').RobloxGui:FindFirstChild('CoreScripts/NetworkPause') then
+        game:GetService('CoreGui').RobloxGui['CoreScripts/NetworkPause']:Destroy()
     end
 end)
-
--- Safe remote & prompt (delay lebih variatif biar ga kena pattern)
-local function safeFire(r, ...)
-    if not RUNNING then return end
-    task.wait(math.random(14, 32)/10)  -- 1.4 - 3.2 detik
-    r:FireServer(...)
-end
-
-local function safeInvoke(r, ...)
-    if not RUNNING then return end
-    task.wait(math.random(14, 32)/10)
-    r:InvokeServer(...)
-end
-
-local function safePrompt(p)
-    if not RUNNING then return end
-    task.wait(math.random(11, 26)/10)  -- 1.1 - 2.6 detik
-    fireproximityprompt(p)
-end
 
 -- [[ 2. UI / WINDOWS SECTION ]] --
 local RunService = game:GetService("RunService")
@@ -233,7 +187,7 @@ end)
 local Window = WindUI:CreateWindow({
 Title = "VoidlineHub | free version.",
 Folder = "adadeh",
-Icon = "rbxassetid://124846601689213",
+Icon = "trending-up",
 Transparent= true,
 NewElements = true,
 Size = UDim2.fromOffset(300, 350),
@@ -464,9 +418,6 @@ _G.AntiAFK = true
 local BaristaRunning = false
 local isWorking = false
 
--- VARIABLES (Gue tambahin ini biar koordinat repair kebaca)
-local POS_EXIT_BARISTA = Vector3.new(-5004.42, 2.89, -678.09)
-local POS_SUPPLY = Vector3.new(-5114.04, 2.89, -669.93)
 
 -- PATHS
 local BaristaJob = workspace:WaitForChild("BaristaJob")
@@ -517,7 +468,7 @@ local function autoWalk(targetPos)
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if not hum or not hrp then return end
     
-    hum.WalkSpeed = 23
+    hum.WalkSpeed = 20
     
     repeat
         if not _G.AutoFarmBarista then break end
