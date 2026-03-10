@@ -87,10 +87,10 @@ end
 local Window = WindUI:CreateWindow({
     Title = "VOIDLINE HUB",
     Author = "Billzz",
-    Icon = "house",
+    Icon = "truck",
     Color = Color3.fromRGB(15, 15, 15),
     Transparent = true,
-    Blur = true
+    Blur = true,
 })
 
 local HomeTab = Window:Tab({ Title = "Home", Icon = "house" })
