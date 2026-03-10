@@ -293,14 +293,12 @@ FarmTPSection:Button({
     end
 })
 
-local MoreTab = Window:Tab({ Title = "More Features", Icon = "plus-circle" })
+local MoreTab = Window:Tab({ Title = "More Features", Icon = "trending-up" })
 local HttpService = game:GetService("HttpService")
-local FileName = "VoidlineHub_Config.json"
 
 -- [[ CHARACTER MODIFICATION SECTION ]] --
 local CharSection = MoreTab:Section({ Title = "Character Modification" })
 
-_G.WalkSpeed = 16
 CharSection:Slider({
     Title = "WalkSpeed",
     Desc = "Adjust your character movement speed.",
@@ -313,7 +311,6 @@ CharSection:Slider({
     end
 })
 
-_G.JumpPower = 50
 CharSection:Slider({
     Title = "JumpPower",
     Desc = "Modify your jump height capability.",
@@ -333,13 +330,14 @@ local StealthSection = MoreTab:Section({ Title = "Privacy & Stealth" })
 _G.HideName = false
 StealthSection:Toggle({
     Title = "Hide Name",
-    Desc = "Remove your overhead name tag from others.",
+    Desc = "Remove your overhead name tag.",
     Callback = function(v)
         _G.HideName = v
         local head = lp.Character:FindFirstChild("Head")
         if head then
-            local tag = head:FindFirstChildOfClass("BillboardGui")
-            if tag then tag.Enabled = not v end
+            for _, tag in pairs(head:GetChildren()) do
+                if tag:IsA("BillboardGui") then tag.Enabled = not v end
+            end
         end
     end
 })
@@ -347,50 +345,36 @@ StealthSection:Toggle({
 _G.SpoofName = ""
 StealthSection:Input({
     Title = "Spoof Name",
-    Desc = "Change your display name locally.",
+    Desc = "Change your display name (Billboard).",
     Placeholder = "Enter fake name...",
     Callback = function(v)
         _G.SpoofName = v
-        if lp.Character and lp.Character:FindFirstChild("Humanoid") then
-            lp.Character.Humanoid.DisplayName = v
+        -- Nembak langsung ke BillboardGui di Character
+        for _, v2 in pairs(lp.Character:GetDescendants()) do
+            if v2:IsA("BillboardGui") then
+                local label = v2:FindFirstChildOfClass("TextLabel")
+                if label then label.Text = v end
+            end
         end
     end
-})
-
--- [[ SYSTEM AUTOMATION SECTION ]] --
-local SystemSection = MoreTab:Section({ Title = "System & Automation" })
-
-_G.AntiAFK = false
-SystemSection:Toggle({
-    Title = "Anti-AFK",
-    Desc = "Prevent being kicked for inactivity.",
-    Callback = function(v)
-        _G.AntiAFK = v
-        local VirtualUser = game:GetService("VirtualUser")
-        lp.Idled:Connect(function()
-            if _G.AntiAFK then
-                VirtualUser:CaptureController()
-                VirtualUser:ClickButton2(Vector2.new())
-            end
-        end)
-    end
-})
-
-SystemSection:Button({
-    Title = "Rejoin Server",
-    Desc = "Quickly reconnect to the current server.",
-    Callback = function() game:GetService("TeleportService"):Teleport(game.PlaceId, lp) end
 })
 
 -- [[ CONFIGURATION MANAGER SECTION ]] --
 local ConfigSection = MoreTab:Section({ Title = "Configuration Manager" })
 
+local ConfigName = "Default"
+ConfigSection:Input({
+    Title = "Config Name",
+    Desc = "Name your configuration file.",
+    Placeholder = "Example: Config 1",
+    Callback = function(v) ConfigName = v end
+})
+
 ConfigSection:Button({
-    Title = "Save Settings",
-    Desc = "Save all farm and character settings locally.",
+    Title = "Save Config",
+    Desc = "Save settings with the name above.",
     Callback = function()
         local ConfigData = {
-            -- Farm States
             ShopSelected = _G.ShopSelected,
             EquipSelected = _G.EquipSelected,
             BuyAmount = _G.BuyAmount,
@@ -399,48 +383,56 @@ ConfigSection:Button({
             AutoCollect = _G.AutoCollect,
             SelectedWorldTP = _G.SelectedWorldTP,
             SelectedFarmTP = _G.SelectedFarmTP,
-            -- Misc States
             WalkSpeed = _G.WalkSpeed,
             JumpPower = _G.JumpPower,
             HideName = _G.HideName,
             SpoofName = _G.SpoofName,
             AntiAFK = _G.AntiAFK
         }
-        writefile(FileName, HttpService:JSONEncode(ConfigData))
-        print("VoidlineHub: Config Saved!")
+        local success, err = pcall(function()
+            writefile(ConfigName .. ".json", HttpService:JSONEncode(ConfigData))
+        end)
+        if success then print("Saved: " .. ConfigName) else warn(err) end
     end
 })
 
+-- Ambil list file buat Dropdown
+local function GetConfigs()
+    local files = {}
+    for _, file in pairs(listfiles("")) do
+        if file:sub(-5) == ".json" then
+            table.insert(files, file:gsub(".json", ""))
+        end
+    end
+    return files
+end
+
+local SelectedLoad = ""
+ConfigSection:Dropdown({
+    Title = "Select Config",
+    Desc = "Choose a file to load.",
+    Options = GetConfigs(),
+    Callback = function(v) SelectedLoad = v end
+})
+
 ConfigSection:Button({
-    Title = "Load Settings",
-    Desc = "Restore your previously saved configuration.",
+    Title = "Load Selected Config",
+    Desc = "Apply settings from the chosen file.",
     Callback = function()
-        if isfile(FileName) then
-            local ConfigData = HttpService:JSONDecode(readfile(FileName))
-            -- Restore all variables
-            _G.ShopSelected = ConfigData.ShopSelected
-            _G.EquipSelected = ConfigData.EquipSelected
-            _G.BuyAmount = ConfigData.BuyAmount
-            _G.AutoEquip = ConfigData.AutoEquip
-            _G.AutoPlant = ConfigData.AutoPlant
-            _G.AutoCollect = ConfigData.AutoCollect
-            _G.SelectedWorldTP = ConfigData.SelectedWorldTP
-            _G.SelectedFarmTP = ConfigData.SelectedFarmTP
-            _G.WalkSpeed = ConfigData.WalkSpeed
-            _G.JumpPower = ConfigData.JumpPower
-            _G.HideName = ConfigData.HideName
-            _G.SpoofName = ConfigData.SpoofName
-            _G.AntiAFK = ConfigData.AntiAFK
-            
+        local file = SelectedLoad .. ".json"
+        if isfile(file) then
+            local data = HttpService:JSONDecode(readfile(file))
+            -- Apply variables
+            _G.ShopSelected = data.ShopSelected
+            _G.WalkSpeed = data.WalkSpeed
+            _G.JumpPower = data.JumpPower
+            _G.SpoofName = data.SpoofName
             -- Re-apply current mods
             if lp.Character and lp.Character:FindFirstChild("Humanoid") then
                 lp.Character.Humanoid.WalkSpeed = _G.WalkSpeed
                 lp.Character.Humanoid.JumpPower = _G.JumpPower
-                lp.Character.Humanoid.DisplayName = _G.SpoofName
             end
-            print("VoidlineHub: Config Loaded!")
-        else
-            warn("VoidlineHub: No config file found.")
+            print("Loaded: " .. SelectedLoad)
         end
     end
 })
