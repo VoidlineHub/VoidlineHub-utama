@@ -478,53 +478,27 @@ local function autoWalk(targetPos)
 end
 
 -- =========================================================
-
--- SAFE CLICK (VIRTUAL INPUT MANAGER - SIMULASI KEY E)
-
+-- SAFE CLICK (HOLD KEY E - 3 DETIK)
 -- =========================================================
-
 local function safeClick(prompt)
-
     if not prompt or not prompt.Enabled then return end
-
     
-
-    -- 1. Tambahan: Cek jarak karakter ke prompt biar gak "E" jauh-jauh (Biar Natural)
-
-    local hrp = game:GetService("Players").LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-
-    if hrp and prompt.Parent:IsA("BasePart") then
-
-        local dist = (hrp.Position - prompt.Parent.Position).Magnitude
-
-        if dist > (prompt.MaxActivationDistance or 10) then
-
-            warn("VoidlineHub: Jarak kejauhan buat pencet E")
-
-            return 
-
-        end
-
-    end
-
-
-
-    task.wait(1.0) -- Delay sebelum interaksi asli lu
-
+    -- Delay sebelum mulai pencet (Biar natural)
+    task.wait(0.5) 
     
-
-    -- 2. Simulasi pencet E (Bukan nembak remote)
-
+    local VIM = game:GetService("VirtualInputManager")
+    
+    -- 1. Mulai Tekan Tombol E (HOLD)
     VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-
-    task.wait(0.1) -- Tahan dikit biar ke-detect game
-
-    VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-
     
-
-    task.wait(0.5) -- Delay settle asli
-
+    -- 2. Tahan Selama 3 Detik (Sesuaikan sama durasi prompt di game)
+    task.wait(3.1) -- Kasih bonus 0.1 biar pasti penuh barnya
+    
+    -- 3. Lepas Tombol E
+    VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+    
+    -- Delay sesudah interaksi biar gak langsung lari
+    task.wait(0.5) 
 end
 
 -- =========================
