@@ -18,7 +18,7 @@ local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
 local PlayerGui = LP:WaitForChild("PlayerGui")
-
+local VIM = game:GetService("VirtualInputManager")
 -- // WindUI Initialization
 local WindUI
 do
@@ -478,18 +478,54 @@ local function autoWalk(targetPos)
 end
 
 -- =========================================================
--- SAFE CLICK (NO SPAM)
+
+-- SAFE CLICK (VIRTUAL INPUT MANAGER - SIMULASI KEY E)
+
 -- =========================================================
+
 local function safeClick(prompt)
+
     if not prompt or not prompt.Enabled then return end
+
     
-    task.wait(1.0) 
-    fireproximityprompt(prompt)
-    task.wait(0.5) 
+
+    -- 1. Tambahan: Cek jarak karakter ke prompt biar gak "E" jauh-jauh (Biar Natural)
+
+    local hrp = game:GetService("Players").LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+    if hrp and prompt.Parent:IsA("BasePart") then
+
+        local dist = (hrp.Position - prompt.Parent.Position).Magnitude
+
+        if dist > (prompt.MaxActivationDistance or 10) then
+
+            warn("VoidlineHub: Jarak kejauhan buat pencet E")
+
+            return 
+
+        end
+
+    end
+
+
+
+    task.wait(1.0) -- Delay sebelum interaksi asli lu
+
+    
+
+    -- 2. Simulasi pencet E (Bukan nembak remote)
+
+    VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+
+    task.wait(0.1) -- Tahan dikit biar ke-detect game
+
+    VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+
+    
+
+    task.wait(0.5) -- Delay settle asli
+
 end
-
-
-
 
 -- =========================
 -- MINIGAME LOGIC
