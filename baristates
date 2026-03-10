@@ -500,14 +500,14 @@ local function safeClick(prompt)
 end
 
 -- =========================
--- MINIGAME LOGIC (CLEAN)
+-- MINIGAME LOGIC (FIXED FLOW)
 -- =========================
 local function handleMinigame()
     local gui = PlayerGui:FindFirstChild("BaristaGUI")
     local mini = gui and gui:FindFirstChild("MinigameFrame")
     if not mini or not mini.Visible then return end
 
-    isWorking = true
+    isWorking = true -- Kunci biar loop utama gak ganggu
     
     pcall(function()
         local target = mini:WaitForChild("BackgroundBar"):WaitForChild("TargetZone")
@@ -516,19 +516,19 @@ local function handleMinigame()
         target.BackgroundTransparency = 1
     end)
 
-    -- Tunggu sampe minigame selesai
+    -- Tunggu sampe minigame selesai (GUI ilang)
     repeat 
         task.wait(0.5) 
     until not mini.Visible or not _G.AutoFarmBarista
 
     task.wait(0.5)
 
-    -- JALAN KE REGISTER (KASIR)
+    -- PAKSA KE REGISTER SEBELUM BALIK KE LOOP UTAMA
     autoWalk(registerPart.Position)
     
-    -- Loop klik register sampe berhasil (Prompt ilang)
     local regPrompt = registerPart:FindFirstChild("RegisterPrompt")
     local retry = 0
+    -- Ulangi terus sampe prompt Register ilang (berhasil serve)
     repeat
         if regPrompt and regPrompt.Enabled then
             safeClick(regPrompt)
@@ -537,27 +537,29 @@ local function handleMinigame()
         retry = retry + 1
     until not regPrompt or not regPrompt.Enabled or retry > 5 or not _G.AutoFarmBarista
     
-    -- BALIK KE MESIN
+    -- Kasih jeda biar server update missionUI-nya
+    task.wait(0.5)
+    
     autoWalk(machinePart.Position)
-    isWorking = false
+    isWorking = false -- Baru buka kunci di sini
 end
 
 -- =========================
--- MAIN CONTROLLER (CLEAN)
+-- MAIN CONTROLLER (STABLE)
 -- =========================
 local function StartBaristaGhost()
     if BaristaRunning then return end
     BaristaRunning = true
 
     task.spawn(function()
-        TeamChangeRequest:FireServer("Barista", 11378976, 1, 0, "Detector")
+        TeamChangeRequest:FireServer("Barista", 0, 0, 0, "Detector")
         task.wait(2.5)
         
         while _G.AutoFarmBarista do
             local missionUI = PlayerGui:FindFirstChild("BaristaMissionUI")
             
+            -- 1. Kalo gak ada misi, ambil job
             if not missionUI and not isWorking then
-                -- Ambil Job
                 safeTween(startPart.CFrame)
                 safeClick(startPart:FindFirstChild("JobPrompt"))
                 
@@ -571,15 +573,15 @@ local function StartBaristaGhost()
                     autoWalk(machinePart.Position)
                 end
 
+            -- 2. Kalo ada misi, cek minigame
             elseif missionUI and not isWorking then
                 local gui = PlayerGui:FindFirstChild("BaristaGUI")
                 local mini = gui and gui:FindFirstChild("MinigameFrame")
 
-                -- CEK MINIGAME DULU
                 if mini and mini.Visible then
-                    handleMinigame()
+                    handleMinigame() -- Di dalem sini udah include Register
                 else
-                    -- JIKA TIDAK MINIGAME, CEK APAKAH PERLU BREW
+                    -- 3. Kalo gak lagi minigame, berarti butuh Brew di mesin
                     local hrp = getHRP()
                     if (hrp.Position - machinePart.Position).Magnitude > 5 then
                         autoWalk(machinePart.Position)
@@ -591,7 +593,7 @@ local function StartBaristaGhost()
                     end
                 end
             end
-            task.wait(1)
+            task.wait(0.5)
         end
         BaristaRunning = false
     end)
