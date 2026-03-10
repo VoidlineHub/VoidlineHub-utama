@@ -293,10 +293,10 @@ FarmTPSection:Button({
     end
 })
 
-local MoreTab = Window:Tab({ Title = "More Features", Icon = "trending-up" })
+local MoreTab = Window:Tab({ Title = "More Features", Icon = "plus-circle" })
 local HttpService = game:GetService("HttpService")
 
--- [[ CHARACTER MODIFICATION SECTION ]] --
+-- [[ CHARACTER MODIFICATION ]] --
 local CharSection = MoreTab:Section({ Title = "Character Modification" })
 
 CharSection:Slider({
@@ -324,10 +324,9 @@ CharSection:Slider({
     end
 })
 
--- [[ PRIVACY & STEALTH SECTION ]] --
+-- [[ PRIVACY & STEALTH ]] --
 local StealthSection = MoreTab:Section({ Title = "Privacy & Stealth" })
 
-_G.HideName = false
 StealthSection:Toggle({
     Title = "Hide Name",
     Desc = "Remove your overhead name tag.",
@@ -349,7 +348,6 @@ StealthSection:Input({
     Placeholder = "Enter fake name...",
     Callback = function(v)
         _G.SpoofName = v
-        -- Nembak langsung ke BillboardGui di Character
         for _, v2 in pairs(lp.Character:GetDescendants()) do
             if v2:IsA("BillboardGui") then
                 local label = v2:FindFirstChildOfClass("TextLabel")
@@ -359,20 +357,44 @@ StealthSection:Input({
     end
 })
 
--- [[ CONFIGURATION MANAGER SECTION ]] --
+-- [[ SYSTEM & AUTOMATION ]] --
+local SystemSection = MoreTab:Section({ Title = "System & Automation" })
+
+SystemSection:Toggle({
+    Title = "Anti-AFK",
+    Desc = "Prevent being kicked for inactivity.",
+    Callback = function(v)
+        _G.AntiAFK = v
+        local VU = game:GetService("VirtualUser")
+        lp.Idled:Connect(function()
+            if _G.AntiAFK then
+                VU:CaptureController()
+                VU:ClickButton2(Vector2.new())
+            end
+        end)
+    end
+})
+
+SystemSection:Button({
+    Title = "Rejoin Server",
+    Desc = "Quickly reconnect to the current server.",
+    Callback = function() game:GetService("TeleportService"):Teleport(game.PlaceId, lp) end
+})
+
+-- [[ CONFIGURATION MANAGER ]] --
 local ConfigSection = MoreTab:Section({ Title = "Configuration Manager" })
 
 local ConfigName = "Default"
 ConfigSection:Input({
     Title = "Config Name",
-    Desc = "Name your configuration file.",
+    Desc = "Enter a name for your configuration.",
     Placeholder = "Example: Config 1",
     Callback = function(v) ConfigName = v end
 })
 
 ConfigSection:Button({
     Title = "Save Config",
-    Desc = "Save settings with the name above.",
+    Desc = "Save current settings with the name above.",
     Callback = function()
         local ConfigData = {
             ShopSelected = _G.ShopSelected,
@@ -389,14 +411,12 @@ ConfigSection:Button({
             SpoofName = _G.SpoofName,
             AntiAFK = _G.AntiAFK
         }
-        local success, err = pcall(function()
-            writefile(ConfigName .. ".json", HttpService:JSONEncode(ConfigData))
-        end)
-        if success then print("Saved: " .. ConfigName) else warn(err) end
+        writefile(ConfigName .. ".json", HttpService:JSONEncode(ConfigData))
+        print("Config Saved: " .. ConfigName)
     end
 })
 
--- Ambil list file buat Dropdown
+-- Fungsi buat ngambil list file json
 local function GetConfigs()
     local files = {}
     for _, file in pairs(listfiles("")) do
@@ -410,29 +430,33 @@ end
 local SelectedLoad = ""
 ConfigSection:Dropdown({
     Title = "Select Config",
-    Desc = "Choose a file to load.",
+    Desc = "Select a saved file to load.",
     Options = GetConfigs(),
     Callback = function(v) SelectedLoad = v end
 })
 
 ConfigSection:Button({
     Title = "Load Selected Config",
-    Desc = "Apply settings from the chosen file.",
+    Desc = "Apply settings from the selected file.",
     Callback = function()
         local file = SelectedLoad .. ".json"
         if isfile(file) then
             local data = HttpService:JSONDecode(readfile(file))
-            -- Apply variables
+            -- Apply All States
             _G.ShopSelected = data.ShopSelected
+            _G.AutoPlant = data.AutoPlant
+            _G.AutoCollect = data.AutoCollect
             _G.WalkSpeed = data.WalkSpeed
             _G.JumpPower = data.JumpPower
+            _G.AntiAFK = data.AntiAFK
             _G.SpoofName = data.SpoofName
+            
             -- Re-apply current mods
             if lp.Character and lp.Character:FindFirstChild("Humanoid") then
                 lp.Character.Humanoid.WalkSpeed = _G.WalkSpeed
                 lp.Character.Humanoid.JumpPower = _G.JumpPower
             end
-            print("Loaded: " .. SelectedLoad)
+            print("Config Loaded: " .. SelectedLoad)
         end
     end
 })
