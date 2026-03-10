@@ -341,8 +341,39 @@ local WebhookTab = Window:Tab({ Title = "Webhook", Icon = "activity" })
 
 WebhookTab:Section({ Title = "Webhook Log" })
 
--- Langsung ke Tab, Gak pake Section-sectionan dongo
-WebhookTab:Input({ Title = "Webhook URL", Callback = function(v) _G.WebhookURL = v end })
-WebhookTab:Toggle({ Title = "Enable Webhook Log", Callback = function(v) _G.WebhookEnabled = v end })
-WebhookTab:Button({ Title = "Test Send Webhook", Callback = function() SendWebhook(true) end })
-WebhookTab:Toggle({ Title = "Hide Username", Callback = function(v) _G.HideUsername = v end })
+-- Bagian Input & Toggle
+WebhookTab:Input({ 
+    Title = "Webhook URL", 
+    Placeholder = "Paste Link Discord Disini",
+    Callback = function(v) _G.WebhookURL = v end 
+})
+
+WebhookTab:Toggle({ 
+    Title = "Enable Webhook Log", 
+    Callback = function(v) _G.WebhookEnabled = v end 
+})
+
+WebhookTab:Button({ 
+    Title = "Test Send Webhook", 
+    Callback = function() SendWebhook(true) end 
+})
+
+WebhookTab:Toggle({ 
+    Title = "Hide Username", 
+    Callback = function(v) _G.HideUsername = v end 
+})
+
+-- [[ 4. WEBHOOK LOOP SYSTEM ]] --
+-- Taruh ini tepat di bawah setup tab biar langsung jalan di background
+task.spawn(function()
+    while true do
+        task.wait(50) -- Jeda 50 detik tiap pengiriman
+        
+        -- Validasi: Link gak kosong dan Toggle lagi ON
+        if _G.WebhookEnabled and _G.WebhookURL and _G.WebhookURL ~= "" then
+            pcall(function()
+                SendWebhook(false) -- Kirim log otomatis
+            end)
+        end
+    end
+end)
