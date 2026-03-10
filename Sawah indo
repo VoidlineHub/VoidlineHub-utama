@@ -14,7 +14,8 @@ local PlantCropRemote = RemotesFolder:WaitForChild("PlantCrop")
 local seedOptions = {"Bibit Padi", "Bibit Jagung", "Bibit Tomat", "Bibit Terong", "Bibit Strawberry", "Bibit Sawit", "Bibit Durian"}
 local itemNames = {"Padi", "Jagung", "Tomat", "Terong", "Strawberry", "Sawit", "Durian"}
 
--- States
+
+-- [[ GLOBAL STATES & CONFIG ]] --
 _G.ShopSelected = "Bibit Padi"
 _G.EquipSelected = "Bibit Padi"
 _G.BuyAmount = 1
@@ -23,65 +24,16 @@ _G.AutoPlant = false
 _G.AutoCollect = false
 _G.SelectedWorldTP = "Merchant"
 _G.SelectedFarmTP = "1"
-_G.WebhookURL = ""         -- Tempat simpen link Discord
-_G.WebhookEnabled = false  -- Status On/Off Webhook
-_G.HideUsername = false    -- Status Blur Username
-local StartTime = os.time() 
 
--- [[ 2. FUNGSI WEBHOOK ]] --
-local function SendWebhook(isTest)
-    if _G.WebhookURL == "" or not _G.WebhookEnabled then return end
-    
-    local lp = game.Players.LocalPlayer
-    local stats = lp:FindFirstChild("leaderstats")
-    
-    -- Path leaderstats Coins, Level, Panen
-    local panen = stats and stats:FindFirstChild("Panen") and stats.Panen.Value or 0
-    local level = stats and stats:FindFirstChild("Level") and stats.Level.Value or 0
-    local coins = stats and stats:FindFirstChild("Coins") and stats.Coins.Value or 0
-    local username = _G.HideUsername and "||" .. lp.Name .. "||" or lp.Name
+-- More Features States
+_G.WalkSpeed = 16
+_G.JumpPower = 50
+_G.HideName = false
+_G.SpoofName = ""
+_G.AntiAFK = false
 
-    -- Scan Inventory dengan pemisah teks
-    local items = {}
-    for _, v in pairs(lp.Backpack:GetChildren()) do
-        if v:IsA("Tool") then table.insert(items, v.Name) end
-    end
-    
-    -- Tambahin teks pemisah di awal list item
-    local itemList = #items > 0 and "-- inventaris --\n" .. table.concat(items, "\n") or "-- inventaris --\nNone"
-
-    -- Time Calculation
-    local diff = os.time() - StartTime
-    local runningTime = string.format("%02d:%02d:%02d", math.floor(diff/3600), math.floor((diff%3600)/60), diff%60)
-
-    local data = {
-        ["embeds"] = {{
-            ["title"] = isTest and "Webhook Test Successful" or "Cycle Completed",
-            ["color"] = 0xFFFFFF,
-            ["fields"] = {
-                {["name"] = "Username", ["value"] = username, ["inline"] = false},
-                {["name"] = "Level", ["value"] = tostring(level), ["inline"] = false},
-                {["name"] = "Coins", ["value"] = "RP. " .. tostring(coins), ["inline"] = false},
-                {["name"] = "Panen", ["value"] = tostring(panen), ["inline"] = false},
-                {["name"] = "Items in Inventory", ["value"] = itemList, ["inline"] = false},
-                {["name"] = "Running Time", ["value"] = runningTime, ["inline"] = false}
-            },
-            ["footer"] = {["text"] = "VoidlineHub System"},
-            ["timestamp"] = os.date("!Y-%m-%dT%H:%M:%SZ")
-        }}
-    }
-
-    local req = syn and syn.request or http_request or request
-    if req then
-        req({
-            Url = _G.WebhookURL,
-            Method = "POST",
-            Headers = {["Content-Type"] = "application/json"},
-            Body = game:GetService("HttpService"):JSONEncode(data)
-        })
-    end
-end
-
+-- Local Variable for Runtime
+local StartTime = os.time()
 
 -- [[ 3. WINDOW SETUP ]] --
 local Window = WindUI:CreateWindow({
@@ -341,38 +293,154 @@ FarmTPSection:Button({
     end
 })
 
-local WebhookTab = Window:Tab({ Title = "Webhook", Icon = "activity" })
+local MoreTab = Window:Tab({ Title = "More Features", Icon = "plus-circle" })
+local HttpService = game:GetService("HttpService")
+local FileName = "VoidlineHub_Config.json"
 
-WebhookTab:Section({ Title = "Webhook Log" })
+-- [[ CHARACTER MODIFICATION SECTION ]] --
+local CharSection = MoreTab:Section({ Title = "Character Modification" })
 
--- Bagian Input & Toggle
-WebhookTab:Input({ 
-    Title = "Webhook URL", 
-    Placeholder = "Paste Link Discord Disini",
-    Callback = function(v) _G.WebhookURL = v end 
-})
-
-WebhookTab:Toggle({ 
-    Title = "Enable Webhook Log", 
-    Callback = function(v) _G.WebhookEnabled = v end 
-})
-
-WebhookTab:Button({ 
-    Title = "Test Send Webhook", 
-    Callback = function() SendWebhook(true) end 
-})
-
-WebhookTab:Toggle({ 
-    Title = "Hide Username", 
-    Callback = function(v) _G.HideUsername = v end 
-})
-
--- [[ INI MESIN OTOMATISNYA - TARUH PALING BAWAH ]] --
-task.spawn(function()
-    while true do
-        task.wait(50) -- Jeda 50 detik
-        if _G.WebhookEnabled and _G.WebhookURL ~= "" then
-            SendWebhook(false)
+_G.WalkSpeed = 16
+CharSection:Slider({
+    Title = "WalkSpeed",
+    Desc = "Adjust your character movement speed.",
+    Step = 1, Min = 16, Max = 250, Default = 16,
+    Callback = function(v)
+        _G.WalkSpeed = v
+        if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+            lp.Character.Humanoid.WalkSpeed = v
         end
     end
-end)
+})
+
+_G.JumpPower = 50
+CharSection:Slider({
+    Title = "JumpPower",
+    Desc = "Modify your jump height capability.",
+    Step = 1, Min = 50, Max = 500, Default = 50,
+    Callback = function(v)
+        _G.JumpPower = v
+        if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+            lp.Character.Humanoid.JumpPower = v
+            lp.Character.Humanoid.UseJumpPower = true
+        end
+    end
+})
+
+-- [[ PRIVACY & STEALTH SECTION ]] --
+local StealthSection = MoreTab:Section({ Title = "Privacy & Stealth" })
+
+_G.HideName = false
+StealthSection:Toggle({
+    Title = "Hide Name",
+    Desc = "Remove your overhead name tag from others.",
+    Callback = function(v)
+        _G.HideName = v
+        local head = lp.Character:FindFirstChild("Head")
+        if head then
+            local tag = head:FindFirstChildOfClass("BillboardGui")
+            if tag then tag.Enabled = not v end
+        end
+    end
+})
+
+_G.SpoofName = ""
+StealthSection:Input({
+    Title = "Spoof Name",
+    Desc = "Change your display name locally.",
+    Placeholder = "Enter fake name...",
+    Callback = function(v)
+        _G.SpoofName = v
+        if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+            lp.Character.Humanoid.DisplayName = v
+        end
+    end
+})
+
+-- [[ SYSTEM AUTOMATION SECTION ]] --
+local SystemSection = MoreTab:Section({ Title = "System & Automation" })
+
+_G.AntiAFK = false
+SystemSection:Toggle({
+    Title = "Anti-AFK",
+    Desc = "Prevent being kicked for inactivity.",
+    Callback = function(v)
+        _G.AntiAFK = v
+        local VirtualUser = game:GetService("VirtualUser")
+        lp.Idled:Connect(function()
+            if _G.AntiAFK then
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton2(Vector2.new())
+            end
+        end)
+    end
+})
+
+SystemSection:Button({
+    Title = "Rejoin Server",
+    Desc = "Quickly reconnect to the current server.",
+    Callback = function() game:GetService("TeleportService"):Teleport(game.PlaceId, lp) end
+})
+
+-- [[ CONFIGURATION MANAGER SECTION ]] --
+local ConfigSection = MoreTab:Section({ Title = "Configuration Manager" })
+
+ConfigSection:Button({
+    Title = "Save Settings",
+    Desc = "Save all farm and character settings locally.",
+    Callback = function()
+        local ConfigData = {
+            -- Farm States
+            ShopSelected = _G.ShopSelected,
+            EquipSelected = _G.EquipSelected,
+            BuyAmount = _G.BuyAmount,
+            AutoEquip = _G.AutoEquip,
+            AutoPlant = _G.AutoPlant,
+            AutoCollect = _G.AutoCollect,
+            SelectedWorldTP = _G.SelectedWorldTP,
+            SelectedFarmTP = _G.SelectedFarmTP,
+            -- Misc States
+            WalkSpeed = _G.WalkSpeed,
+            JumpPower = _G.JumpPower,
+            HideName = _G.HideName,
+            SpoofName = _G.SpoofName,
+            AntiAFK = _G.AntiAFK
+        }
+        writefile(FileName, HttpService:JSONEncode(ConfigData))
+        print("VoidlineHub: Config Saved!")
+    end
+})
+
+ConfigSection:Button({
+    Title = "Load Settings",
+    Desc = "Restore your previously saved configuration.",
+    Callback = function()
+        if isfile(FileName) then
+            local ConfigData = HttpService:JSONDecode(readfile(FileName))
+            -- Restore all variables
+            _G.ShopSelected = ConfigData.ShopSelected
+            _G.EquipSelected = ConfigData.EquipSelected
+            _G.BuyAmount = ConfigData.BuyAmount
+            _G.AutoEquip = ConfigData.AutoEquip
+            _G.AutoPlant = ConfigData.AutoPlant
+            _G.AutoCollect = ConfigData.AutoCollect
+            _G.SelectedWorldTP = ConfigData.SelectedWorldTP
+            _G.SelectedFarmTP = ConfigData.SelectedFarmTP
+            _G.WalkSpeed = ConfigData.WalkSpeed
+            _G.JumpPower = ConfigData.JumpPower
+            _G.HideName = ConfigData.HideName
+            _G.SpoofName = ConfigData.SpoofName
+            _G.AntiAFK = ConfigData.AntiAFK
+            
+            -- Re-apply current mods
+            if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+                lp.Character.Humanoid.WalkSpeed = _G.WalkSpeed
+                lp.Character.Humanoid.JumpPower = _G.JumpPower
+                lp.Character.Humanoid.DisplayName = _G.SpoofName
+            end
+            print("VoidlineHub: Config Loaded!")
+        else
+            warn("VoidlineHub: No config file found.")
+        end
+    end
+})
