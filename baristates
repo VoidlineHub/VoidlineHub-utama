@@ -18,7 +18,7 @@ local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
 local PlayerGui = LP:WaitForChild("PlayerGui")
-local VIM = game:GetService("VirtualInputManager")
+
 -- // WindUI Initialization
 local WindUI
 do
@@ -478,27 +478,25 @@ local function autoWalk(targetPos)
 end
 
 -- =========================================================
--- SAFE CLICK (HOLD KEY E - 3 DETIK)
+-- SAFE CLICK (HOLD PROXIMITY - DURASI 3 DETIK)
 -- =========================================================
 local function safeClick(prompt)
     if not prompt or not prompt.Enabled then return end
     
-    -- Delay sebelum mulai pencet (Biar natural)
-    task.wait(0.5) 
+    -- 1. Delay sebelum mulai (Biar natural gak langsung snap)
+    task.wait(0.1) 
     
-    local VIM = game:GetService("VirtualInputManager")
+    -- 2. Simulasi Nahan (Hold) Tombol
+    -- Ini nembak durasi aslinya, jadi server nunggu 3 detik baru anggap kelar
+    pcall(function()
+        fireproximityprompt(prompt, 3) -- Angka 3 ini durasi nahan (HoldDuration)
+    end)
     
-    -- 1. Mulai Tekan Tombol E (HOLD)
-    VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+    -- 3. Tunggu proses nahan selesai (3 detik + sedikit buffer)
+    task.wait(3.0)
     
-    -- 2. Tahan Selama 3 Detik (Sesuaikan sama durasi prompt di game)
-    task.wait(3.1) -- Kasih bonus 0.1 biar pasti penuh barnya
-    
-    -- 3. Lepas Tombol E
-    VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-    
-    -- Delay sesudah interaksi biar gak langsung lari
-    task.wait(0.5) 
+    -- 4. Delay sesudah interaksi biar gak langsung lari kayak robot
+    task.wait(0.1) 
 end
 
 -- =========================
