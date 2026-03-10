@@ -59,7 +59,7 @@ local function SendWebhook(isTest)
                 {["name"] = "Username", ["value"] = username, ["inline"] = false},
                 {["name"] = "Level", ["value"] = tostring(level), ["inline"] = false},
                 {["name"] = "Current Money", ["value"] = "RP. " .. tostring(money), ["inline"] = false},
-                {["name"] = "Items in Inventory", ["value"] = itemList, ["inline"] = false},
+                {["name"] = "Items in Inventory", ["value"] = "```\n" .. itemList .. "\n```", ["inline"] = false},
                 {["name"] = "Running Time", ["value"] = runningTime, ["inline"] = false}
             },
             ["footer"] = {["text"] = "VoidlineHub System"},
@@ -67,23 +67,29 @@ local function SendWebhook(isTest)
         }}
     }
 
-    local req = syn and syn.request or http_request or request
-    if req then
-        req({
-            Url = _G.WebhookURL,
-            Method = "POST",
-            Headers = {["Content-Type"] = "application/json"},
-            Body = game:GetService("HttpService"):JSONEncode(data)
-        })
+    -- Support berbagai macam executor (Synapse, Delta, Fluxus, dll)
+    local request_func = syn and syn.request or http_request or request or (http and http.request)
+    
+    if request_func then
+        -- Pakai pcall supaya kalau Discord lagi error, script lu gak crash
+        pcall(function()
+            request_func({
+                Url = _G.WebhookURL,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = game:GetService("HttpService"):JSONEncode(data) -- FIX: JSONEncode bukan JEONEncode
+            })
+        end)
     end
 end
+
 
 
 -- [[ 3. WINDOW SETUP ]] --
 local Window = WindUI:CreateWindow({
     Title = "VOIDLINE HUB",
     Author = "Billzz",
-    Icon = "bank",
+    Icon = "house",
     Color = Color3.fromRGB(15, 15, 15),
     Transparent = true,
     Blur = true
@@ -363,17 +369,12 @@ WebhookTab:Toggle({
     Callback = function(v) _G.HideUsername = v end 
 })
 
--- [[ 4. WEBHOOK LOOP SYSTEM ]] --
--- Taruh ini tepat di bawah setup tab biar langsung jalan di background
+-- [[ INI MESIN OTOMATISNYA - TARUH PALING BAWAH ]] --
 task.spawn(function()
     while true do
-        task.wait(50) -- Jeda 50 detik tiap pengiriman
-        
-        -- Validasi: Link gak kosong dan Toggle lagi ON
-        if _G.WebhookEnabled and _G.WebhookURL and _G.WebhookURL ~= "" then
-            pcall(function()
-                SendWebhook(false) -- Kirim log otomatis
-            end)
+        task.wait(50) -- Jeda 50 detik
+        if _G.WebhookEnabled and _G.WebhookURL ~= "" then
+            SendWebhook(false)
         end
     end
 end)
