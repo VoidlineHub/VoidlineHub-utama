@@ -247,17 +247,37 @@ btn.MouseButton1Click:Connect(function()
     end
 end)
 
--- UI Loop
+-- // MONEY TRACKER REFRESH (PAKE RPVALUE & UPDATED EVENT)
+local function StartMoneyTracker()
+    local pd = Player:WaitForChild("PlayerData", 20)
+    local rp = pd and pd:WaitForChild("RPValue", 20) -- Pake RPValue sesuai info lu
+    
+    if rp then
+        InitialMoney = rp.Value
+        -- Update otomatis tiap kali data game berubah (lebih enteng drpd loop)
+        pd:WaitForChild("DataUpdated", 5).Event:Connect(function()
+            local newVal = rp.Value
+            if _G.AutoFarmActive and newVal > InitialMoney then
+                _G.CurrentEarning = _G.CurrentEarning + (newVal - InitialMoney)
+            end
+            InitialMoney = newVal
+            moneyLab.Text = "Money: " .. FormatNumber(newVal)
+        end)
+        
+        -- Set awal pas baru buka
+        moneyLab.Text = "Money: " .. FormatNumber(rp.Value)
+    end
+end
+task.spawn(StartMoneyTracker)
+
+-- // UI LOOP (TINGGAL RUNTIME & EARNING)
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(1) do -- 1 detik cukup biar ga berat, Money udah diupdate Event di atas
         if not sg.Parent then break end
         if _G.AutoFarmActive then
             timeLab.Text = "Runtime: " .. FormatTime(tick() - _G.StartTime)
             earnLab.Text = "Earning: " .. FormatNumber(_G.CurrentEarning)
         end
-        local pd = Player:FindFirstChild("PlayerData")
-        local m = pd and pd:FindFirstChild("Money")
-        if m then moneyLab.Text = "Money: " .. FormatNumber(m.Value) end
     end
 end)
 
