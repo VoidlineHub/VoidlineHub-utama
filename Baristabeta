@@ -8,6 +8,7 @@ _G.AutoFarmActive = false
 _G.StartTime = tick()
 _G.CurrentEarning = 0
 LastActivity = tick()
+local InitialMoney = 0
 
 local function FormatNumber(value)
     local formatted = tostring(value):reverse():gsub("(%d%d%d)", "%1,"):reverse()
