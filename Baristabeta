@@ -240,6 +240,11 @@ btn.MouseButton1Click:Connect(function()
     statusLab.Text = _G.AutoFarmActive and "• Autofarm: Active" or "• Autofarm: False"
     statusLab.TextColor3 = _G.AutoFarmActive and Color3.fromRGB(150, 255, 150) or Color3.fromRGB(255, 100, 100)
     btn.Text = _G.AutoFarmActive and "STOP AUTOMATION" or "START AUTOMATION"
+    
+    if _G.AutoFarmActive then 
+        _G.StartTime = tick() 
+        LastActivity = 0 -- BARIS INI: Biar pas di-klik langsung maksa Start Job
+    end
 end)
 
 -- UI Loop
