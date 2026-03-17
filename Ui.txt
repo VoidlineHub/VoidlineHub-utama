@@ -69,46 +69,43 @@ local function GetRemote(name)
     return nil
 end
 
--- // 1. BYPASS TP LU (SIT -> WAIT -> TP) - TETEP BYPASS UTAMA
+-- // 1. BYPASS TP (SIT LOGIC)
 local function BypassTP(targetCF)
     local Char = LP.Character or LP.CharacterAdded:Wait()
     local Hum = Char:WaitForChild("Humanoid")
-    local Root = Char:WaitForChild("HumanoidRootPart")
-    
-    if Hum and Root then
+    if Hum and Char.PrimaryPart then
         Hum.Sit = true
-        task.wait(0.5)
-        Root.CFrame = targetCF
-        task.wait(0.3)
+        task.wait(0.4)
+        Char.PrimaryPart.CFrame = targetCF
+        task.wait(0.2)
         Hum.Sit = false
     end
 end
 
--- // 2. TWEEN VOID (-30) - FIX: GAK BAKAL NYUNGSEP TERUS
+-- // 2. TWEEN VOID (FIXED LOCK Y -30)
 local function TweenVoid(targetCF)
     local Root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if Root then
-        -- Kunci posisi start dan target di ketinggian bawah tanah (-30)
-        local startY = targetCF.Y - 30 
-        local duration = (Root.Position - targetCF.Position).Magnitude / 130
+        local targetY = targetCF.Y - 30
+        local dist = (Root.Position - Vector3.new(targetCF.X, Root.Position.Y, targetCF.Z)).Magnitude
+        local duration = dist / 130
         
-        -- 1. Langsung "Selam" ke bawah di titik awal
-        Root.CFrame = CFrame.new(Root.Position.X, startY, Root.Position.Z)
+        -- Lock di bawah tanah
+        Root.CFrame = CFrame.new(Root.Position.X, targetY, Root.Position.Z)
         task.wait(0.1)
         
-        -- 2. Tween Horizontal di kedalaman yang sama (tetap di -30)
-        local tween = game:GetService("TweenService"):Create(Root, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
-            CFrame = CFrame.new(targetCF.X, startY, targetCF.Z)
+        local tween = TS:Create(Root, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
+            CFrame = CFrame.new(targetCF.X, targetY, targetCF.Z)
         })
         tween:Play()
         tween.Completed:Wait()
         
-        -- 3. Munculin ke atas pas udah sampe
+        -- Naik ke tujuan
         Root.CFrame = targetCF
     end
 end
 
--- // 3. FUNGSI JALAN (UNTUK MACHINE & REGISTER)
+-- // 3. WALK LOGIC
 local function WalkTo(targetPos)
     local Hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
     if Hum then
@@ -117,33 +114,21 @@ local function WalkTo(targetPos)
     end
 end
 
--- // CORE SEQUENCE: PAKAI TWEEN VOID UNTUK START JOB
-local function ExecuteStartSequence()
-    local tr = GetRemote("TeamChangeRequest")
-    if LP.Team and LP.Team.Name ~= "Barista" and tr then
-        tr:FireServer("Barista", 11378976, 0, 0, "Detector")
-        task.wait(2.5)
-    end
-    
-    TweenVoid(StartJobCF)
-    task.wait(0.8)
-    
-    if JobPrompt and JobPrompt.Enabled then
-
+-- // MAIN ENGINE LOOP
 task.spawn(function()
-    while task.wait(0.6) do
+    while task.wait(0.5) do
         if _G.AutoFarmBarista then
             local _, OrderTextLabel, MinigameFrame = GetBaristaElements()
             
-            -- PROTEKSI: Kalau lagi ada Minigame, JANGAN lakuin apapun (Apalagi Tween ke Start Job)
-            if MinigameFrame and MinigameFrame.Visible then 
-                LastActivity = tick() -- Reset timer terus selama kerja
-                continue 
+            -- PROTEKSI: Lagi brewing? Diem!
+            if MinigameFrame and MinigameFrame.Visible then
+                LastActivity = tick()
+                continue
             end
 
-            -- Cek Reset: Cuma jalan kalau bener-bener gak ada kerjaan & timer abis
+            -- Timer Reset 4 Menit
             if (tick() - LastActivity >= 240) then
-                ExecuteStartSequence()
+                ExecuteStartSequence() -- Panggil fungsi start job lu
                 continue
             end
 
@@ -156,17 +141,16 @@ task.spawn(function()
                     task.wait(0.5)
                     fireproximityprompt(SupplyPrompt)
                     LastActivity = tick()
-                    task.wait(0.5)
+                    task.wait(0.4)
+                    -- TP Balik deket mesin terus Walk
                     LP.Character.HumanoidRootPart.CFrame = MachineCF * CFrame.new(0, 0, 3)
                     task.wait(0.2)
                     WalkTo(MachineCF.Position)
                     fireproximityprompt(MachinePrompt)
-                
                 elseif MachinePrompt.Enabled then
                     WalkTo(MachineCF.Position)
                     fireproximityprompt(MachinePrompt)
                     LastActivity = tick()
-                
                 elseif RegisterPrompt.Enabled then
                     WalkTo(RegisterCF.Position)
                     fireproximityprompt(RegisterPrompt)
