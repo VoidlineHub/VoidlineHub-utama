@@ -87,15 +87,24 @@ end
 local function TweenVoid(targetCF)
     local Root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if Root then
-        -- Nyelam dulu biar gak kedetect teleport jarak jauh
+        -- 1. Hitung Jarak & Durasi (Speed = 130)
+        local currentPos = Root.Position
+        local targetPos = Vector3.new(targetCF.X, currentPos.Y, targetCF.Z)
+        local distance = (currentPos - targetPos).Magnitude
+        local duration = distance / 180 -- Kecepatan 130 studs/s
+        
+        -- 2. Nyelam dulu
         Root.CFrame = Root.CFrame * CFrame.new(0, -30, 0)
         task.wait(0.2)
-        local tween = game:GetService("TweenService"):Create(Root, TweenInfo.new(2.5, Enum.EasingStyle.Linear), {
+        
+        -- 3. Tween dengan durasi dinamis
+        local tween = game:GetService("TweenService"):Create(Root, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
             CFrame = CFrame.new(targetCF.X, Root.Position.Y, targetCF.Z)
         })
         tween:Play()
         tween.Completed:Wait()
-        -- Muncul di tempat kerja
+        
+        -- 4. Muncul di tempat kerja
         Root.CFrame = targetCF
     end
 end
