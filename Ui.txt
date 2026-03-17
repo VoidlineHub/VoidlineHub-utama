@@ -112,7 +112,7 @@ local function TweenNormal(targetCF)
     local Root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if Root then
         local dist = (Root.Position - targetCF.Position).Magnitude
-        local duration = dist / 100 -- Speed 100 biar smooth gak kaku
+        local duration = dist / 30 -- Speed 100 biar smooth gak kaku
         
         local tween = TS:Create(Root, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
             CFrame = targetCF
@@ -138,56 +138,51 @@ local function ExecuteStartSequence()
     LastActivity = tick()
 end
 
--- // MAIN FARMING LOOP (FIXED NPC DETECTION)
+-- // MAIN FARMING LOOP (ONLY)
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(0.6) do
         if _G.AutoFarmBarista then
-            local Gui, OrderTextLabel, MinigameFrame = GetBaristaElements()
+            local _, OrderTextLabel, MinigameFrame = GetBaristaElements()
             
-            -- PROTEKSI: Kalau lagi ada Minigame (Brewing), JANGAN diganggu
+            -- PROTEKSI: Lagi brewing/minigame? Diem!
             if MinigameFrame and MinigameFrame.Visible then
                 LastActivity = tick()
                 continue
             end
 
-            -- Reset kalau 4 menit bengong
-            if (tick() - LastActivity >= 240) then
-                ExecuteStartSequence()
+            -- Cek 4 Menit Tanpa Aktivitas -> Balik Start Job (TweenVoid)
+            if tick() - LastActivity >= 240 then
+                ExecuteStartSequence() -- Di dalem sini pastiin manggil TweenVoid
                 continue
             end
 
-            -- CEK APAKAH ADA ORDERAN (NPC DATENG)
-            if OrderTextLabel and OrderTextLabel.Text ~= "" and OrderTextLabel.Text ~= "..." then
+            if OrderTextLabel then
                 local txt = OrderTextLabel.Text:lower()
                 local isBroken = (OrderTextLabel.TextColor3.R > 0.8 and (txt:find("break") or txt:find("down")))
                 
-                -- 1. KONDISI MESIN RUSAK (SUPPLY)
+                -- 1. MESIN RUSAK
                 if isBroken then
                     BypassTP(SupplyCF)
-                    task.wait(0.4)
+                    task.wait(0.5)
                     fireproximityprompt(SupplyPrompt)
                     LastActivity = tick()
                     task.wait(0.5)
-                    -- Balik deket mesin
-                    LP.Character.HumanoidRootPart.CFrame = MachineCF * CFrame.new(0, 0, 3)
-                    task.wait(0.2)
                     TweenNormal(MachineCF)
                     fireproximityprompt(MachinePrompt)
                 
-                -- 2. KONDISI NORMAL (BREWING / REGISTER)
+                -- 2. MESIN NORMAL
                 elseif MachinePrompt and MachinePrompt.Enabled then
                     TweenNormal(MachineCF)
                     fireproximityprompt(MachinePrompt)
                     LastActivity = tick()
-                    
+                
+                -- 3. KASIR
                 elseif RegisterPrompt and RegisterPrompt.Enabled then
+                    task.wait(0.5)
                     TweenNormal(RegisterCF)
                     fireproximityprompt(RegisterPrompt)
                     LastActivity = tick()
                 end
-            else
-                -- Gak ada orderan? Tetep update LastActivity dikit biar gak gampang reset
-                -- Tapi jangan di-reset full biar timer 4 menit tetep jalan kalau emang bug
             end
         end
     end
