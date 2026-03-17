@@ -69,7 +69,7 @@ local function GetRemote(name)
     return nil
 end
 
--- // 1. BYPASS TP LU (SIT LOGIC) - KHUSUS SUPPLY
+-- // 1. BYPASS TP (SIT LOGIC) - KHUSUS SUPPLY
 local function BypassTP(targetCF)
     local Char = LP.Character or LP.CharacterAdded:Wait()
     local Hum = Char:WaitForChild("Humanoid")
@@ -93,7 +93,7 @@ local function TweenVoid(targetCF)
         Root.CFrame = CFrame.new(Root.Position.X, targetY, Root.Position.Z)
         task.wait(0.1)
         
-        local tween = game:GetService("TweenService"):Create(Root, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
+        local tween = TS:Create(Root, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
             CFrame = CFrame.new(targetCF.X, targetY, targetCF.Z)
         })
         tween:Play()
@@ -102,12 +102,18 @@ local function TweenVoid(targetCF)
     end
 end
 
--- // 3. FUNGSI JALAN (UNTUK MACHINE & REGISTER)
-local function WalkTo(targetPos)
-    local Hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
-    if Hum then
-        Hum:MoveTo(targetPos)
-        Hum.MoveToFinished:Wait()
+-- // 3. TWEEN BIASA (NO HEIGHT) - UNTUK MACHINE & REGISTER (ANTI-WALK DETECT)
+local function TweenNormal(targetCF)
+    local Root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if Root then
+        local dist = (Root.Position - targetCF.Position).Magnitude
+        local duration = dist / 100 -- Speed 100 biar smooth gak kaku
+        
+        local tween = TS:Create(Root, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
+            CFrame = targetCF
+        })
+        tween:Play()
+        tween.Completed:Wait()
     end
 end
 
@@ -133,7 +139,7 @@ task.spawn(function()
         if _G.AutoFarmBarista then
             local _, OrderTextLabel, MinigameFrame = GetBaristaElements()
             
-            -- PROTEKSI: Kalau lagi brewing, diem!
+            -- PROTEKSI: Lagi brewing? Diem!
             if MinigameFrame and MinigameFrame.Visible then
                 LastActivity = tick()
                 continue
@@ -155,20 +161,18 @@ task.spawn(function()
                     fireproximityprompt(SupplyPrompt)
                     LastActivity = tick()
                     task.wait(0.5)
-                    -- Balik ke mesin: TP deket dulu baru Walk biar rapi
-                    LP.Character.HumanoidRootPart.CFrame = MachineCF * CFrame.new(0, 0, 3)
-                    task.wait(0.2)
-                    WalkTo(MachineCF.Position)
+                    -- Balik ke mesin: Pake TweenNormal biar legit gak kedetect walk
+                    TweenNormal(MachineCF * CFrame.new(0, 0, 2))
                     fireproximityprompt(MachinePrompt)
                 
                 elseif MachinePrompt.Enabled then
-                    WalkTo(MachineCF.Position)
+                    TweenNormal(MachineCF)
                     fireproximityprompt(MachinePrompt)
                     LastActivity = tick()
                 
                 elseif RegisterPrompt.Enabled then
                     task.wait(0.5)
-                    WalkTo(RegisterCF.Position)
+                    TweenNormal(RegisterCF)
                     task.wait(0.3)
                     fireproximityprompt(RegisterPrompt)
                     LastActivity = tick()
