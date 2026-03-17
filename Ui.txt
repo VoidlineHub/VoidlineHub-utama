@@ -111,10 +111,12 @@ end
 local function TweenNormal(targetCF)
     local Root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if Root then
+        -- Panggil Service langsung biar gak error "index nil"
+        local TweenService = game:GetService("TweenService")
         local dist = (Root.Position - targetCF.Position).Magnitude
-        local duration = dist / 30 -- Speed 100 biar smooth gak kaku
+        local duration = dist / 30 -- Speed 30 biar smooth gak kaku (Anti-Detect)
         
-        local tween = TS:Create(Root, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
+        local tween = TweenService:Create(Root, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
             CFrame = targetCF
         })
         tween:Play()
