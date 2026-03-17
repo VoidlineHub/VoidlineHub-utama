@@ -68,9 +68,6 @@ local function GetRemote(name)
     return nil
 end
 
-
-end)
-
 -- // 1. BYPASS TP LU (SIT -> WAIT -> TP) - TETEP BYPASS UTAMA
 local function BypassTP(targetCF)
     local Char = LP.Character or LP.CharacterAdded:Wait()
