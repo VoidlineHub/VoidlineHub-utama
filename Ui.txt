@@ -90,7 +90,7 @@ local function TweenVoid(targetCF)
         -- Nyelam dulu biar gak kedetect teleport jarak jauh
         Root.CFrame = Root.CFrame * CFrame.new(0, -30, 0)
         task.wait(0.2)
-        local tween = game:GetService("TweenService"):Create(Root, TweenInfo.new(1.5, Enum.EasingStyle.Linear), {
+        local tween = game:GetService("TweenService"):Create(Root, TweenInfo.new(2.5, Enum.EasingStyle.Linear), {
             CFrame = CFrame.new(targetCF.X, Root.Position.Y, targetCF.Z)
         })
         tween:Play()
