@@ -84,24 +84,26 @@ local function BypassTP(targetCF)
     end
 end
 
--- // 2. TWEEN VOID (-30) - KHUSUS JALAN JAUH (SPAWN -> START JOB)
+-- // 2. TWEEN VOID (-30) - FIX: GAK BAKAL NYUNGSEP TERUS
 local function TweenVoid(targetCF)
     local Root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if Root then
-        local currentPos = Root.Position
-        local targetPos = Vector3.new(targetCF.X, currentPos.Y, targetCF.Z)
-        local distance = (currentPos - targetPos).Magnitude
-        local duration = distance / 130 
+        -- Kunci posisi start dan target di ketinggian bawah tanah (-30)
+        local startY = targetCF.Y - 30 
+        local duration = (Root.Position - targetCF.Position).Magnitude / 130
         
-        Root.CFrame = Root.CFrame * CFrame.new(0, -30, 0)
-        task.wait(0.2)
+        -- 1. Langsung "Selam" ke bawah di titik awal
+        Root.CFrame = CFrame.new(Root.Position.X, startY, Root.Position.Z)
+        task.wait(0.1)
         
+        -- 2. Tween Horizontal di kedalaman yang sama (tetap di -30)
         local tween = game:GetService("TweenService"):Create(Root, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
-            CFrame = CFrame.new(targetCF.X, Root.Position.Y, targetCF.Z)
+            CFrame = CFrame.new(targetCF.X, startY, targetCF.Z)
         })
         tween:Play()
         tween.Completed:Wait()
         
+        -- 3. Munculin ke atas pas udah sampe
         Root.CFrame = targetCF
     end
 end
