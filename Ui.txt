@@ -129,20 +129,22 @@ local function ExecuteStartSequence()
     task.wait(0.8)
     
     if JobPrompt and JobPrompt.Enabled then
-        fireproximityprompt(JobPrompt)
-    end
-    LastActivity = tick()
-end
 
--- // MAIN FARMING LOOP
 task.spawn(function()
     while task.wait(0.6) do
         if _G.AutoFarmBarista then
             local _, OrderTextLabel, MinigameFrame = GetBaristaElements()
             
-            -- Reset kalau stuck 4 menit atau End Shift (JobPrompt muncul)
-            if (tick() - LastActivity >= 240) or (JobPrompt and JobPrompt.Enabled) then
+            -- PROTEKSI: Kalau lagi ada Minigame, JANGAN lakuin apapun (Apalagi Tween ke Start Job)
+            if MinigameFrame and MinigameFrame.Visible then 
+                LastActivity = tick() -- Reset timer terus selama kerja
+                continue 
+            end
+
+            -- Cek Reset: Cuma jalan kalau bener-bener gak ada kerjaan & timer abis
+            if (tick() - LastActivity >= 240) then
                 ExecuteStartSequence()
+                continue
             end
 
             if OrderTextLabel then
@@ -155,24 +157,18 @@ task.spawn(function()
                     fireproximityprompt(SupplyPrompt)
                     LastActivity = tick()
                     task.wait(0.5)
-                    
-                    -- Instant TP balik biar Walk-nya gak kejauhan/nabrak
                     LP.Character.HumanoidRootPart.CFrame = MachineCF * CFrame.new(0, 0, 3)
                     task.wait(0.2)
-                    
                     WalkTo(MachineCF.Position)
                     fireproximityprompt(MachinePrompt)
-                elseif MachinePrompt.Enabled and not (MinigameFrame and MinigameFrame.Visible) then
+                
+                elseif MachinePrompt.Enabled then
                     WalkTo(MachineCF.Position)
                     fireproximityprompt(MachinePrompt)
                     LastActivity = tick()
-                    repeat task.wait(0.5)
-                        LastActivity = tick()
-                    until not (MinigameFrame and MinigameFrame.Visible) or not _G.AutoFarmBarista
-                elseif RegisterPrompt.Enabled and not (MinigameFrame and MinigameFrame.Visible) then
-                    task.wait(0.5)
+                
+                elseif RegisterPrompt.Enabled then
                     WalkTo(RegisterCF.Position)
-                    task.wait(0.3)
                     fireproximityprompt(RegisterPrompt)
                     LastActivity = tick()
                 end
