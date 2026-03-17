@@ -89,7 +89,7 @@ local function TweenVoid(targetCF)
         local targetY = targetCF.Y - 30
         local currentPos = Root.Position
         local dist = (currentPos - Vector3.new(targetCF.X, currentPos.Y, targetCF.Z)).Magnitude
-        local duration = dist / 130
+        local duration = dist / 180
         
         -- Selam ke kedalaman targetY
         Root.CFrame = CFrame.new(currentPos.X, targetY, currentPos.Z)
