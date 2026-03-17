@@ -69,7 +69,7 @@ local function GetRemote(name)
     return nil
 end
 
--- // 1. BYPASS TP (SIT LOGIC)
+-- // 1. BYPASS TP LU (SIT LOGIC) - KHUSUS SUPPLY
 local function BypassTP(targetCF)
     local Char = LP.Character or LP.CharacterAdded:Wait()
     local Hum = Char:WaitForChild("Humanoid")
@@ -82,7 +82,7 @@ local function BypassTP(targetCF)
     end
 end
 
--- // 2. TWEEN VOID (FIXED LOCK Y -30)
+-- // 2. TWEEN VOID (LOCK Y -30) - KHUSUS JAUH (SPAWN -> START JOB)
 local function TweenVoid(targetCF)
     local Root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if Root then
@@ -90,22 +90,19 @@ local function TweenVoid(targetCF)
         local dist = (Root.Position - Vector3.new(targetCF.X, Root.Position.Y, targetCF.Z)).Magnitude
         local duration = dist / 130
         
-        -- Lock di bawah tanah
         Root.CFrame = CFrame.new(Root.Position.X, targetY, Root.Position.Z)
         task.wait(0.1)
         
-        local tween = TS:Create(Root, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
+        local tween = game:GetService("TweenService"):Create(Root, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
             CFrame = CFrame.new(targetCF.X, targetY, targetCF.Z)
         })
         tween:Play()
         tween.Completed:Wait()
-        
-        -- Naik ke tujuan
         Root.CFrame = targetCF
     end
 end
 
--- // 3. WALK LOGIC
+-- // 3. FUNGSI JALAN (UNTUK MACHINE & REGISTER)
 local function WalkTo(targetPos)
     local Hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
     if Hum then
@@ -114,21 +111,37 @@ local function WalkTo(targetPos)
     end
 end
 
--- // MAIN ENGINE LOOP
+-- // CORE SEQUENCE: START JOB
+local function ExecuteStartSequence()
+    local tr = GetRemote("TeamChangeRequest")
+    if LP.Team and LP.Team.Name ~= "Barista" and tr then
+        tr:FireServer("Barista", 11378976, 0, 0, "Detector")
+        task.wait(2.5)
+    end
+    
+    TweenVoid(StartJobCF)
+    task.wait(0.8)
+    if JobPrompt and JobPrompt.Enabled then
+        fireproximityprompt(JobPrompt)
+    end
+    LastActivity = tick()
+end
+
+-- // MAIN FARMING LOOP
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(0.6) do
         if _G.AutoFarmBarista then
             local _, OrderTextLabel, MinigameFrame = GetBaristaElements()
             
-            -- PROTEKSI: Lagi brewing? Diem!
+            -- PROTEKSI: Kalau lagi brewing, diem!
             if MinigameFrame and MinigameFrame.Visible then
                 LastActivity = tick()
                 continue
             end
 
-            -- Timer Reset 4 Menit
-            if (tick() - LastActivity >= 240) then
-                ExecuteStartSequence() -- Panggil fungsi start job lu
+            -- Cek 4 Menit Tanpa Aktivitas
+            if tick() - LastActivity >= 240 then
+                ExecuteStartSequence()
                 continue
             end
 
@@ -141,18 +154,22 @@ task.spawn(function()
                     task.wait(0.5)
                     fireproximityprompt(SupplyPrompt)
                     LastActivity = tick()
-                    task.wait(0.4)
-                    -- TP Balik deket mesin terus Walk
+                    task.wait(0.5)
+                    -- Balik ke mesin: TP deket dulu baru Walk biar rapi
                     LP.Character.HumanoidRootPart.CFrame = MachineCF * CFrame.new(0, 0, 3)
                     task.wait(0.2)
                     WalkTo(MachineCF.Position)
                     fireproximityprompt(MachinePrompt)
+                
                 elseif MachinePrompt.Enabled then
                     WalkTo(MachineCF.Position)
                     fireproximityprompt(MachinePrompt)
                     LastActivity = tick()
+                
                 elseif RegisterPrompt.Enabled then
+                    task.wait(0.5)
                     WalkTo(RegisterCF.Position)
+                    task.wait(0.3)
                     fireproximityprompt(RegisterPrompt)
                     LastActivity = tick()
                 end
