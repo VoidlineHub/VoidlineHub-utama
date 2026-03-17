@@ -36,7 +36,7 @@ local TAKE_PROMPT = workspace:WaitForChild("Livrason"):WaitForChild("Take1"):Wai
 
 -- [[ GLOBAL VARIABLES ]]
 _G.AutofarmCourier = false 
-_G.CourierSpeed = 230  
+_G.CourierSpeed = 330  
 _G.AutoFarmBarista = false
 LastActivity = tick()
 
@@ -491,7 +491,7 @@ AutofarmTab:Toggle({
 AutofarmTab:Slider({
     Title = "speed Autofarm Courier",
     Desc = "pakai senormal nya ya cik",
-    Value = {Min = 10, Max = 300, Default = 230},
+    Value = {Min = 10, Max = 500, Default = 330},
     Callback = function(value)
         _G.CourierSpeed = value -- Real-time ganti speed tween
     end
