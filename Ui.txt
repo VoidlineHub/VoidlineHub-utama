@@ -86,18 +86,24 @@ end
 local function TweenVoid(targetCF)
     local Root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if Root then
-        local targetY = targetCF.Y - 30
+        -- KUNCI: Y-nya harus relatif ke targetCF, bukan ke posisi lu sekarang
+        -- Biar gak makin turun ke void pas dipanggil berkali-kali
+        local downY = targetCF.Y - 30 
         local dist = (Root.Position - Vector3.new(targetCF.X, Root.Position.Y, targetCF.Z)).Magnitude
-        local duration = dist / 130
+        local duration = dist / 180
         
-        Root.CFrame = CFrame.new(Root.Position.X, targetY, Root.Position.Z)
+        -- 1. Langsung set ketinggian di bawah lantai (Gak bakal turun terus)
+        Root.CFrame = CFrame.new(Root.Position.X, downY, Root.Position.Z)
         task.wait(0.1)
         
+        -- 2. Tween maju ke koordinat target (tapi tetep di kedalaman downY)
         local tween = TS:Create(Root, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
-            CFrame = CFrame.new(targetCF.X, targetY, targetCF.Z)
+            CFrame = CFrame.new(targetCF.X, downY, targetCF.Z)
         })
         tween:Play()
         tween.Completed:Wait()
+        
+        -- 3. Muncul ke permukaan pas udah sampe di atas StartJobCF
         Root.CFrame = targetCF
     end
 end
