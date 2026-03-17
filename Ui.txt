@@ -68,6 +68,9 @@ local function GetRemote(name)
     return nil
 end
 
+
+end)
+
 -- // 1. BYPASS TP LU (SIT -> WAIT -> TP) - TETEP BYPASS UTAMA
 local function BypassTP(targetCF)
     local Char = LP.Character or LP.CharacterAdded:Wait()
@@ -87,24 +90,20 @@ end
 local function TweenVoid(targetCF)
     local Root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if Root then
-        -- 1. Hitung Jarak & Durasi (Speed = 130)
         local currentPos = Root.Position
         local targetPos = Vector3.new(targetCF.X, currentPos.Y, targetCF.Z)
         local distance = (currentPos - targetPos).Magnitude
-        local duration = distance / 180 -- Kecepatan 130 studs/s
+        local duration = distance / 130 
         
-        -- 2. Nyelam dulu
         Root.CFrame = Root.CFrame * CFrame.new(0, -30, 0)
         task.wait(0.2)
         
-        -- 3. Tween dengan durasi dinamis
         local tween = game:GetService("TweenService"):Create(Root, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
             CFrame = CFrame.new(targetCF.X, Root.Position.Y, targetCF.Z)
         })
         tween:Play()
         tween.Completed:Wait()
         
-        -- 4. Muncul di tempat kerja
         Root.CFrame = targetCF
     end
 end
@@ -126,7 +125,6 @@ local function ExecuteStartSequence()
         task.wait(2.5)
     end
     
-    -- Jarak jauh pake TweenVoid biar aman
     TweenVoid(StartJobCF)
     task.wait(0.8)
     
@@ -142,7 +140,8 @@ task.spawn(function()
         if _G.AutoFarmBarista then
             local _, OrderTextLabel, MinigameFrame = GetBaristaElements()
             
-            if tick() - LastActivity >= 240 then
+            -- Reset kalau stuck 4 menit atau End Shift (JobPrompt muncul)
+            if (tick() - LastActivity >= 240) or (JobPrompt and JobPrompt.Enabled) then
                 ExecuteStartSequence()
             end
 
@@ -151,27 +150,26 @@ task.spawn(function()
                 local isBroken = (OrderTextLabel.TextColor3.R > 0.8 and (txt:find("break") or txt:find("down")))
                 
                 if isBroken then
-                    -- SUPPLY PAKE BYPASS TP (SIT)
                     BypassTP(SupplyCF)
                     task.wait(0.5)
                     fireproximityprompt(SupplyPrompt)
                     LastActivity = tick()
                     task.wait(0.5)
-                    -- BALIK KE MACHINE PAKE WALK
+                    
+                    -- Instant TP balik biar Walk-nya gak kejauhan/nabrak
+                    LP.Character.HumanoidRootPart.CFrame = MachineCF * CFrame.new(0, 0, 3)
+                    task.wait(0.2)
+                    
                     WalkTo(MachineCF.Position)
                     fireproximityprompt(MachinePrompt)
-                
                 elseif MachinePrompt.Enabled and not (MinigameFrame and MinigameFrame.Visible) then
-                    -- KE MACHINE PAKE WALK
                     WalkTo(MachineCF.Position)
                     fireproximityprompt(MachinePrompt)
                     LastActivity = tick()
                     repeat task.wait(0.5)
                         LastActivity = tick()
                     until not (MinigameFrame and MinigameFrame.Visible) or not _G.AutoFarmBarista
-                
                 elseif RegisterPrompt.Enabled and not (MinigameFrame and MinigameFrame.Visible) then
-                    -- KE REGISTER PAKE WALK
                     task.wait(0.5)
                     WalkTo(RegisterCF.Position)
                     task.wait(0.3)
@@ -183,8 +181,7 @@ task.spawn(function()
     end
 end)
 
-
--- Persistent Fixes & Anti-AFK
+-- Persistent Fixes
 RunService.Heartbeat:Connect(function()
     local _, _, MinigameFrame = GetBaristaElements()
     if _G.AutoFarmBarista and MinigameFrame and MinigameFrame.Visible then
@@ -192,7 +189,6 @@ RunService.Heartbeat:Connect(function()
         if tz then tz.Size = UDim2.new(1, 0, 1, 0); tz.Position = UDim2.new(0, 0, 0, 0) end
     end
 end)
-
 
 -- [[  UTILITY FUNCTIONS ]]
 local function SwitchToCourier()
