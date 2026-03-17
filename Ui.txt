@@ -138,50 +138,56 @@ local function ExecuteStartSequence()
     LastActivity = tick()
 end
 
--- // MAIN FARMING LOOP
+-- // MAIN FARMING LOOP (FIXED NPC DETECTION)
 task.spawn(function()
-    while task.wait(0.6) do
+    while task.wait(0.5) do
         if _G.AutoFarmBarista then
-            local _, OrderTextLabel, MinigameFrame = GetBaristaElements()
+            local Gui, OrderTextLabel, MinigameFrame = GetBaristaElements()
             
-            -- PROTEKSI: Lagi brewing? Diem!
+            -- PROTEKSI: Kalau lagi ada Minigame (Brewing), JANGAN diganggu
             if MinigameFrame and MinigameFrame.Visible then
                 LastActivity = tick()
                 continue
             end
 
-            -- Cek 4 Menit Tanpa Aktivitas
-            if tick() - LastActivity >= 240 then
+            -- Reset kalau 4 menit bengong
+            if (tick() - LastActivity >= 240) then
                 ExecuteStartSequence()
                 continue
             end
 
-            if OrderTextLabel then
+            -- CEK APAKAH ADA ORDERAN (NPC DATENG)
+            if OrderTextLabel and OrderTextLabel.Text ~= "" and OrderTextLabel.Text ~= "..." then
                 local txt = OrderTextLabel.Text:lower()
                 local isBroken = (OrderTextLabel.TextColor3.R > 0.8 and (txt:find("break") or txt:find("down")))
                 
+                -- 1. KONDISI MESIN RUSAK (SUPPLY)
                 if isBroken then
                     BypassTP(SupplyCF)
-                    task.wait(0.5)
+                    task.wait(0.4)
                     fireproximityprompt(SupplyPrompt)
                     LastActivity = tick()
                     task.wait(0.5)
-                    -- Balik ke mesin: Pake TweenNormal biar legit gak kedetect walk
-                    TweenNormal(MachineCF * CFrame.new(0, 0, 2))
+                    -- Balik deket mesin
+                    LP.Character.HumanoidRootPart.CFrame = MachineCF * CFrame.new(0, 0, 3)
+                    task.wait(0.2)
+                    TweenNormal(MachineCF)
                     fireproximityprompt(MachinePrompt)
                 
-                elseif MachinePrompt.Enabled then
+                -- 2. KONDISI NORMAL (BREWING / REGISTER)
+                elseif MachinePrompt and MachinePrompt.Enabled then
                     TweenNormal(MachineCF)
                     fireproximityprompt(MachinePrompt)
                     LastActivity = tick()
-                
-                elseif RegisterPrompt.Enabled then
-                    task.wait(0.5)
+                    
+                elseif RegisterPrompt and RegisterPrompt.Enabled then
                     TweenNormal(RegisterCF)
-                    task.wait(0.3)
                     fireproximityprompt(RegisterPrompt)
                     LastActivity = tick()
                 end
+            else
+                -- Gak ada orderan? Tetep update LastActivity dikit biar gak gampang reset
+                -- Tapi jangan di-reset full biar timer 4 menit tetep jalan kalau emang bug
             end
         end
     end
