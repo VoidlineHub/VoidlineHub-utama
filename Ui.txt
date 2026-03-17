@@ -137,22 +137,21 @@ local function ExecuteStartSequence()
     end
     LastActivity = tick()
 end
-
--- // MAIN FARMING LOOP (ONLY)
+-- // MAIN FARMING LOOP (PURE LOGIC)
 task.spawn(function()
     while task.wait(0.6) do
         if _G.AutoFarmBarista then
             local _, OrderTextLabel, MinigameFrame = GetBaristaElements()
             
-            -- PROTEKSI: Lagi brewing/minigame? Diem!
+            -- 1. PROTEKSI: Lagi brewing/minigame? DIEM! (Anti-Interupsi)
             if MinigameFrame and MinigameFrame.Visible then
                 LastActivity = tick()
                 continue
             end
 
-            -- Cek 4 Menit Tanpa Aktivitas -> Balik Start Job (TweenVoid)
+            -- 2. TIMER 4 MENIT: Balik Start Job pake TWEEN VOID (-30)
             if tick() - LastActivity >= 240 then
-                ExecuteStartSequence() -- Di dalem sini pastiin manggil TweenVoid
+                ExecuteStartSequence() -- Pastiin fungsi ini isinya TWEEN VOID
                 continue
             end
 
@@ -160,23 +159,24 @@ task.spawn(function()
                 local txt = OrderTextLabel.Text:lower()
                 local isBroken = (OrderTextLabel.TextColor3.R > 0.8 and (txt:find("break") or txt:find("down")))
                 
-                -- 1. MESIN RUSAK
+                -- 3. LOGIC SUPPLY: Pake BypassTP (Sit Logic)
                 if isBroken then
                     BypassTP(SupplyCF)
                     task.wait(0.5)
                     fireproximityprompt(SupplyPrompt)
                     LastActivity = tick()
                     task.wait(0.5)
+                    -- Balik ke Mesin pake TWEEN NORMAL (Bukan Void)
                     TweenNormal(MachineCF)
                     fireproximityprompt(MachinePrompt)
                 
-                -- 2. MESIN NORMAL
+                -- 4. LOGIC MACHINE: Pake TWEEN NORMAL (Anti-AutoWalk)
                 elseif MachinePrompt and MachinePrompt.Enabled then
                     TweenNormal(MachineCF)
                     fireproximityprompt(MachinePrompt)
                     LastActivity = tick()
                 
-                -- 3. KASIR
+                -- 5. LOGIC REGISTER: Pake TWEEN NORMAL (Anti-AutoWalk)
                 elseif RegisterPrompt and RegisterPrompt.Enabled then
                     task.wait(0.5)
                     TweenNormal(RegisterCF)
