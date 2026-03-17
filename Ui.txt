@@ -17,6 +17,7 @@ local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
 local Player = LP
+local LastActivity = tick()
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local CourierSettings = require(ReplicatedStorage:WaitForChild("Delivery System"):WaitForChild("Settings"))
