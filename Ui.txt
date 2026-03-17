@@ -82,45 +82,30 @@ local function BypassTP(targetCF)
     end
 end
 
--- // 2. TWEEN VOID (LOCK Y -30) - KHUSUS JAUH (SPAWN -> START JOB)
-
+-- // 2. TWEEN VOID (LOCK Y -30) - PAKAI LOGIC ASLI LU BRE
 local function TweenVoid(targetCF)
-
     local Root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-
     if Root then
-
         local targetY = targetCF.Y - 30
-
-        local dist = (Root.Position - Vector3.new(targetCF.X, Root.Position.Y, targetCF.Z)).Magnitude
-
+        local currentPos = Root.Position
+        local dist = (currentPos - Vector3.new(targetCF.X, currentPos.Y, targetCF.Z)).Magnitude
         local duration = dist / 130
-
         
-
-        Root.CFrame = CFrame.new(Root.Position.X, targetY, Root.Position.Z)
-
+        -- Selam ke kedalaman targetY
+        Root.CFrame = CFrame.new(currentPos.X, targetY, currentPos.Z)
         task.wait(0.1)
-
         
-
+        -- Tween lurus di kedalaman yang sama
         local tween = game:GetService("TweenService"):Create(Root, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
-
             CFrame = CFrame.new(targetCF.X, targetY, targetCF.Z)
-
         })
-
         tween:Play()
-
         tween.Completed:Wait()
-
+        
+        -- Munculin ke permukaan StartJobCF
         Root.CFrame = targetCF
-
     end
-
 end
-
-
 
 -- // 3. TWEEN BIASA (NO HEIGHT) - UNTUK MACHINE & REGISTER (ANTI-WALK DETECT)
 local function TweenNormal(targetCF)
