@@ -68,41 +68,63 @@ local function GetRemote(name)
     return nil
 end
 
-
--- // BYPASS TP (SIT -> WAIT -> TP)
+-- // 1. BYPASS TP LU (SIT -> WAIT -> TP) - TETEP BYPASS UTAMA
 local function BypassTP(targetCF)
-    -- Ganti Player jadi LP biar gak nil
     local Char = LP.Character or LP.CharacterAdded:Wait()
     local Hum = Char:WaitForChild("Humanoid")
     local Root = Char:WaitForChild("HumanoidRootPart")
     
     if Hum and Root then
         Hum.Sit = true
-        task.wait(0.5) -- SIT WAIT
+        task.wait(0.5)
         Root.CFrame = targetCF
         task.wait(0.3)
         Hum.Sit = false
     end
 end
 
--- // CORE SEQUENCE: REMOTE -> BYPASS TP -> WAIT -> START
+-- // 2. TWEEN VOID (-30) - KHUSUS JALAN JAUH (SPAWN -> START JOB)
+local function TweenVoid(targetCF)
+    local Root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if Root then
+        -- Nyelam dulu biar gak kedetect teleport jarak jauh
+        Root.CFrame = Root.CFrame * CFrame.new(0, -30, 0)
+        task.wait(0.2)
+        local tween = game:GetService("TweenService"):Create(Root, TweenInfo.new(1.5, Enum.EasingStyle.Linear), {
+            CFrame = CFrame.new(targetCF.X, Root.Position.Y, targetCF.Z)
+        })
+        tween:Play()
+        tween.Completed:Wait()
+        -- Muncul di tempat kerja
+        Root.CFrame = targetCF
+    end
+end
+
+-- // 3. FUNGSI JALAN (UNTUK MACHINE & REGISTER)
+local function WalkTo(targetPos)
+    local Hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
+    if Hum then
+        Hum:MoveTo(targetPos)
+        Hum.MoveToFinished:Wait()
+    end
+end
+
+-- // CORE SEQUENCE: PAKAI TWEEN VOID UNTUK START JOB
 local function ExecuteStartSequence()
     local tr = GetRemote("TeamChangeRequest")
-    
-    -- Ganti Player jadi LP di baris ini
     if LP.Team and LP.Team.Name ~= "Barista" and tr then
         tr:FireServer("Barista", 11378976, 0, 0, "Detector")
         task.wait(2.5)
     end
     
-    BypassTP(StartJobCF)
-    task.wait(0.8) -- WAIT BEFORE FIRE
+    -- Jarak jauh pake TweenVoid biar aman
+    TweenVoid(StartJobCF)
+    task.wait(0.8)
     
     if JobPrompt and JobPrompt.Enabled then
         fireproximityprompt(JobPrompt)
     end
-    
-    LastActivity = tick() -- Reset timer setelah ambil job
+    LastActivity = tick()
 end
 
 -- // MAIN FARMING LOOP
@@ -111,7 +133,6 @@ task.spawn(function()
         if _G.AutoFarmBarista then
             local _, OrderTextLabel, MinigameFrame = GetBaristaElements()
             
-            -- Cek 4 Menit Tanpa Aktivitas
             if tick() - LastActivity >= 240 then
                 ExecuteStartSequence()
             end
@@ -121,31 +142,38 @@ task.spawn(function()
                 local isBroken = (OrderTextLabel.TextColor3.R > 0.8 and (txt:find("break") or txt:find("down")))
                 
                 if isBroken then
+                    -- SUPPLY PAKE BYPASS TP (SIT)
                     BypassTP(SupplyCF)
                     task.wait(0.5)
                     fireproximityprompt(SupplyPrompt)
-                    LastActivity = tick() -- RESET TIMER
+                    LastActivity = tick()
                     task.wait(0.5)
-                    BypassTP(MachineCF)
+                    -- BALIK KE MACHINE PAKE WALK
+                    WalkTo(MachineCF.Position)
                     fireproximityprompt(MachinePrompt)
+                
                 elseif MachinePrompt.Enabled and not (MinigameFrame and MinigameFrame.Visible) then
-                    BypassTP(MachineCF)
+                    -- KE MACHINE PAKE WALK
+                    WalkTo(MachineCF.Position)
                     fireproximityprompt(MachinePrompt)
-                    LastActivity = tick() -- RESET TIMER
+                    LastActivity = tick()
                     repeat task.wait(0.5)
-                        LastActivity = tick() -- Jaga agar tidak mati pas nunggu minigame
+                        LastActivity = tick()
                     until not (MinigameFrame and MinigameFrame.Visible) or not _G.AutoFarmBarista
+                
                 elseif RegisterPrompt.Enabled and not (MinigameFrame and MinigameFrame.Visible) then
+                    -- KE REGISTER PAKE WALK
                     task.wait(0.5)
-                    BypassTP(RegisterCF)
-                    task.wait(0.5)
+                    WalkTo(RegisterCF.Position)
+                    task.wait(0.3)
                     fireproximityprompt(RegisterPrompt)
-                    LastActivity = tick() -- RESET TIMER
+                    LastActivity = tick()
                 end
             end
         end
     end
 end)
+
 
 -- Persistent Fixes & Anti-AFK
 RunService.Heartbeat:Connect(function()
