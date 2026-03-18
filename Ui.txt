@@ -106,21 +106,36 @@ local function TweenVoid(targetCF)
         Root.CFrame = targetCF
     end
 end
-
--- // 3. TWEEN BIASA (NO HEIGHT) - UNTUK MACHINE & REGISTER (ANTI-WALK DETECT)
-local function TweenNormal(targetCF)
-    local Root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if Root then
-        -- Panggil Service langsung biar gak error "index nil"
+-- // 3. TWEEN BIASA (ANTI-SIT & AUTO-FIRE)
+local function TweenNormal(targetCF, targetPrompt)
+    local Char = LP.Character
+    local Root = Char and Char:FindFirstChild("HumanoidRootPart")
+    local Hum = Char and Char:FindFirstChild("Humanoid")
+    
+    if Root and Hum then
+        -- 1. MATIIN AUTO-SIT BIAR GAK NYANGKUT DI KURSI
+        Hum.Sit = false
+        Hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+        
         local TweenService = game:GetService("TweenService")
         local dist = (Root.Position - targetCF.Position).Magnitude
-        local duration = dist / 30 -- Speed 30 biar smooth gak kaku (Anti-Detect)
+        local duration = dist / 30 
         
         local tween = TweenService:Create(Root, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
             CFrame = targetCF
         })
         tween:Play()
-        tween.Completed:Wait()
+        
+        -- Tunggu sampe bener-bener nyampe (Magnitude < 2)
+        repeat task.wait() until (Root.Position - targetCF.Position).Magnitude < 2 or not _G.AutoFarmBarista
+        
+        -- 2. FIRE PROMPT PAS UDAH SAMPE (GAK BAKAL MISS)
+        if targetPrompt and targetPrompt.Enabled then
+            fireproximityprompt(targetPrompt)
+        end
+        
+        -- 3. NYALAIN LAGI SIT-NYA PAS UDAH BERES JALAN
+        Hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
     end
 end
 
@@ -139,7 +154,8 @@ local function ExecuteStartSequence()
     end
     LastActivity = tick()
 end
--- // MAIN FARMING LOOP (PURE LOGIC)
+
+-- // MAIN FARMING LOOP (2 MINUTE RESET)
 task.spawn(function()
     while task.wait(0.6) do
         if _G.AutoFarmBarista then
@@ -151,9 +167,9 @@ task.spawn(function()
                 continue
             end
 
-            -- 2. TIMER 4 MENIT: Balik Start Job pake TWEEN VOID (-30)
-            if tick() - LastActivity >= 240 then
-                ExecuteStartSequence() -- Pastiin fungsi ini isinya TWEEN VOID
+            -- 2. TIMER 2 MENIT (120 Detik): Balik Start Job pake TWEEN VOID (-30)
+            if tick() - LastActivity >= 120 then
+                ExecuteStartSequence() -- Pastiin fungsi ini isinya TWEEN VOID (-30)
                 continue
             end
 
