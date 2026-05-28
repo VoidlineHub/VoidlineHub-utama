@@ -1,0 +1,253 @@
+-- State Global untuk Toggle
+_G.QurbanAutoFarm = false
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Koordinat Sapi Spawn (CFrame Lengkap)
+local koordinatAwal = CFrame.new(-3386.31543, -79.0189896, -23828.9395, 0, 0, 1, 0, -1, 0, 1, 0, 0)
+
+-- State pengaman agar loop scanning tidak bentrok saat sedang memproses/mengantar
+local sedangMengurusSapi = false
+
+-- Fungsi Notifikasi Tunggal saat delay dimulai
+local function kirimNotif(pesan)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "Auto Minigame",
+            Text = pesan,
+            Duration = 4,
+            Button1 = "OK"
+        })
+    end)
+end
+
+-- Memindahkan MODEL TRUK, bukan karakter, biar ga pental (fling)
+local function autoLoadSapiSpawn(modelTruk)
+    if modelTruk and modelTruk:IsA("Model") then
+        -- Pindahin truknya balik ke koordinat sapi spawn
+        modelTruk:PivotTo(koordinatAwal)
+        kirimNotif("Autofarm: Memindahkan Truk ke Sapi Spawn agar area ke-load!")
+        task.wait(2.0) -- Beri jeda agar area ter-load dengan sempurna
+        sedangMengurusSapi = false -- Buka kunci agar bisa mulai nyari sapi lagi
+    end
+end
+
+local QurbanRemotes = ReplicatedStorage:WaitForChild("EventAsset"):WaitForChild("QurbanRemotes")
+local StartLoadingMinigame = QurbanRemotes:WaitForChild("StartLoadingMinigame")
+local PromptInput = QurbanRemotes:WaitForChild("PromptInput")
+local DestinationRevealed = QurbanRemotes:WaitForChild("DestinationRevealed")
+
+-- FITUR 1: TELEPORT KE SPAWN AREA -> SCANNING SAPI (PRIORITAS MUTASI > BIASA) + AUTO PENCET
+task.spawn(function()
+    -- Teleportasi pertama kali saat script dijalankan dan toggle aktif
+    if _G.QurbanAutoFarm then
+        local karakter = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local rootPart = karakter:WaitForChild("HumanoidRootPart", 5)
+        if rootPart then
+            rootPart.CFrame = koordinatAwal
+            task.wait(1.5)
+        end
+    end
+
+    while task.wait(0.5) do
+        -- Pengecekan aktifasi via toggle dan status pengaman
+        if _G.QurbanAutoFarm and not sedangMengurusSapi then
+            local karakter = LocalPlayer.Character
+            local rootPart = karakter and karakter:FindFirstChild("HumanoidRootPart")
+            local humanoid = karakter and karakter:FindFirstChildOfClass("Humanoid")
+            
+            -- Skrip hanya bekerja jika kamu TIDAK sedang mengemudi/duduk di truk
+            if rootPart and humanoid and not humanoid.SeatPart then
+                
+                -- ATURAN: Sebelum cari sapi, pastikan berada di CFrame asal dulu agar area ter-load
+                if (rootPart.Position - koordinatAwal.Position).Magnitude > 20 then
+                    rootPart.CFrame = koordinatAwal
+                    task.wait(1.5) -- Jeda loading area
+                end
+                
+                local targetSapi = nil
+                local prioritasMutasi = false
+                
+                -- Scan seluruh objek di workspace
+                for _, obj in ipairs(workspace:GetChildren()) do
+                    if string.sub(obj.Name, 1, 4) == "Cow_" and obj:IsA("Model") then
+                        local prompt = obj:FindFirstChild("LoadPrompt", true)
+                        
+                        if prompt and prompt.Enabled then
+                            -- Cek apakah sapi ini jenis MUTASI menggunakan deep scan (true)
+                            local pakahMutasi = obj:FindFirstChild("_MutationBaseSA", true)
+                            
+                            if pakahMutasi then
+                                -- Jika ketemu mutasi, langsung kunci target dan hentikan pencarian sapi lain
+                                targetSapi = obj
+                                prioritasMutasi = true
+                                break
+                            elseif not targetSapi then
+                                -- Jika belum ada target mutasi, tampung sapi biasa dulu sementara
+                                targetSapi = obj
+                            end
+                        end
+                    end
+                end
+                
+                -- Eksekusi Teleportasi ke Sapi yang dipilih
+                if targetSapi then
+                    local promptSapi = targetSapi:FindFirstChild("LoadPrompt", true)
+                    if promptSapi then
+                        sedangMengurusSapi = true -- Kunci status agar loop tidak mendeteksi sapi lain saat eksekusi
+                        
+                        -- Teleportasikan karakter tepat ke posisi sapi
+                        rootPart.CFrame = targetSapi:GetPivot() * CFrame.new(0, 2, 2)
+                        task.wait(0.5) -- Jeda aman sebelum interact
+                        fireproximityprompt(promptSapi)
+                        
+                        -- Pengaman Anti-Stuck: Jika dalam 12 detik gagal masuk minigame/truk, buka lock status
+                        task.delay(12, function()
+                            if sedangMengurusSapi then
+                                local cekHumanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                                if cekHumanoid and not cekHumanoid.SeatPart then
+                                    sedangMengurusSapi = false
+                                end
+                            end
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- FITUR 2: AUTO MINIGAME (FIXED: DELAY RHYTHM 0.5 DETIK)
+StartLoadingMinigame.OnClientEvent:Connect(function(data)
+    -- Pengecekan aktifasi via toggle
+    if not _G.QurbanAutoFarm then return end
+    
+    if not data or not data.sequence then return end
+    sedangMengurusSapi = true -- Pastikan status terkunci selama minigame berlangsung
+    task.wait(0.5) -- Jeda sebelum mulai menjawab minigame
+
+    for index, prompt in ipairs(data.sequence) do
+        -- Berhenti di tengah jalan jika toggle tiba-tiba dimatikan saat minigame berjalan
+        if not _G.QurbanAutoFarm then break end
+
+        local kunciJawaban = nil
+
+        if prompt.type == "TAP" then
+            kunciJawaban = prompt.key
+        elseif prompt.type == "MASH" then
+            kunciJawaban = prompt.targetCount
+        elseif prompt.type == "SEQUENCE" then
+            kunciJawaban = prompt.sequence
+        end
+
+        if kunciJawaban ~= nil then
+            PromptInput:FireServer({
+                ["promptIndex"] = index,
+                ["input"] = kunciJawaban
+            })
+        end
+
+        task.wait(0.5) -- FIXED: Kecepatan konstan 0.5 detik per ketukan/prompt sesuai request
+    end
+    task.wait(0.5)
+end)
+
+-- FITUR 3: TELEPORT TRUK DENGAN LOGIKA ANGKA JARAK UTAMA
+DestinationRevealed.OnClientEvent:Connect(function(data)
+    -- Pengecekan aktifasi via toggle
+    if not _G.QurbanAutoFarm then return end
+    
+    if not data or not data.masjidPosition then return end
+    
+    local karakter = LocalPlayer.Character
+    if not karakter then return end
+    
+    local humanoid = karakter:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    
+    while not humanoid.SeatPart do
+        if not _G.QurbanAutoFarm then return end
+        task.wait(0.5)
+    end
+    
+    task.wait(1) -- Tunggu teks GUI sinkron sepenuhnya
+    
+    local waktuTunggu = 20 -- Default dasar aman
+    
+    pcall(function()
+        local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+        local deliveryHUD = playerGui and playerGui:WaitForChild("DeliveryHUD", 5)
+        local destFrame = deliveryHUD and deliveryHUD:WaitForChild("DestinationFrame", 5)
+        local distanceLabel = destFrame and destFrame:WaitForChild("Distance", 5)
+        
+        if distanceLabel then
+            local teksOriginal = distanceLabel.Text
+            local isKStuds = string.find(string.lower(teksOriginal), "k")
+            
+            -- Ekstrak hanya angka saja (termasuk desimal jika ada) dari teks GUI
+            local angkaTeks = string.match(teksOriginal, "%d+%.?%d*")
+            local nilaiAngka = tonumber(angkaTeks)
+            
+            if nilaiAngka then
+                if isKStuds then
+                    -- KATEGORI RIBUAN (k studs)
+                    if nilaiAngka >= 23.0 then
+                        waktuTunggu = 65 -- Kasus 23.0k studs ke atas
+                    else
+                        waktuTunggu = 20 -- Kasus 3.0k studs atau 9.3k studs
+                    end
+                else
+                    if nilaiAngka <= 23.9 then
+                        waktuTunggu = 65
+                    end
+                end
+            end
+        end
+    end)
+    
+    -- Memunculkan notifikasi tunggal berisi durasi aman
+    kirimNotif("Menahan posisi selama " .. tostring(waktuTunggu) .. " detik sebelum teleport...")
+    
+    task.wait(waktuTunggu)
+    
+    -- Cek ulang toggle setelah menunggu delay lama sebelum benar-benar teleport
+    if not _G.QurbanAutoFarm then return end
+    
+    -- Mencari mobil
+    local modelTruk = nil
+    local vehiclesFolder = workspace:FindFirstChild("Vehicles")
+    
+    if vehiclesFolder then
+        for _, v in ipairs(vehiclesFolder:GetChildren()) do
+            if string.sub(v.Name, 1, 11) == "QurbanTruck" then
+                modelTruk = v
+                break
+            end
+        end
+    end
+    
+    if not modelTruk and humanoid.SeatPart then
+        modelTruk = humanoid.SeatPart:FindFirstAncestorOfClass("Model")
+    end
+    
+    if not modelTruk then return end
+    
+    local pivotAwal = modelTruk:GetPivot()
+    local posisiTujuan = data.masjidPosition + Vector3.new(0, 5, 0)
+    local cframeTujuan = CFrame.new(posisiTujuan) * pivotAwal.Rotation
+    
+    modelTruk:PivotTo(cframeTujuan)
+    
+    -- [LOOP BALIK KE AWAL]: Setelah beres nganter ke masjid, jalankan fungsi balik ke koordinatAwal via truk
+    task.wait(2)
+    if _G.QurbanAutoFarm then
+        autoLoadSapiSpawn(modelTruk)
+    else
+        sedangMengurusSapi = false
+    end
+end)
+
