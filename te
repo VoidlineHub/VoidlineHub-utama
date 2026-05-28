@@ -1,5 +1,5 @@
 -- State Global untuk Toggle
-_G.QurbanAutoFarm = false
+_G.QurbanAutoFarm = true
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
