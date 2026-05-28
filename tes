@@ -1,0 +1,252 @@
+-- SETTING & TOGGLE
+_G.QurbanAutoFarm = true -- Ubah ke false jika ingin mematikan
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+-- Mengambil Remotes
+local QurbanRemotes = ReplicatedStorage:WaitForChild("EventAsset"):WaitForChild("QurbanRemotes")
+local StartLoadingMinigame = QurbanRemotes:WaitForChild("StartLoadingMinigame")
+local PromptInput = QurbanRemotes:WaitForChild("PromptInput")
+local DestinationRevealed = QurbanRemotes:WaitForChild("DestinationRevealed")
+
+-- Koordinat Sapi Spawn (Sesuai CFrame permintaanmu)
+local koordinatAwal = CFrame.new(-3386.31543, -79.0189896, -23828.9395, 0, 0, 1, 0, -1, 0, 1, 0, 0)
+
+-- Status Pengaman agar tidak konflik antar fungsi
+local sedangMengurusSapi = false
+
+-- Fungsi helper untuk notifikasi (bisa disesuaikan dengan UI game-mu)
+local function kirimNotif(pesan)
+    print("[Qurban System]: " .. pesan)
+end
+
+-- FUNGSI OTOMATIS KEMBALI KE SPAWN SAPI (Dipanggil setelah teleport ke masjid selesai jika diperlukan)
+local function autoLoadSapiSpawn(modelTruk)
+    if modelTruk and modelTruk:IsA("Model") then
+        modelTruk:PivotTo(koordinatAwal)
+        kirimNotif("Autofarm: Memindahkan Truk kembali ke Sapi Spawn agar area ke-load!")
+        task.wait(1.5) -- Waktu tunggu agar map me-load dengan sempurna
+        sedangMengurusSapi = false -- Membuka kunci agar karakter bisa mulai nyari sapi lagi
+    end
+end
+
+--- =============================================================
+--- LOGIKA OTOMATIS SAAT SELESAI NGANTER KE MASJID (DELIVERY LOGIC)
+--- =============================================================
+DestinationRevealed.OnClientEvent:Connect(function(data)
+    if not _G.QurbanAutoFarm then return end
+    if not data or not data.masjidPosition then return end
+    
+    local karakter = LocalPlayer.Character
+    if not karakter then return end
+    
+    local humanoid = karakter:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    
+    -- Tunggu sampai player benar-benar duduk di truk
+    while not humanoid.SeatPart do
+        if not _G.QurbanAutoFarm then return end
+        task.wait(0.5)
+    end
+    
+    task.wait(1.0) -- Tunggu teks GUI benar-benar sinkron & muncul
+    
+    local waktuTunggu = 20 -- Default dasar aman (3.0k atau 9.3k studs)
+    
+    pcall(function()
+        local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+        local deliveryHUD = playerGui and playerGui:WaitForChild("DeliveryHUD", 5)
+        local destFrame = deliveryHUD and deliveryHUD:WaitForChild("DestinationFrame", 5)
+        local distanceLabel = destFrame and destFrame:WaitForChild("Distance", 5)
+        
+        if distanceLabel then
+            local teksOriginal = distanceLabel.Text
+            local isKStuds = string.find(string.lower(teksOriginal), "k")
+            
+            -- Ambil angka (termasuk titik desimal)
+            local angkaTeks = string.match(teksOriginal, "%d+%.?%d*")
+            local nilaiAngka = tonumber(angkaTeks)
+            
+            if nilaiAngka then
+                if isKStuds then
+                    -- KATEGORI RIBUAN (k studs)
+                    if nilaiAngka >= 22.0 then -- Mengamankan jika terbaca 22.9k atau 23.0k
+                        waktuTunggu = 65 -- Kasus rute jauh (23.0k studs ke atas)
+                    else
+                        waktuTunggu = 20 -- Kasus rute menengah/dekat (3.0k atau 9.3k studs)
+                    end
+                else
+                    -- KATEGORI DEKAT (studs biasa tanpa 'k')
+                    if nilaiAngka <= 25.0 then
+                        waktuTunggu = 65 -- Kasus penanganan bug teks studs biasa
+                    end
+                end
+            end
+        end
+    end)
+    
+    -- Jalankan proses menahan posisi dan teleport di thread terpisah agar anti-stuck
+    task.spawn(function()
+        kirimNotif("Menahan posisi truk selama " .. tostring(waktuTunggu) .. " detik sebelum teleport...")
+        
+        task.wait(waktuTunggu)
+        
+        -- Pengaman jika ditengah jalan menahan posisi toggle dimatikan
+        if not _G.QurbanAutoFarm then return end
+        
+        -- Cari kendaraan (Prioritas 1: Lewat kursi yang sedang diduduki player)
+        local modelTruk = nil
+        if humanoid.SeatPart then
+            modelTruk = humanoid.SeatPart:FindFirstAncestorOfClass("Model")
+        end
+        
+        -- (Prioritas 2: Cari di folder Vehicles jika kursi gagal membaca model)
+        if not modelTruk then
+            local vehiclesFolder = workspace:FindFirstChild("Vehicles")
+            if vehiclesFolder then
+                for _, v in ipairs(vehiclesFolder:GetChildren()) do
+                    if string.sub(v.Name, 1, 11) == "QurbanTruck" then
+                        modelTruk = v
+                        break
+                    end
+                end
+            end
+        end
+        
+        -- Eksekusi Teleportasi Kendaraan ke Masjid
+        if modelTruk then
+            local pivotAwal = modelTruk:GetPivot()
+            local posisiTujuan = data.masjidPosition + Vector3.new(0, 5, 0) -- Ketinggian 5 studs agar anti-ambles
+            local cframeTujuan = CFrame.new(posisiTujuan) * pivotAwal.Rotation
+            
+            -- Metode 1: Teleportasi Model Utama
+            modelTruk:PivotTo(cframeTujuan)
+            
+            -- Metode 2: Backup Teleportasi jika script mobil lokal memblokir PivotTo pada model induk
+            task.wait(0.1)
+            if humanoid.SeatPart and (humanoid.SeatPart.Position - posisiTujuan).Magnitude > 100 then
+                humanoid.SeatPart.CFrame = cframeTujuan
+            end
+            
+            kirimNotif("Autofarm: Truk berhasil dikirim ke lokasi Masjid!")
+            
+            -- Opsional: Aktifkan baris di bawah ini jika ingin truk langsung balik ke spawn sesaat setelah sampai masjid
+            -- task.wait(2.0)
+            -- autoLoadSapiSpawn(modelTruk)
+        else
+            kirimNotif("Gagal menemukan model truk!")
+            sedangMengurusSapi = false
+        end
+    end)
+end)
+
+--- =============================================================
+--- FEATURE BYPASS: AUTO ANSWER MINIGAME (0.5s RHYTHM)
+--- =============================================================
+StartLoadingMinigame.OnClientEvent:Connect(function(data)
+    if _G.QurbanAutoFarm then
+        sedangMengurusSapi = true
+        task.wait(0.5) -- Jeda sebelum menjawab minigame
+        
+        if data and data.sequence then
+            for index, promptData in ipairs(data.sequence) do
+                local jawaban = nil
+                
+                if promptData.type == "TAP" then
+                    jawaban = promptData.key
+                elseif promptData.type == "SEQUENCE" then
+                    jawaban = promptData.sequence 
+                elseif promptData.type == "MASH" then
+                    jawaban = promptData.targetCount 
+                end
+                
+                PromptInput:FireServer({
+                    ["promptIndex"] = index,
+                    ["input"] = jawaban
+                })
+                
+                task.wait(0.5) -- Jeda antar tombol/prompt dalam game sesuai keinginanmu
+            end
+        end
+        
+        -- Jeda setelah game selesai agar data tersinkronisasi ke server
+        task.wait(0.5)
+    end
+end)
+
+--- =============================================================
+--- FITUR 1: TELEPORT KE SAPI (DETEKSI DEEP-SCAN MUTASI)
+--- =============================================================
+task.spawn(function()
+    -- Teleportasi awal saat pertama kali script dijalankan
+    if _G.QurbanAutoFarm then
+        local karakter = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local rootPart = karakter:WaitForChild("HumanoidRootPart", 5)
+        if rootPart then
+            rootPart.CFrame = koordinatAwal
+            task.wait(2.0)
+        end
+    end
+
+    -- Loop Pencarian Sapi
+    while task.wait(0.5) do
+        if _G.QurbanAutoFarm and not sedangMengurusSapi then
+            local karakter = LocalPlayer.Character
+            local rootPart = karakter and karakter:FindFirstChild("HumanoidRootPart")
+            local humanoid = karakter and karakter:FindFirstChildOfClass("Humanoid")
+            
+            -- Hanya bekerja jika sedang tidak duduk di truk
+            if rootPart and humanoid and not humanoid.SeatPart then
+                local targetSapi = nil
+                local prioritasMutasi = false
+                
+                -- Scan seluruh objek di workspace
+                for _, obj in ipairs(workspace:GetChildren()) do
+                    if string.sub(obj.Name, 1, 4) == "Cow_" and obj:IsA("Model") then
+                        local prompt = obj:FindFirstChild("LoadPrompt", true)
+                        
+                        if prompt and prompt.Enabled then
+                            -- PERBAIKAN: Menggunakan pencarian mendalam (deep scan) true untuk mendeteksi penanda mutasi
+                            local apakahMutasi = obj:FindFirstChild("_MutationBaseSA", true)
+                            
+                            if apakahMutasi then
+                                targetSapi = obj
+                                prioritasMutasi = true
+                                break -- Langsung keluar loop jika mutasi ditemukan
+                            elseif not targetSapi then
+                                targetSapi = obj -- Simpan sapi biasa sebagai cadangan jika mutasi belum ada
+                            end
+                        end
+                    end
+                end
+                
+                -- Eksekusi Teleportasi ke Sapi
+                if targetSapi then
+                    local promptSapi = targetSapi:FindFirstChild("LoadPrompt", true)
+                    if promptSapi then
+                        sedangMengurusSapi = true -- Kunci agar tidak berpindah target saat eksekusi dimulai
+                        
+                        rootPart.CFrame = targetSapi:GetPivot() * CFrame.new(0, 2, 2)
+                        task.wait(0.5) -- Jeda 0.5 detik yang kamu inginkan
+                        
+                        fireproximityprompt(promptSapi)
+                        
+                        -- Pengaman Anti Stuck: Membuka kunci otomatis jika dalam 12 detik gagal ke-load
+                        task.delay(12, function()
+                            if sedangMengurusSapi and (not targetSapi or not targetSapi.Parent or not promptSapi.Enabled) then
+                                local cekHumanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                                -- Jika ternyata dia tidak naik truk, kita buka kuncinya biar cari sapi lagi
+                                if cekHumanoid and not cekHumanoid.SeatPart then
+                                    sedangMengurusSapi = false
+                                end
+                            end
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end)
+
