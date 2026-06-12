@@ -1,4 +1,4 @@
-print("voidline loaded")
+print("voidline loaded2")
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
@@ -152,47 +152,44 @@ game.Players.LocalPlayer.Idled:Connect(function()
     end
 end) -- Pastikan ada 'end)' di sini!
 
--- --- UTILITY FUNCTIONS ---
-local function SetStatus(text)
-    if StatusLabel then
-        StatusLabel:Set("Status: " .. text)
-    end
-end
-
-local function GetMyBus()
-    return workspace.SpawnedVehicles:FindFirstChild(_G.SelectedBus)
-end
-
-local function SetFreeze(state)
-    local bus = GetMyBus()
-    if bus then
-        for _, part in pairs(bus:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Anchored = state
-                if not state then
-                    part.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                    part.AssemblyAngularVelocity = Vector3.new(0,0,0)
-                end
-            end
+-- // BACKGROUND THREAD PENSTABIL KENDARAAN (Logic dari SC baru agar tween super smooth)
+local vehicle
+local function stabilize(bus)
+    if not bus then return end
+    for _, v in ipairs(bus:GetDescendants()) do
+        if v:IsA("BasePart") then
+            v.AssemblyLinearVelocity = Vector3.new(0,0,0)
+            v.AssemblyAngularVelocity = Vector3.new(0,0,0)
+            v.CanCollide = false
+            v.Anchored = true
         end
     end
 end
 
--- LOGIKA TWEEN 9 DETIK (PENGGANTI INSTANT TP LAMA LU)
-local currentTween
-local function tweenVehicleFix(bus, targetCF, duration)
+local function unanchor(bus)
+    if not bus then return end
+    for _, v in ipairs(bus:GetDescendants()) do
+        if v:IsA("BasePart") then
+            v.Anchored = false
+        end
+    end
+end
+
+task.spawn(function()
+    while true do
+        task.wait()
+        if _G.AutoFull and vehicle and vehicle.Parent then
+            stabilize(vehicle)
+        end
+    end
+end)
+
+-- --- FUNCTION TWEEN UTAMA (Hasil Merge Logic 9 Detik Pas) ---
+local function tweenVehicle(bus, targetCF, duration)
     if not bus or not bus.PrimaryPart then return end
 
-    -- Matikan gravity & freeze agar posisi stabil saat bergeser lerp
     game:GetService("Workspace").Gravity = 0
-    for _, part in pairs(bus:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.AssemblyLinearVelocity = Vector3.new(0,0,0)
-            part.AssemblyAngularVelocity = Vector3.new(0,0,0)
-            part.CanCollide = false
-            part.Anchored = true
-        end
-    end
+    stabilize(bus)
 
     local startCF = bus:GetPivot()
     local startTime = tick()
@@ -223,41 +220,70 @@ local function tweenVehicleFix(bus, targetCF, duration)
     repeat task.wait() until done
 
     bus:PivotTo(targetCF)
-    
-    -- Kunci ulang posisi setelah sampai sebelum gravity aktif
-    for _, part in pairs(bus:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.AssemblyLinearVelocity = Vector3.new(0,0,0)
-            part.AssemblyAngularVelocity = Vector3.new(0,0,0)
-            part.CanCollide = false
-            part.Anchored = true
-        end
-    end
+    stabilize(bus)
     task.wait(0.1)
 
     game:GetService("Workspace").Gravity = 196.2
     task.wait(0.2)
-    
-    -- Unanchor agar bus bisa dipakai normal/ikut logic freeze utama
-    for _, part in pairs(bus:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Anchored = false
-        end
-    end
-    
+    unanchor(bus)
+
     SetStatus("Arrived")
 end
 
-local function GetActiveStop()
-    for _, part in pairs(workspace.Checkpoints:GetChildren()) do
-        local bs = part:FindFirstChild("BusStop")
-        if bs and bs:IsA("BillboardGui") and bs.Enabled == true then
-            return part
+-- --- FUNCTION TWEEN HRP OFFSET (Untuk Spawn/Start Job Biar Gak Glitch) ---
+local function tweenVehicleHrp(bus, targetCF, duration)
+    if not bus or not bus.PrimaryPart then return end
+
+    game:GetService("Workspace").Gravity = 0
+    stabilize(bus)
+
+    local character = LP.Character
+    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+    local driveSeat
+
+    for _, v in ipairs(bus:GetDescendants()) do
+        if v:IsA("VehicleSeat") then
+            driveSeat = v
+            break
         end
     end
-    return nil
-end
 
+    local pivotCF = bus:GetPivot()
+    local refCF = (hrp and hrp.CFrame) or (driveSeat and driveSeat.CFrame) or pivotCF
+    local offset = pivotCF:ToObjectSpace(refCF)
+    local startCF = refCF
+    local startTime = tick()
+    local done = false
+
+    if currentTween then currentTween:Disconnect() end
+
+    currentTween = game:GetService("RunService").Heartbeat:Connect(function()
+        if not _G.AutoFull then
+            if currentTween then currentTween:Disconnect() end
+            done = true
+            return
+        end
+
+        local elapsed = tick() - startTime
+        local alpha = math.clamp(elapsed / duration, 0, 1)
+        bus:PivotTo(startCF:Lerp(targetCF, alpha):ToWorldSpace(offset:Inverse()))
+
+        if alpha >= 1 then
+            if currentTween then currentTween:Disconnect() end
+            done = true
+        end
+    end)
+
+    repeat task.wait() until done
+
+    bus:PivotTo(targetCF:ToWorldSpace(offset:Inverse()))
+    stabilize(bus)
+    task.wait(0.1)
+
+    game:GetService("Workspace").Gravity = 196.2
+    task.wait(0.1)
+    unanchor(bus)
+end
 
 -- // 2. FUNGSI AUTO-AVATAR
 local function getAvatar()
@@ -401,89 +427,96 @@ MainTab:CreateToggle({
             end)
 
             local hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
-            local infoLabel = LP.PlayerGui:FindFirstChild("BusJobGUI") and LP.PlayerGui.BusJobGUI.JobStatusFrame.InfoLabel
+            local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
             
             if not jobStarted then
+                SetStatus("Preparing...")
+                Remotes:WaitForChild("DespawnCar"):FireServer()
+                task.wait(1)
+                
                 SetStatus("Spawning: " .. _G.SelectedBus)
                 Remotes:WaitForChild("SpawnCar"):FireServer(_G.SelectedBus)
-                task.wait(4)
-                local bus = GetMyBus()
+                task.wait(2)
                 
-                if bus and bus:FindFirstChild("DriveSeat") then
-                    bus.DriveSeat:Sit(hum)
-                    task.wait(2)
+                -- Deteksi Owner Kendaraan ala SC Baru
+                for _, v in ipairs(workspace.SpawnedVehicles:GetChildren()) do
+                    local owner = v:FindFirstChild("Owner", true)
+                    if owner and tostring(owner.Value) == LP.Name then
+                        vehicle = v
+                        break
+                    end
+                end
+                
+                if vehicle then
+                    repeat task.wait() until vehicle.PrimaryPart or vehicle:FindFirstChildWhichIsA("BasePart")
                     
-                    SetStatus("get job...")
-                    Remotes:WaitForChild("StartBusJob"):InvokeServer("Baranangsiang_ke_Cirebon2")
-                    task.wait(1)
+                    local driveSeat
+                    for _, v in ipairs(vehicle:GetDescendants()) do
+                        if v:IsA("VehicleSeat") or v:IsA("DriveSeat") then
+                            driveSeat = v
+                            break
+                        end
+                    end
                     
-                    hum.Jump = true
-                    task.wait(1.5)
-                    
-                    SetStatus("Spawn vehicle..")
-                    Remotes:WaitForChild("SpawnCar"):FireServer(_G.SelectedBus)
-                    task.wait(4)
-                    bus = GetMyBus() 
-                    
-                    if bus and bus:FindFirstChild("DriveSeat") then
-                        bus.DriveSeat:Sit(hum)
+                    if driveSeat and hum and hrp then
+                        SetStatus("Sitting...")
+                        hrp.CFrame = driveSeat.CFrame + Vector3.new(0, 3, 0)
+                        task.wait(1)
+                        driveSeat:Sit(hum)
+                        task.wait(1)
+                        
+                        if hum.SeatPart ~= driveSeat then
+                            hrp.CFrame = driveSeat.CFrame
+                            task.wait(0.5)
+                            driveSeat:Sit(hum)
+                        end
+                        
+                        SetStatus("Going To Trigger")
+                        task.wait(1)
+                        
+                        local triggerPart = workspace:WaitForChild("BusJobTriggers"):WaitForChild("Baranangsiang")
+                        tweenVehicleHrp(vehicle, triggerPart.CFrame, 5)
+                        
+                        SetStatus("Starting Job")
+                        Remotes:WaitForChild("CancelBusJob"):FireServer()
+                        task.wait(1)
+                        
+                        Remotes:WaitForChild("StartBusJob"):InvokeServer("Baranangsiang_ke_Cirebon2")
+                        SetStatus("Waiting System")
+                        task.wait(4)
                         jobStarted = true
                     end
                 end
             end
             
-            local target = GetActiveStop()
+            -- Ambil Halte Aktif menggunakan pengecekan TextLabel Text milik SC Baru (Lebih Akurat)
+            local target = nil
+            for _, v in ipairs(workspace.Checkpoints:GetDescendants()) do
+                local stopGui = v:FindFirstChild("BusStop", true)
+                if stopGui then
+                    local stopText = stopGui:FindFirstChild("Stop", true)
+                    if stopText and stopText:IsA("TextLabel") and stopText.Text ~= "" then
+                        target = v
+                        break
+                    end
+                end
+            end
+            
             if target then
                 noBillboardTime = 0 
                 if target ~= lastTarget then
-                    -- PROSES TP AWAL GANTI KE TWEEN 9 DETIK
-                    SetFreeze(true) 
-                    task.wait(0.2)
+                    local targetCF = target:IsA("BasePart") and target.CFrame or target:GetPivot()
                     
-                    local bus = GetMyBus()
-                    if bus then
-                        tweenVehicleFix(bus, target.CFrame, 9)
-                    else
-                        -- Fallback kalau kendaraan ga ketemu (biar player ga macet)
-                        local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-                        if hrp then hrp.CFrame = target.CFrame end
-                    end
-                    
+                    -- Jalankan Tween Halte Pas Skala 9 Detik Murni
+                    tweenVehicle(vehicle, targetCF, 9)
                     lastTarget = target
                     
-                    -- PENGECEKAN ANTI-STUCK / RETURN ZONE (Disesuaikan Jadi Maksimal 10 Detik Biar Pas)
-                    for i = 1, 10 do
-                        if not _G.AutoFull then break end
-                        if infoLabel and string.find(string.upper(infoLabel.Text), "RETURN TO THE CHECKPOINT") then
-                            SetStatus("Correction: Tween Again!")
-                            SetFreeze(false)
-                            task.wait(0.5)
-                            
-                            local reBus = GetMyBus()
-                            if reBus then
-                                tweenVehicleFix(reBus, target.CFrame, 9)
-                            else
-                                local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-                                if hrp then hrp.CFrame = target.CFrame end
-                            end
-                            
-                            task.wait(0.5)
-                            SetFreeze(true)
-                        else
-                            SetStatus("Position Secure...")
-                        end
-                        task.wait(1)
-                    end
-                    
-                    -- SISA WAKTU DELAY DI HALP / FREEZE (19s - 10s Pengecekan = 9s Sisa)
-                    for i = 9, 1, -1 do
+                    -- Sisa Delay Tunggu Payout Di Halte Pas 19 Detik Tanpa Timer Tambahan
+                    for i = 19, 1, -1 do
                         if not _G.AutoFull then break end
                         SetStatus("Waiting Stop: " .. i .. "s")
                         task.wait(1)
                     end
-                    
-                    SetFreeze(false)
-                    -- TIMER DElAY 2 MENIT (77 DETIK) SUDAH DIHAPUS TOTAL DI SINI
                 end
             else
                 if jobStarted then
@@ -492,26 +525,17 @@ MainTab:CreateToggle({
                     
                     if noBillboardTime >= 40 then
                         SetStatus("Finishing Job...")
-                        SetFreeze(true)
-                        task.wait(0.2)
                         
-                        -- FINISH TP GANTI KE TWEEN 9 DETIK
-                        local bus = GetMyBus()
-                        if bus then
-                            tweenVehicleFix(bus, CirebonEndCF, 9)
-                        else
-                            local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-                            if hrp then hrp.CFrame = CirebonEndCF end
-                        end
-                        
+                        -- Menggunakan koordinat CirebonEndCF bawaan rute lu lama
+                        tweenVehicleHrp(vehicle, CirebonEndCF, 9)
                         task.wait(2)
-                        SetFreeze(false)
+                        
                         jobStarted = false
                         lastTarget = nil
                         noBillboardTime = 0
                         
-                        local busToDelete = GetMyBus()
-                        if busToDelete then busToDelete:Destroy() end 
+                        if vehicle then vehicle:Destroy() end 
+                        Remotes:WaitForChild("DespawnCar"):FireServer()
                         
                         SetStatus("Job Finished! Restarting...")
                         task.wait(3) 
