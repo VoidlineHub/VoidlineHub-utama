@@ -178,15 +178,74 @@ local function SetFreeze(state)
     end
 end
 
-local function InstantTP(targetCF)
-    local bus = GetMyBus()
-    if not bus then return end
-    SetFreeze(false) 
-    task.wait(0.1)
-    for i = 1, 3 do
-        bus:PivotTo(targetCF)
-        task.wait(0.05)
+-- LOGIKA TWEEN 9 DETIK (PENGGANTI INSTANT TP LAMA LU)
+local currentTween
+local function tweenVehicleFix(bus, targetCF, duration)
+    if not bus or not bus.PrimaryPart then return end
+
+    -- Matikan gravity & freeze agar posisi stabil saat bergeser lerp
+    game:GetService("Workspace").Gravity = 0
+    for _, part in pairs(bus:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.AssemblyLinearVelocity = Vector3.new(0,0,0)
+            part.AssemblyAngularVelocity = Vector3.new(0,0,0)
+            part.CanCollide = false
+            part.Anchored = true
+        end
     end
+
+    local startCF = bus:GetPivot()
+    local startTime = tick()
+    local done = false
+
+    if currentTween then currentTween:Disconnect() end
+
+    currentTween = game:GetService("RunService").Heartbeat:Connect(function()
+        if not _G.AutoFull then
+            if currentTween then currentTween:Disconnect() end
+            done = true
+            return
+        end
+
+        local elapsed = tick() - startTime
+        local remain = math.max(0, math.ceil(duration - elapsed))
+        SetStatus("Tweening " .. remain .. "s")
+
+        local alpha = math.clamp(elapsed / duration, 0, 1)
+        bus:PivotTo(startCF:Lerp(targetCF, alpha))
+
+        if alpha >= 1 then
+            if currentTween then currentTween:Disconnect() end
+            done = true
+        end
+    end)
+
+    repeat task.wait() until done
+
+    bus:PivotTo(targetCF)
+    
+    -- Kunci ulang posisi setelah sampai sebelum gravity aktif
+    for _, part in pairs(bus:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.AssemblyLinearVelocity = Vector3.new(0,0,0)
+            part.AssemblyAngularVelocity = Vector3.new(0,0,0)
+            part.CanCollide = false
+            part.Anchored = true
+        end
+    end
+    task.wait(0.1)
+
+    game:GetService("Workspace").Gravity = 196.2
+    task.wait(0.2)
+    
+    -- Unanchor agar bus bisa dipakai normal/ikut logic freeze utama
+    for _, part in pairs(bus:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Anchored = false
+        end
+    end
+    
+    SetStatus("Arrived")
 end
 
 local function GetActiveStop()
@@ -198,6 +257,7 @@ local function GetActiveStop()
     end
     return nil
 end
+
 
 -- // 2. FUNGSI AUTO-AVATAR
 local function getAvatar()
@@ -321,22 +381,13 @@ MainTab:CreateSection("Autofarm bus")
 MainTab:CreateParagraph({
     Title = "How to Use Auto-Kick", 
     Content = "1. Masukkan target uang (Contoh: 1.500.000)\n2. Nyalakan toggle 'Enable Auto-Kick'\n3. Script akan otomatis kick saat uang tercapai."
-})
+
+-- TOGGLE MAIN MENU
 MainTab:CreateToggle({
     Name = "On Autofarm",
     CurrentValue = false,
     Callback = function(Value)
-        _G.AutoFull = Value
-        _G.blackscreen = Value
-        
-        if not Value then 
-           _G.blackscreen = false
-            lastTarget = nil 
-            jobStarted = false
-            SetFreeze(false)
-            SetStatus("Idle")
-        end
-        
+        _G.AutoFull = Value        
         while _G.AutoFull do
             -- LOGIC HAPUS PENGHALANG
             pcall(function()
@@ -386,20 +437,37 @@ MainTab:CreateToggle({
             if target then
                 noBillboardTime = 0 
                 if target ~= lastTarget then
-                    -- PROSES TP AWAL
+                    -- PROSES TP AWAL GANTI KE TWEEN 9 DETIK
                     SetFreeze(true) 
                     task.wait(0.2)
-                    InstantTP(target.CFrame)
+                    
+                    local bus = GetMyBus()
+                    if bus then
+                        tweenVehicleFix(bus, target.CFrame, 9)
+                    else
+                        -- Fallback kalau kendaraan ga ketemu (biar player ga macet)
+                        local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                        if hrp then hrp.CFrame = target.CFrame end
+                    end
+                    
                     lastTarget = target
                     
                     -- PENGECEKAN 30 DETIK (Anti-Stuck / Return Zone)
                     for i = 1, 30 do
                         if not _G.AutoFull then break end
                         if infoLabel and string.find(string.upper(infoLabel.Text), "RETURN TO THE CHECKPOINT") then
-                            SetStatus("Correction: TP Again!")
+                            SetStatus("Correction: Tween Again!")
                             SetFreeze(false)
                             task.wait(0.5)
-                            InstantTP(target.CFrame)
+                            
+                            local reBus = GetMyBus()
+                            if reBus then
+                                tweenVehicleFix(reBus, target.CFrame, 9)
+                            else
+                                local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                                if hrp then hrp.CFrame = target.CFrame end
+                            end
+                            
                             task.wait(0.5)
                             SetFreeze(true)
                         else
@@ -433,7 +501,15 @@ MainTab:CreateToggle({
                         SetStatus("Finishing Job...")
                         SetFreeze(true)
                         task.wait(0.2)
-                        InstantTP(CirebonEndCF)
+                        
+                        -- FINISH TP GANTI KE TWEEN 9 DETIK
+                        local bus = GetMyBus()
+                        if bus then
+                            tweenVehicleFix(bus, CirebonEndCF, 9)
+                        else
+                            local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                            if hrp then hrp.CFrame = CirebonEndCF end
+                        end
                         
                         task.wait(2)
                         SetFreeze(false)
@@ -441,8 +517,8 @@ MainTab:CreateToggle({
                         lastTarget = nil
                         noBillboardTime = 0
                         
-                        local bus = GetMyBus()
-                        if bus then bus:Destroy() end 
+                        local busToDelete = GetMyBus()
+                        if busToDelete then busToDelete:Destroy() end 
                         
                         SetStatus("Job Finished! Restarting...")
                         task.wait(3) 
