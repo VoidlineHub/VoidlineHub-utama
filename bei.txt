@@ -380,7 +380,7 @@ local MainTab = Window:CreateTab("Main Farm", "play")
 MainTab:CreateSection("Autofarm bus")
 MainTab:CreateParagraph({
     Title = "How to Use Auto-Kick", 
-    Content = "1. Masukkan target uang (Contoh: 1.500.000)\n2. Nyalakan toggle 'Enable Auto-Kick'\n3. Script akan otomatis kick saat uang tercapai."
+    Content = "1. Masukkan target uang (Contoh: 1.500.000)\n2. Nyalakan toggle 'Enable Auto-Kick'\n3. Script akan otomatis kick saat uang tercapai."})
 
 -- TOGGLE MAIN MENU
 MainTab:CreateToggle({
