@@ -381,7 +381,6 @@ MainTab:CreateSection("Autofarm bus")
 MainTab:CreateParagraph({
     Title = "How to Use Auto-Kick", 
     Content = "1. Masukkan target uang (Contoh: 1.500.000)\n2. Nyalakan toggle 'Enable Auto-Kick'\n3. Script akan otomatis kick saat uang tercapai."})
-
 -- TOGGLE MAIN MENU
 MainTab:CreateToggle({
     Name = "On Autofarm",
@@ -452,8 +451,8 @@ MainTab:CreateToggle({
                     
                     lastTarget = target
                     
-                    -- PENGECEKAN 30 DETIK (Anti-Stuck / Return Zone)
-                    for i = 1, 30 do
+                    -- PENGECEKAN ANTI-STUCK / RETURN ZONE (Disesuaikan Jadi Maksimal 10 Detik Biar Pas)
+                    for i = 1, 10 do
                         if not _G.AutoFull then break end
                         if infoLabel and string.find(string.upper(infoLabel.Text), "RETURN TO THE CHECKPOINT") then
                             SetStatus("Correction: Tween Again!")
@@ -476,21 +475,15 @@ MainTab:CreateToggle({
                         task.wait(1)
                     end
                     
-                    -- SISA WAKTU FREEZE (45 - 30 = 15s)
-                    for i = 15, 1, -1 do
+                    -- SISA WAKTU DELAY DI HALP / FREEZE (19s - 10s Pengecekan = 9s Sisa)
+                    for i = 9, 1, -1 do
                         if not _G.AutoFull then break end
-                        SetStatus("To Stations: " .. i .. "s")
+                        SetStatus("Waiting Stop: " .. i .. "s")
                         task.wait(1)
                     end
                     
                     SetFreeze(false)
-                    
-                    -- Timer 2: Total 2 Menit (120s - 45s = 75s)
-                    for i = 77, 1, -1 do
-                        if not _G.AutoFull then break end
-                        SetStatus("Delay TP: " .. i .. "s")
-                        task.wait(1)
-                    end
+                    -- TIMER DElAY 2 MENIT (77 DETIK) SUDAH DIHAPUS TOTAL DI SINI
                 end
             else
                 if jobStarted then
@@ -529,8 +522,6 @@ MainTab:CreateToggle({
         end
     end
 })
-
-
 
 MainTab:CreateSection("Auto Stop Settings")
 
